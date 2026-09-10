@@ -1,0 +1,6 @@
+{
+  "name": "AgriSmart AI",
+  "description": "Intelligent Agriculture decision-support platform for crop disease diagnosis, weather intelligence, smart irrigation, and farmer advisory.",
+  "requestFramePermissions": ["camera"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

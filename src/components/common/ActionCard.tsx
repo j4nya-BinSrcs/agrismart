@@ -1,0 +1,105 @@
+import React from 'react';
+import { ActionItem } from '../../types';
+import { CheckCircle2, Circle, Clock, ArrowRight } from 'lucide-react';
+import { StatusBadge } from './StatusBadge';
+
+interface ActionCardProps {
+  action: ActionItem;
+  onToggleComplete: (id: string) => void;
+  onNavigate?: (route: ActionItem['actionRoute']) => void;
+}
+
+export const ActionCard: React.FC<ActionCardProps> = ({
+  action,
+  onToggleComplete,
+  onNavigate,
+}) => {
+  const getStatusMapping = (priority: ActionItem['priority']) => {
+    switch (priority) {
+      case 'urgent':
+        return { status: 'urgent' as const, label: 'Critical' };
+      case 'recommended':
+        return { status: 'warning' as const, label: 'Attention' };
+      case 'informational':
+      default:
+        return { status: 'info' as const, label: 'Routine' };
+    }
+  };
+
+  const statusInfo = getStatusMapping(action.priority);
+
+  return (
+    <div
+      id={`action-item-${action.id}`}
+      className={`rounded-lg border p-4 transition-colors ${
+        action.completed
+          ? 'bg-slate-50/70 border-slate-200 opacity-60'
+          : 'bg-white border-slate-200'
+      }`}
+    >
+      <div className="flex items-start gap-3">
+        <button
+          type="button"
+          onClick={() => onToggleComplete(action.id)}
+          className="mt-0.5 text-slate-400 hover:text-emerald-800 transition-colors cursor-pointer shrink-0"
+          title={action.completed ? 'Mark pending' : 'Mark completed'}
+        >
+          {action.completed ? (
+            <CheckCircle2 className="w-5 h-5 text-emerald-700" />
+          ) : (
+            <Circle className="w-5 h-5 text-slate-300 hover:text-slate-500" />
+          )}
+        </button>
+
+        <div className="flex-1 min-w-0">
+          <div className="flex flex-wrap items-center gap-2.5 mb-1.5 text-xs text-slate-500">
+            <StatusBadge status={statusInfo.status} label={statusInfo.label} size="sm" />
+            <span className="text-slate-300">•</span>
+            <span className="capitalize">{action.category.replace('_', ' ')}</span>
+            {action.cropAffected && (
+              <>
+                <span className="text-slate-300">•</span>
+                <span className="text-slate-700">{action.cropAffected}</span>
+              </>
+            )}
+            <span className="ml-auto text-[11px] text-slate-500 flex items-center gap-1">
+              <Clock className="w-3.5 h-3.5 text-slate-400" />
+              {action.timeframe}
+            </span>
+          </div>
+
+          <h4
+            className={`text-sm font-semibold mb-1 ${
+              action.completed ? 'line-through text-slate-500' : 'text-slate-900'
+            }`}
+          >
+            {action.title}
+          </h4>
+
+          <p className="text-xs text-slate-700 leading-relaxed mb-2 font-normal">
+            {action.actionText}
+          </p>
+
+          <div className="text-xs text-slate-500 flex items-start gap-1.5 py-1">
+            <span className="text-slate-700 font-medium shrink-0">Reason:</span>
+            <span>{action.reason}</span>
+          </div>
+
+          {action.actionRoute && onNavigate && !action.completed && (
+            <div className="mt-2.5 flex justify-end">
+              <button
+                type="button"
+                onClick={() => onNavigate(action.actionRoute)}
+                className="inline-flex items-center gap-1 text-xs font-medium text-emerald-800 hover:text-emerald-950 transition-colors cursor-pointer"
+              >
+                <span>View {action.actionRoute.replace('-', ' ')}</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
