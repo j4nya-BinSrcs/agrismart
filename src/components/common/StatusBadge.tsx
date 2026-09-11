@@ -14,27 +14,27 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({ status, label, size = 
   switch (status) {
     case 'healthy':
     case 'optimal':
-      dotColor = 'bg-emerald-600';
-      textColor = 'text-emerald-800';
+      dotColor = 'bg-emerald-600 dark:bg-emerald-400';
+      textColor = 'text-emerald-800 dark:text-emerald-400';
       defaultText = status === 'healthy' ? 'Healthy' : 'Optimal';
       break;
     case 'warning':
     case 'moderate':
     case 'delay':
-      dotColor = 'bg-amber-500';
-      textColor = 'text-amber-800';
+      dotColor = 'bg-amber-500 dark:bg-amber-400';
+      textColor = 'text-amber-800 dark:text-amber-400';
       defaultText = status === 'delay' ? 'Delay Advised' : 'Attention';
       break;
     case 'urgent':
     case 'severe':
-      dotColor = 'bg-rose-600';
-      textColor = 'text-rose-800';
+      dotColor = 'bg-rose-600 dark:bg-rose-400';
+      textColor = 'text-rose-800 dark:text-rose-400';
       defaultText = 'Critical';
       break;
     case 'info':
     default:
-      dotColor = 'bg-slate-400';
-      textColor = 'text-slate-700';
+      dotColor = 'bg-slate-400 dark:bg-slate-500';
+      textColor = 'text-slate-700 dark:text-slate-300';
       defaultText = 'Info';
       break;
   }

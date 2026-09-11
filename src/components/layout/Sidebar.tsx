@@ -1,17 +1,3 @@
-declare module 'react/jsx-runtime' {
-  export const Fragment: any;
-  export function jsx(type: any, props: any, key?: any): any;
-  export function jsxs(type: any, props: any, key?: any): any;
-}
-
-declare global {
-  namespace JSX {
-    interface IntrinsicElements {
-      [elemName: string]: any;
-    }
-  }
-}
-
 import React from 'react';
 import {
   LayoutDashboard,
@@ -88,9 +74,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
   };
 
   const content = (
-    <div className="flex flex-col h-full bg-[#242424] text-white">
+    <div className="flex flex-col h-full bg-[#242424] dark:bg-[#0f0f0f] text-white transition-colors">
       {/* Brand Header */}
-      <div className="px-5 py-4 border-b border-emerald-900/70 flex items-center justify-between">
+      <div className="px-5 py-4 border-b border-zinc-700/60 dark:border-[#222222] flex items-center justify-between">
         <div className="flex items-center gap-2.5">
           <div className="w-7 h-7 rounded-md bg-emerald-800 border border-emerald-700/60 text-white flex items-center justify-center shadow-xs">
             <Leaf className="w-4 h-4 text-emerald-200" />
@@ -99,14 +85,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <div className="font-semibold text-sm text-white tracking-tight">
               AGRI SMART
             </div>
-            <div className="text-[10px] text-emerald-200/70">Operations Console</div>
+            <div className="text-[10px] text-emerald-300/80">Operations Console</div>
           </div>
         </div>
         {/* Mobile close button */}
         <button
           type="button"
           onClick={onCloseMobile}
-          className="lg:hidden p-1 rounded-md text-emerald-300 hover:text-white hover:bg-emerald-900/60 transition-colors"
+          className="lg:hidden p-1 rounded-md text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors"
         >
           <X className="w-4 h-4" />
         </button>
@@ -130,12 +116,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
               className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-xs font-medium transition-colors text-left cursor-pointer ${
                 isActive
                   ? 'bg-emerald-800 text-white font-semibold shadow-xs'
-                  : 'text-emerald-100/80 hover:text-white hover:bg-emerald-900/50'
+                  : 'text-zinc-300 hover:text-white hover:bg-zinc-800/70 dark:hover:bg-[#1a1a1a]'
               }`}
             >
               <Icon
                 className={`w-4 h-4 shrink-0 transition-colors ${
-                  isActive ? 'text-white' : 'text-emerald-300/80'
+                  isActive ? 'text-white' : 'text-emerald-400'
                 }`}
               />
               <span className="truncate">{item.label}</span>
@@ -148,27 +134,27 @@ export const Sidebar: React.FC<SidebarProps> = ({
       </nav>
 
       {/* Simplified Quiet Sensor Panel */}
-      <div className="p-3 border-t border-emerald-900/70 text-xs">
-        <div className="p-3 rounded-lg bg-emerald-900/40 border border-emerald-800/60 space-y-2">
-          <div className="flex items-center justify-between text-[11px] text-emerald-300/90 font-medium">
+      <div className="p-3 border-t border-zinc-700/60 dark:border-[#222222] text-xs">
+        <div className="p-3 rounded-lg bg-zinc-800/80 dark:bg-[#161616] border border-zinc-700/60 dark:border-[#262626] space-y-2">
+          <div className="flex items-center justify-between text-[11px] text-emerald-400 font-medium">
             <span>FARM STATUS</span>
-            <span className="flex items-center gap-1 text-emerald-300 text-[10px] font-medium">
+            <span className="flex items-center gap-1 text-emerald-400 text-[10px] font-medium">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
               Sensors online
             </span>
           </div>
 
-          <div className="flex items-center justify-between text-emerald-200/80 text-[11px]">
+          <div className="flex items-center justify-between text-zinc-300 text-[11px]">
             <span>Soil moisture</span>
             <span className="font-mono text-white font-medium">31%</span>
           </div>
 
-          <div className="flex items-center justify-between text-emerald-200/80 text-[11px]">
+          <div className="flex items-center justify-between text-zinc-300 text-[11px]">
             <span>Rain probability</span>
             <span className="font-mono text-white font-medium">82%</span>
           </div>
 
-          <div className="pt-2 border-t border-emerald-800/60 text-[11px] text-emerald-100 font-medium flex items-center justify-between">
+          <div className="pt-2 border-t border-zinc-700/60 dark:border-[#262626] text-[11px] text-emerald-300 font-medium flex items-center justify-between">
             <span>Irrigation delayed</span>
           </div>
         </div>
@@ -179,7 +165,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   return (
     <>
       {/* Desktop Persistent Sidebar */}
-      <aside className="hidden lg:block w-60 shrink-0 h-screen sticky top-0 border-r border-[#042d22] bg-[#05382b]">
+      <aside className="hidden lg:block w-60 shrink-0 h-screen sticky top-0 border-r border-zinc-800 dark:border-[#222222] bg-[#242424] dark:bg-[#0f0f0f] transition-colors">
         {content}
       </aside>
 
@@ -187,10 +173,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
       {isMobileOpen && (
         <div className="fixed inset-0 z-50 lg:hidden flex">
           <div
-            className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs"
+            className="fixed inset-0 bg-black/60 backdrop-blur-xs"
             onClick={onCloseMobile}
           />
-          <div className="relative w-64 max-w-[85vw] h-full shadow-xl z-10 bg-[#05382b] border-r border-[#042d22]">
+          <div className="relative w-64 max-w-[85vw] h-full shadow-xl z-10 bg-[#242424] dark:bg-[#0f0f0f] border-r border-zinc-800 dark:border-[#222222]">
             {content}
           </div>
         </div>

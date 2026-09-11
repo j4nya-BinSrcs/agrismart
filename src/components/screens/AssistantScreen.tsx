@@ -3,20 +3,11 @@ import {
   Send,
   Mic,
   MicOff,
-  Globe,
-  Sparkles,
   Bot,
   User,
-  Volume2,
-  VolumeX,
-  CheckCircle2,
-  ArrowRight,
-  Leaf,
-  Droplets,
-  CloudRain,
-  HelpCircle,
 } from 'lucide-react';
-import { AssistantMessage, Language, ScreenType } from '../../types';
+import { AssistantMessage, Language, ScreenType, DiagnosisRecord, WeatherCondition } from '../../types';
+import { assistantService } from '../../services/assistantService';
 
 interface AssistantScreenProps {
   initialQuery?: string;
@@ -24,6 +15,8 @@ interface AssistantScreenProps {
   currentLanguage: Language;
   onLanguageChange: (lang: Language) => void;
   onNavigate: (screen: ScreenType) => void;
+  activeDiagnosis?: DiagnosisRecord;
+  weather?: WeatherCondition;
 }
 
 export const AssistantScreen: React.FC<AssistantScreenProps> = ({
@@ -31,7 +24,8 @@ export const AssistantScreen: React.FC<AssistantScreenProps> = ({
   onClearInitialQuery,
   currentLanguage,
   onLanguageChange,
-  onNavigate,
+  activeDiagnosis,
+  weather,
 }) => {
   const [messages, setMessages] = useState<AssistantMessage[]>([
     {
@@ -52,7 +46,6 @@ export const AssistantScreen: React.FC<AssistantScreenProps> = ({
 
   const [inputVal, setInputVal] = useState<string>('');
   const [isVoiceRecording, setIsVoiceRecording] = useState<boolean>(false);
-  const [isSpeaking, setIsSpeaking] = useState<boolean>(false);
   const [isTyping, setIsTyping] = useState<boolean>(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -60,7 +53,7 @@ export const AssistantScreen: React.FC<AssistantScreenProps> = ({
   // Auto-scroll to bottom of chat
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+  }, [messages, isTyping]);
 
   // Handle pre-filled query if passed from Diagnosis Result
   useEffect(() => {
@@ -97,8 +90,8 @@ export const AssistantScreen: React.FC<AssistantScreenProps> = ({
 
   const currentPrompts = suggestedPrompts[currentLanguage] || suggestedPrompts.en;
 
-  const handleUserSubmit = (queryText: string) => {
-    if (!queryText.trim()) return;
+  const handleUserSubmit = async (queryText: string) => {
+    if (!queryText.trim() || isTyping) return;
 
     const userMsg: AssistantMessage = {
       id: `user-${Date.now()}`,
@@ -112,170 +105,70 @@ export const AssistantScreen: React.FC<AssistantScreenProps> = ({
     setInputVal('');
     setIsTyping(true);
 
-    // Generate intelligent, structured agricultural advisor response
-    setTimeout(() => {
-      const botResponse = generateAgriculturalResponse(queryText, currentLanguage);
+    try {
+      const botResponse = await assistantService.sendQuery(queryText, currentLanguage, {
+        farmName: 'Patel Farm',
+        activeDiagnosis,
+        weather,
+        soilMoisture: 31,
+      });
       setMessages((prev) => [...prev, botResponse]);
+    } catch (error) {
+      console.error('Failed to get advisor response:', error);
+      const fallbackMsg: AssistantMessage = {
+        id: `error-${Date.now()}`,
+        sender: 'assistant',
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        text: 'I encountered an issue processing that query. Please try asking again or select one of the suggested topics.',
+        language: currentLanguage,
+      };
+      setMessages((prev) => [...prev, fallbackMsg]);
+    } finally {
       setIsTyping(false);
-    }, 550);
-  };
-
-  const generateAgriculturalResponse = (
-    query: string,
-    lang: Language
-  ): AssistantMessage => {
-    const q = query.toLowerCase();
-
-    // Gujarati Responses
-    if (lang === 'gu') {
-      if (q.includes('પિયત') || q.includes('પાણી') || q.includes('irrigate')) {
-        return {
-          id: `bot-${Date.now()}`,
-          sender: 'assistant',
-          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-          text: `ખેડૂત મિત્ર રમેશભાઈ, **આજે પિયત બિલકુલ ન આપો.**\n\n- **કારણ:** આગામી ૨૪ કલાકમાં ૮૨% વરસાદની શક્યતા છે (~૧૪.૫ મિમી વરસાદ).\n- **ખેતર સ્થિતિ:** ખેતર A માં જમીનનો ભેજ ૩૧% છે, વરસાદથી કુદરતી રીતે ભેજ ૪૮% થઈ જશે.\n- **ભલામણ:** મોટર ચાલુ ન કરશો. વરસાદ પછી આવતીકાલે સાંજે સેન્સર ચેક કરીશું.`,
-          contextTag: 'ખેતર A • પિયત સલાહ',
-          actionSuggestions: [
-            'વરસાદ પછી દવા ક્યારે છાંટવી?',
-            'ટામેટાના પાન સુકાઈ ગયા છે તે કાપી નાખવા?',
-          ],
-          language: 'gu',
-        };
-      }
-
-      return {
-        id: `bot-${Date.now()}`,
-        sender: 'assistant',
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        text: `ટામેટાના **અર્લી બ્લાઈટ (સુકારો)** માટે તાત્કાલિક પગલાં:\n\n૧. **ચેપી પાન દૂર કરો:** નીચેના પીળા અને કાળા ડાઘવાળા પાન કાપીને થેલીમાં ભરી ખેતર બહાર ખાડામાં દાટી દો.\n૨. **છંટકાવ મોકૂફ રાખો:** આજે બપોરે વરસાદ આવવાનો હોવાથી દવા ધોવાઈ જશે. શુક્રવારે સવારે તાંબા યુક્ત દવા (કોપર હાઇડ્રોક્સાઇડ ૨ ગ્રામ/લિટર) છાંટો.\n૩. **ગંભીરતા:** મધ્યમ (Moderate) છે. જો પાન કાપી લેશો તો પાક સંપૂર્ણ બચી જશે.`,
-        contextTag: 'ટામેટા • પાક સંરક્ષણ',
-        actionSuggestions: ['શું આજે ખાતર આપી શકાય?', 'ખેતર B કપાસની સ્થિતિ શું છે?'],
-        language: 'gu',
-      };
     }
-
-    // Hindi Responses
-    if (lang === 'hi') {
-      if (q.includes('सिंचाई') || q.includes('पानी') || q.includes('irrigate')) {
-        return {
-          id: `bot-${Date.now()}`,
-          sender: 'assistant',
-          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-          text: `किसान भाई रमेश जी, **आज सिंचाई रोक दीजिए।**\n\n- **मौसम पूर्वानुमान:** अगले 24 घंटों में 82% बारिश (लगभग 14.5 मिमी) की संभावना है।\n- **सलाह:** यदि आज पंप चलाएंगे तो जड़ों में पानी भरने से फफूंद तेजी से फैलेगी। बारिश से जमीन अपने आप रिचार्ज हो जाएगी।\n- **बचत:** आज पंप बंद रखने से 1,850 लीटर पानी और बिजली की बचत होगी।`,
-          contextTag: 'सिंचाई नियंत्रण • पटेल फार्म',
-          actionSuggestions: ['दवा का छिड़काव कब करें?', 'क्या बारिश से टमाटर खराब होंगे?'],
-          language: 'hi',
-        };
-      }
-
-      return {
-        id: `bot-${Date.now()}`,
-        sender: 'assistant',
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        text: `टमाटर के **अर्ली ब्लाइट (अगेती झुलसा)** के लिए अनुशंसित कार्ययोजना:\n\n1. **संक्रमित पत्तियां हटाएं:** पौधे के निचले हिस्से की धब्बेदार पत्तियां काटकर खेत से दूर नष्ट करें।\n2. **छिड़काव स्थगित रखें:** आज बारिश के कारण दवा धुलने का खतरा है। शुक्रवार सुबह कॉपर ऑक्सीक्लोराइड (2.5 ग्राम/लीटर) या ट्राइकोडर्मा का छिड़काव करें।\n3. **गंभीरता:** मध्यम स्तर (91% निश्चितता)। समय पर पत्तियां हटाने से रोग ऊपर नहीं फैलेगा।`,
-        contextTag: 'रोग प्रबंधन • खेत A',
-        actionSuggestions: ['दवा का घोल कितना बनाना है?', 'कल सुबह क्या जांचें?'],
-        language: 'hi',
-      };
-    }
-
-    // English Responses (Structured agronomic response)
-    if (q.includes('irrigate') || q.includes('water') || q.includes('pump')) {
-      return {
-        id: `bot-${Date.now()}`,
-        sender: 'assistant',
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        text: `**Decision: Hold irrigation on Field A and Field C today.**\n\n• **Weather Synchronization:** An 82% precipitation probability is forecast for the Anand cluster, bringing an estimated 14.5 mm of rainfall starting this afternoon (~2:00 PM).\n• **Root Zone Moisture:** Field A is currently at 31% volumetric soil moisture. Imminent rainfall will naturally replenish root levels to the optimal 48% target.\n• **Agronomic Risk:** Irrigating prior to heavy rain causes surface pooling, suffocates fine root hairs, and creates high canopy humidity that accelerates Alternaria fungal spore spread.\n• **Action:** Keep irrigation pumps idle today. Re-evaluate sensor moisture logs tomorrow morning at 7:00 AM.`,
-        contextTag: 'Irrigation Advisory • Sensor Synced',
-        actionSuggestions: [
-          'What should I check tomorrow morning?',
-          'When is the next safe foliar spraying window?',
-        ],
-        language: 'en',
-      };
-    }
-
-    if (q.includes('how serious') || q.includes('severity')) {
-      return {
-        id: `bot-${Date.now()}`,
-        sender: 'assistant',
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        text: `**Severity Assessment: Moderate (Early Stage Containment)**\n\n• **Infection Scope:** Lesions are currently restricted to lower 20% of canopy on Field A (Plot 2). Stems and fruit clusters are clear of dark cankers.\n• **Yield Impact Risk:** If lower leaves are pruned prior to today's rain, projected yield loss is <3%.\n• **Urgency:** If left untreated during the rainstorm, spore splash will spread pathogen to flowering clusters within 48 hours.\n• **Action Required:** Physical leaf pruning must be finished before 11:30 AM today.`,
-        contextTag: 'Severity & Yield Risk Analysis',
-        actionSuggestions: [
-          'What bio-fungicide dosage is recommended?',
-          'Explain this in simple Gujarati or Hindi',
-        ],
-        language: 'en',
-      };
-    }
-
-    return {
-      id: `bot-${Date.now()}`,
-      sender: 'assistant',
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      text: `**Treatment Advisory for Tomato Early Blight (Alternaria solani):**\n\n1. **Immediate Cultural Action (Today before 11:30 AM):**\n   • Prune off all lower leaves showing concentric brown 'target' spots.\n   • Seal clipped debris in bags and remove from field (do NOT compost).\n\n2. **Weather Synchronization (Spray Timing):**\n   • **Do not spray chemicals today.** Rain forecast (82%) will wash away foliar treatment.\n   • Spray window opens **Friday, Sep 12 at 7:00 AM** during calm, dry morning.\n\n3. **Recommended Formulation:**\n   • Copper Hydroxide (2.0 g/L) OR Bio-agent Trichoderma viride (5 g/L).\n   • Target underside of leaves where stomata allow fungal penetration.\n\n4. **Mulching:**\n   • Lay dry organic straw beneath vines to stop soil-borne spore splash during rain.`,
-      contextTag: 'Crop Protection • Field A (Tomato)',
-      actionSuggestions: [
-        'Can I irrigate Field A today?',
-        'How does this affect my sustainability score?',
-      ],
-      language: 'en',
-    };
   };
 
   const toggleVoiceRecording = () => {
-    if (!isVoiceRecording) {
+    if (isVoiceRecording) {
+      setIsVoiceRecording(false);
+    } else {
       setIsVoiceRecording(true);
-      // Simulate speech-to-text capture
+      // Simulate voice input capturing
       setTimeout(() => {
         setIsVoiceRecording(false);
-        if (currentLanguage === 'gu') {
-          handleUserSubmit('શું આજે ટામેટામાં દવા છાંટી શકાય?');
-        } else if (currentLanguage === 'hi') {
-          handleUserSubmit('क्या आज टमाटर में दवा का छिड़काव कर सकते हैं?');
-        } else {
-          handleUserSubmit('Can I spray fungicide on my tomatoes before the rain?');
-        }
+        const voiceQuery =
+          currentLanguage === 'gu'
+            ? 'શું હું આજે ખેતર A માં પિયત આપી શકું?'
+            : currentLanguage === 'hi'
+            ? 'क्या मैं आज खेत A में सिंचाई कर सकता हूँ?'
+            : 'Can I irrigate Field A today?';
+        setInputVal(voiceQuery);
       }, 2500);
-    } else {
-      setIsVoiceRecording(false);
     }
   };
 
   return (
-    <div className="space-y-5 max-w-4xl mx-auto pb-12">
-      {/* Title & Assistant Context Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-200">
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-md bg-emerald-800 text-white flex items-center justify-center shrink-0">
-            <Bot className="w-5 h-5" />
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-xl font-semibold text-slate-900 tracking-tight">
-                Farmer Advisory Assistant
-              </h1>
-              <span className="inline-flex items-center gap-1 text-[11px] text-slate-600 font-medium bg-slate-100 border border-slate-200 px-1.5 py-0.5 rounded">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-700" />
-                Active Context
-              </span>
-            </div>
-            <p className="text-xs text-slate-500 mt-0.5">
-              Patel Farm • Field A Tomato Telemetry & Weather Integrated
-            </p>
-          </div>
+    <div className="space-y-6 max-w-4xl mx-auto pb-8">
+      {/* Title & Language Bar */}
+      <div className="pb-2 border-b border-slate-200/80 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+        <div>
+          <h1 className="text-lg sm:text-xl font-semibold text-slate-900 dark:text-slate-100 tracking-tight">
+            AgriSmart Advisor
+          </h1>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+            Agronomic advisory grounded in your real-time sensor telemetry and weather forecast.
+          </p>
         </div>
 
-        {/* Language Selector Segmented Control */}
-        <div className="flex items-center gap-1 p-0.5 bg-slate-100 rounded-md border border-slate-200 text-xs font-medium self-start sm:self-auto">
+        {/* Language Tabs */}
+        <div className="flex items-center gap-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-1 rounded-md self-start sm:self-auto shadow-xs">
           <button
             type="button"
             onClick={() => onLanguageChange('en')}
-            className={`px-2.5 py-1 rounded transition-colors cursor-pointer ${
+            className={`px-2.5 py-1 text-xs font-medium rounded transition-colors cursor-pointer ${
               currentLanguage === 'en'
-                ? 'bg-white text-slate-900 font-semibold shadow-2xs'
-                : 'text-slate-600 hover:text-slate-900'
+                ? 'bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100'
             }`}
           >
             English
@@ -283,10 +176,10 @@ export const AssistantScreen: React.FC<AssistantScreenProps> = ({
           <button
             type="button"
             onClick={() => onLanguageChange('hi')}
-            className={`px-2.5 py-1 rounded transition-colors cursor-pointer ${
+            className={`px-2.5 py-1 text-xs font-medium rounded transition-colors cursor-pointer ${
               currentLanguage === 'hi'
-                ? 'bg-white text-slate-900 font-semibold shadow-2xs'
-                : 'text-slate-600 hover:text-slate-900'
+                ? 'bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100'
             }`}
           >
             हिन्दी
@@ -294,10 +187,10 @@ export const AssistantScreen: React.FC<AssistantScreenProps> = ({
           <button
             type="button"
             onClick={() => onLanguageChange('gu')}
-            className={`px-2.5 py-1 rounded transition-colors cursor-pointer ${
+            className={`px-2.5 py-1 text-xs font-medium rounded transition-colors cursor-pointer ${
               currentLanguage === 'gu'
-                ? 'bg-white text-slate-900 font-semibold shadow-2xs'
-                : 'text-slate-600 hover:text-slate-900'
+                ? 'bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100'
             }`}
           >
             ગુજરાતી
@@ -306,8 +199,8 @@ export const AssistantScreen: React.FC<AssistantScreenProps> = ({
       </div>
 
       {/* Suggested Prompt Chips */}
-      <div className="bg-white border border-slate-200 rounded-lg p-3.5 space-y-2">
-        <div className="text-[10px] font-medium text-slate-500 uppercase tracking-wider">
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-3.5 space-y-2">
+        <div className="text-[10px] font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
           Suggested Queries
         </div>
         <div className="flex flex-wrap gap-1.5">
@@ -316,7 +209,7 @@ export const AssistantScreen: React.FC<AssistantScreenProps> = ({
               key={i}
               type="button"
               onClick={() => handleUserSubmit(prompt)}
-              className="text-xs text-slate-700 hover:text-slate-900 bg-slate-50 hover:bg-slate-100 border border-slate-200 px-2.5 py-1 rounded-md transition-colors text-left cursor-pointer"
+              className="text-xs text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-slate-100 bg-slate-50 dark:bg-slate-800/70 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-700 px-2.5 py-1 rounded-md transition-colors text-left cursor-pointer"
             >
               {prompt}
             </button>
@@ -325,7 +218,7 @@ export const AssistantScreen: React.FC<AssistantScreenProps> = ({
       </div>
 
       {/* Main Conversation Stream */}
-      <div className="bg-white border border-slate-200 rounded-lg p-4 sm:p-5 min-h-[420px] flex flex-col justify-between">
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-4 sm:p-5 min-h-[420px] flex flex-col justify-between">
         <div className="space-y-4 mb-4">
           {messages.map((msg) => {
             const isBot = msg.sender === 'assistant';
@@ -337,10 +230,10 @@ export const AssistantScreen: React.FC<AssistantScreenProps> = ({
               >
                 {/* Avatar */}
                 <div
-                  className={`w-7 h-7 rounded-md flex items-center justify-center shrink-0 text-xs font-medium ${
+                  className={`w-7 h-7 rounded-md flex items-center justify-center shrink-0 text-xs font-medium shadow-xs ${
                     isBot
-                      ? 'bg-emerald-800 text-white'
-                      : 'bg-slate-800 text-white'
+                      ? 'bg-emerald-800 dark:bg-emerald-700 text-white'
+                      : 'bg-slate-800 dark:bg-slate-700 text-white'
                   }`}
                 >
                   {isBot ? <Bot className="w-3.5 h-3.5" /> : <User className="w-3.5 h-3.5" />}
@@ -350,13 +243,13 @@ export const AssistantScreen: React.FC<AssistantScreenProps> = ({
                 <div
                   className={`max-w-[85%] rounded-lg p-3.5 text-xs sm:text-sm leading-relaxed ${
                     isBot
-                      ? 'bg-slate-50 text-slate-900 border border-slate-200'
-                      : 'bg-slate-900 text-white'
+                      ? 'bg-slate-50 dark:bg-slate-800/80 text-slate-900 dark:text-slate-100 border border-slate-200 dark:border-slate-700'
+                      : 'bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900'
                   }`}
                 >
                   {/* Context Tag if provided */}
                   {msg.contextTag && (
-                    <div className="text-[10px] font-medium text-slate-500 bg-white border border-slate-200 px-2 py-0.5 rounded mb-2 w-fit">
+                    <div className="text-[10px] font-medium text-slate-500 dark:text-slate-400 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 px-2 py-0.5 rounded mb-2 w-fit">
                       {msg.contextTag}
                     </div>
                   )}
@@ -368,8 +261,8 @@ export const AssistantScreen: React.FC<AssistantScreenProps> = ({
 
                   {/* Follow-up suggestion buttons */}
                   {msg.actionSuggestions && msg.actionSuggestions.length > 0 && (
-                    <div className="mt-3 pt-2.5 border-t border-slate-200 space-y-1.5">
-                      <span className="text-[10px] font-medium text-slate-500 uppercase block">
+                    <div className="mt-3 pt-2.5 border-t border-slate-200 dark:border-slate-700 space-y-1.5">
+                      <span className="text-[10px] font-medium text-slate-500 dark:text-slate-400 uppercase block">
                         Related Actions:
                       </span>
                       <div className="flex flex-wrap gap-1.5">
@@ -378,7 +271,7 @@ export const AssistantScreen: React.FC<AssistantScreenProps> = ({
                             key={idx}
                             type="button"
                             onClick={() => handleUserSubmit(sug)}
-                            className="text-xs bg-white text-slate-700 hover:text-slate-900 border border-slate-200 hover:border-slate-300 px-2 py-0.5 rounded transition-colors cursor-pointer"
+                            className="text-xs bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-slate-100 border border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 px-2 py-0.5 rounded transition-colors cursor-pointer"
                           >
                             {sug}
                           </button>
@@ -389,7 +282,7 @@ export const AssistantScreen: React.FC<AssistantScreenProps> = ({
 
                   <div
                     className={`text-[10px] mt-1.5 flex justify-end ${
-                      isBot ? 'text-slate-400' : 'text-slate-400'
+                      isBot ? 'text-slate-400 dark:text-slate-500' : 'text-slate-300 dark:text-slate-600'
                     }`}
                   >
                     {msg.timestamp}
@@ -400,14 +293,14 @@ export const AssistantScreen: React.FC<AssistantScreenProps> = ({
           })}
           {isTyping && (
             <div className="flex items-start gap-2.5">
-              <div className="w-7 h-7 rounded-md flex items-center justify-center shrink-0 bg-emerald-800 text-white">
+              <div className="w-7 h-7 rounded-md flex items-center justify-center shrink-0 bg-emerald-800 dark:bg-emerald-700 text-white">
                 <Bot className="w-3.5 h-3.5" />
               </div>
-              <div className="rounded-lg p-3 text-xs bg-slate-50 text-slate-600 border border-slate-200 flex items-center gap-2">
+              <div className="rounded-lg p-3 text-xs bg-slate-50 dark:bg-slate-800/80 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 flex items-center gap-2">
                 <div className="flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-700 animate-pulse" />
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-700 animate-pulse [animation-delay:150ms]" />
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-700 animate-pulse [animation-delay:300ms]" />
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-700 dark:bg-emerald-400 animate-pulse" />
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-700 dark:bg-emerald-400 animate-pulse [animation-delay:150ms]" />
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-700 dark:bg-emerald-400 animate-pulse [animation-delay:300ms]" />
                 </div>
                 <span>AgriSmart Advisor is reviewing farm telemetry...</span>
               </div>
@@ -417,18 +310,18 @@ export const AssistantScreen: React.FC<AssistantScreenProps> = ({
         </div>
 
         {/* Input Bar with Voice UI */}
-        <div className="pt-3 border-t border-slate-200">
+        <div className="pt-3 border-t border-slate-200 dark:border-slate-800">
           {isVoiceRecording && (
-            <div className="mb-2.5 p-2.5 rounded-md bg-slate-50 border border-slate-300 text-slate-800 flex items-center justify-between text-xs">
+            <div className="mb-2.5 p-2.5 rounded-md bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-800 dark:text-slate-200 flex items-center justify-between text-xs">
               <div className="flex items-center gap-2">
                 <span className="w-2 h-2 rounded-full bg-rose-600 animate-pulse" />
                 <span className="font-medium">Listening in {currentLanguage.toUpperCase()}...</span>
-                <span className="text-slate-500">Speak clearly into microphone</span>
+                <span className="text-slate-500 dark:text-slate-400">Speak clearly into microphone</span>
               </div>
               <button
                 type="button"
                 onClick={() => setIsVoiceRecording(false)}
-                className="font-medium text-rose-700 hover:underline"
+                className="font-medium text-rose-700 dark:text-rose-400 hover:underline cursor-pointer"
               >
                 Cancel
               </button>
@@ -446,12 +339,13 @@ export const AssistantScreen: React.FC<AssistantScreenProps> = ({
             <button
               type="button"
               onClick={toggleVoiceRecording}
-              className={`p-2.5 rounded-md border transition-colors cursor-pointer ${
+              className={`p-2.5 rounded-md border transition-colors cursor-pointer shadow-xs ${
                 isVoiceRecording
                   ? 'bg-rose-700 text-white border-rose-800'
-                  : 'bg-white hover:bg-slate-50 text-slate-700 border-slate-200'
+                  : 'bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-750 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-700'
               }`}
               title={isVoiceRecording ? 'Stop recording' : 'Voice input'}
+              aria-label="Voice input"
             >
               {isVoiceRecording ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
             </button>
@@ -468,14 +362,15 @@ export const AssistantScreen: React.FC<AssistantScreenProps> = ({
                   ? 'खेती से जुड़ा सवाल यहाँ पूछें... (उदा. क्या आज सिंचाई करनी चाहिए?)'
                   : 'Ask about crops, diseases, irrigation timing, or weather impact...'
               }
-              className="flex-1 bg-white border border-slate-200 rounded-md px-3.5 py-2 text-xs sm:text-sm text-slate-900 focus:outline-none focus:border-slate-400"
+              className="flex-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-md px-3.5 py-2 text-xs sm:text-sm text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:border-slate-400 dark:focus:border-slate-500"
             />
 
             {/* Send button */}
             <button
               type="submit"
-              disabled={!inputVal.trim()}
-              className="p-2.5 rounded-md bg-emerald-800 hover:bg-emerald-900 text-white transition-colors disabled:opacity-40 cursor-pointer"
+              disabled={!inputVal.trim() || isTyping}
+              className="p-2.5 rounded-md bg-emerald-800 hover:bg-emerald-900 dark:bg-emerald-700 dark:hover:bg-emerald-600 text-white transition-colors disabled:opacity-40 cursor-pointer shadow-xs"
+              aria-label="Send query"
             >
               <Send className="w-4 h-4" />
             </button>

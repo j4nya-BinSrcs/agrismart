@@ -3,22 +3,26 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   ScreenType,
   Language,
   DiagnosisRecord,
   ActionItem,
+  AppNotification,
+  WeatherCondition,
+  HourlyForecast,
+  DailyForecast,
+  IrrigationZone,
+  SustainabilityMetric,
 } from './types';
 import {
-  INITIAL_DIAGNOSES,
-  TODAY_ACTIONS,
-  CURRENT_WEATHER,
-  HOURLY_FORECASTS,
-  DAILY_FORECASTS,
-  IRRIGATION_ZONES,
-  SUSTAINABILITY_DATA,
-} from './data/mockData';
+  farmService,
+  diagnosisService,
+  weatherService,
+  irrigationService,
+  sustainabilityService,
+} from './services';
 import { Sidebar } from './components/layout/Sidebar';
 import { Header } from './components/layout/Header';
 import { NotificationDrawer } from './components/layout/NotificationDrawer';
@@ -29,6 +33,10 @@ import { WeatherScreen } from './components/screens/WeatherScreen';
 import { IrrigationScreen } from './components/screens/IrrigationScreen';
 import { SustainabilityScreen } from './components/screens/SustainabilityScreen';
 import { AssistantScreen } from './components/screens/AssistantScreen';
+import { NotFoundScreen } from './components/screens/NotFoundScreen';
+import { ErrorBoundary } from './components/common/ErrorBoundary';
+import { useToast } from './context/ToastContext';
+import { getStoredItem, setStoredItem } from './utils/storage';
 
 // Mobile bottom navigation icons
 import {
@@ -39,34 +47,191 @@ import {
   MessageSquareHeart,
 } from 'lucide-react';
 
+function screenToPath(screen: ScreenType): string {
+  switch (screen) {
+    case 'dashboard':
+      return '/dashboard';
+    case 'diagnose':
+    case 'diagnosis':
+      return '/diagnosis';
+    case 'diagnosis-result':
+    case 'diagnosis/result':
+      return '/diagnosis/result';
+    case 'weather':
+      return '/weather';
+    case 'irrigation':
+      return '/irrigation';
+    case 'sustainability':
+      return '/sustainability';
+    case 'assistant':
+      return '/assistant';
+    default:
+      return '/dashboard';
+  }
+}
+
+function pathToScreen(pathname: string, hash: string): ScreenType {
+  const cleanPath = (hash && hash.startsWith('#/') ? hash.replace('#', '') : pathname).toLowerCase();
+  
+  if (cleanPath === '/' || cleanPath === '' || cleanPath === '/dashboard') {
+    return 'dashboard';
+  }
+  if (cleanPath === '/diagnose' || cleanPath === '/diagnosis') {
+    return 'diagnose';
+  }
+  if (cleanPath === '/diagnosis/result' || cleanPath === '/diagnosis-result') {
+    return 'diagnosis-result';
+  }
+  if (cleanPath === '/weather') {
+    return 'weather';
+  }
+  if (cleanPath === '/irrigation') {
+    return 'irrigation';
+  }
+  if (cleanPath === '/sustainability') {
+    return 'sustainability';
+  }
+  if (cleanPath === '/assistant') {
+    return 'assistant';
+  }
+  return 'not-found';
+}
+
+const LANG_STORAGE_KEY = 'selected_language';
+
 export default function App() {
-  // App state
+  const { showToast } = useToast();
+
+  // App navigation and view state
   const [currentScreen, setCurrentScreen] = useState<ScreenType>('dashboard');
-  const [currentLanguage, setCurrentLanguage] = useState<Language>('en');
+  const [currentLanguage, setCurrentLanguage] = useState<Language>(() =>
+    getStoredItem<Language>(LANG_STORAGE_KEY, 'en')
+  );
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState<boolean>(false);
   const [isNotificationDrawerOpen, setIsNotificationDrawerOpen] = useState<boolean>(false);
-  const [unreadNotifications, setUnreadNotifications] = useState<number>(3);
 
   // Core agricultural data states
-  const [diagnoses, setDiagnoses] = useState<DiagnosisRecord[]>(INITIAL_DIAGNOSES);
-  const [currentDiagnosis, setCurrentDiagnosis] = useState<DiagnosisRecord>(INITIAL_DIAGNOSES[0]);
-  const [actions, setActions] = useState<ActionItem[]>(TODAY_ACTIONS);
+  const [diagnoses, setDiagnoses] = useState<DiagnosisRecord[]>([]);
+  const [currentDiagnosis, setCurrentDiagnosis] = useState<DiagnosisRecord | null>(null);
+  const [actions, setActions] = useState<ActionItem[]>([]);
+  const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [assistantQuery, setAssistantQuery] = useState<string>('');
 
-  // Toggle action completion
-  const handleToggleAction = (id: string) => {
-    setActions((prev) =>
-      prev.map((act) =>
-        act.id === id ? { ...act, completed: !act.completed } : act
-      )
-    );
+  // Telemetry data from services
+  const [weather, setWeather] = useState<WeatherCondition | null>(null);
+  const [hourlyForecast, setHourlyForecast] = useState<HourlyForecast[]>([]);
+  const [dailyForecast, setDailyForecast] = useState<DailyForecast[]>([]);
+  const [irrigationZones, setIrrigationZones] = useState<IrrigationZone[]>([]);
+  const [sustainability, setSustainability] = useState<SustainabilityMetric | null>(null);
+
+  // URL synchronization
+  const handleNavigate = useCallback((screen: ScreenType) => {
+    const targetPath = screenToPath(screen);
+    if (window.location.pathname !== targetPath) {
+      try {
+        window.history.pushState({ screen }, '', targetPath);
+      } catch {
+        window.location.hash = targetPath;
+      }
+    }
+    setCurrentScreen(screen);
+  }, []);
+
+  // Listen to browser navigation (Back, Forward, Refresh, Direct URL)
+  useEffect(() => {
+    const initialScreen = pathToScreen(window.location.pathname, window.location.hash);
+    setCurrentScreen(initialScreen);
+
+    if (window.location.pathname === '/' || window.location.pathname === '') {
+      try {
+        window.history.replaceState({ screen: 'dashboard' }, '', '/dashboard');
+      } catch {}
+    }
+
+    const handlePopState = () => {
+      const target = pathToScreen(window.location.pathname, window.location.hash);
+      setCurrentScreen(target);
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    window.addEventListener('hashchange', handlePopState);
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+      window.removeEventListener('hashchange', handlePopState);
+    };
+  }, []);
+
+  // Load initial data through service architecture
+  useEffect(() => {
+    let isMounted = true;
+
+    async function loadData() {
+      try {
+        const [
+          diagList,
+          actList,
+          notifList,
+          currentW,
+          hourlyW,
+          dailyW,
+          zones,
+          sust,
+        ] = await Promise.all([
+          diagnosisService.getDiagnosisHistory(),
+          farmService.getTodayActions(),
+          farmService.getNotifications(),
+          weatherService.getCurrentWeather(),
+          weatherService.getHourlyForecast(),
+          weatherService.getDailyForecast(),
+          irrigationService.getIrrigationZones(),
+          sustainabilityService.getSustainabilityMetrics(),
+        ]);
+
+        if (isMounted) {
+          setDiagnoses(diagList);
+          if (diagList.length > 0) {
+            setCurrentDiagnosis(diagList[0]);
+          }
+          setActions(actList);
+          setNotifications(notifList);
+          setWeather(currentW);
+          setHourlyForecast(hourlyW);
+          setDailyForecast(dailyW);
+          setIrrigationZones(zones);
+          setSustainability(sust);
+        }
+      } catch (err) {
+        console.error('[App] Failed to load farm data:', err);
+      }
+    }
+
+    loadData();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  // Handle language change and persist
+  const handleLanguageChange = (lang: Language) => {
+    setCurrentLanguage(lang);
+    setStoredItem(LANG_STORAGE_KEY, lang);
+  };
+
+  // Toggle action completion through service
+  const handleToggleAction = async (id: string) => {
+    try {
+      const updated = await farmService.toggleAction(id);
+      setActions(updated);
+    } catch (err) {
+      console.error('[App] Action toggle failed:', err);
+    }
   };
 
   // When a new diagnosis is generated from DiagnoseScreen
-  const handleDiagnosisComplete = (newRecord: DiagnosisRecord) => {
+  const handleDiagnosisComplete = async (newRecord: DiagnosisRecord) => {
     setCurrentDiagnosis(newRecord);
-    setDiagnoses((prev) => [newRecord, ...prev]);
-    // Also create a relevant action item for Today's actions if not healthy
+    setDiagnoses((prev) => [newRecord, ...prev.filter((d) => d.id !== newRecord.id)]);
+
     if (!newRecord.isHealthy) {
       const newAction: ActionItem = {
         id: `act-${Date.now()}`,
@@ -80,21 +245,60 @@ export default function App() {
         timeframe: 'Target today before rain',
         actionRoute: 'diagnosis-result',
       };
-      setActions((prev) => [newAction, ...prev]);
+      const updatedActions = await farmService.addAction(newAction);
+      setActions(updatedActions);
     }
   };
 
   const handleAskAssistant = (query: string) => {
     setAssistantQuery(query);
-    setCurrentScreen('assistant');
+    handleNavigate('assistant');
   };
 
+  // Notifications operations
+  const handleMarkAsRead = async (id: string) => {
+    const updated = await farmService.markNotificationAsRead(id);
+    setNotifications(updated);
+  };
+
+  const handleMarkAllAsRead = async () => {
+    const updated = await farmService.markAllNotificationsAsRead();
+    setNotifications(updated);
+  };
+
+  // Demo reset mechanism (Section 24)
+  const handleResetDemoData = async () => {
+    try {
+      await farmService.resetDemoData();
+      const [diagList, actList, notifList] = await Promise.all([
+        diagnosisService.getDiagnosisHistory(),
+        farmService.getTodayActions(),
+        farmService.getNotifications(),
+      ]);
+      setDiagnoses(diagList);
+      if (diagList.length > 0) {
+        setCurrentDiagnosis(diagList[0]);
+      }
+      setActions(actList);
+      setNotifications(notifList);
+      setCurrentLanguage('en');
+      setStoredItem(LANG_STORAGE_KEY, 'en');
+      setAssistantQuery('');
+      handleNavigate('dashboard');
+      showToast('Demo data restored to initial Patel Farm state.', 'success');
+    } catch (err) {
+      console.error('[App] Demo reset failed:', err);
+    }
+  };
+
+  const unreadNotificationsCount = notifications.filter((n) => !n.read).length;
+
   return (
-    <div className="flex h-screen bg-[#F8F9FA] text-[#1E293B] overflow-hidden">
+    <div className="flex h-screen bg-[#F8F9FA] dark:bg-[#080808] text-[#1E293B] dark:text-[#EDEDED] overflow-hidden transition-colors">
       {/* 1. Desktop & Mobile Sidebar Navigation */}
       <Sidebar
         currentScreen={currentScreen}
-        onNavigate={setCurrentScreen}
+        onNavigate={handleNavigate}
         isMobileOpen={isMobileSidebarOpen}
         onCloseMobile={() => setIsMobileSidebarOpen(false)}
         hasActiveDiagnosis={Boolean(currentDiagnosis)}
@@ -105,81 +309,87 @@ export default function App() {
         {/* Persistent Top Header */}
         <Header
           currentScreen={currentScreen}
-          onNavigate={setCurrentScreen}
+          onNavigate={handleNavigate}
           currentLanguage={currentLanguage}
-          onLanguageChange={setCurrentLanguage}
+          onLanguageChange={handleLanguageChange}
           onToggleMobileSidebar={() => setIsMobileSidebarOpen(true)}
-          onOpenNotifications={() => {
-            setIsNotificationDrawerOpen(true);
-            setUnreadNotifications(0);
-          }}
-          unreadCount={unreadNotifications}
+          onOpenNotifications={() => setIsNotificationDrawerOpen(true)}
+          unreadCount={unreadNotificationsCount}
+          onResetDemo={handleResetDemoData}
         />
 
-        {/* Scrollable Screen Viewport */}
-        <main className="flex-1 overflow-y-auto px-4 sm:px-6 lg:px-8 py-6 pb-20 sm:pb-8">
-          {currentScreen === 'dashboard' && (
-            <DashboardScreen
-              onNavigate={setCurrentScreen}
-              actions={actions}
-              onToggleAction={handleToggleAction}
-              diagnoses={diagnoses}
-              onSelectDiagnosis={(diag) => {
-                setCurrentDiagnosis(diag);
-                setCurrentScreen('diagnosis-result');
-              }}
-              weather={CURRENT_WEATHER}
-            />
-          )}
+        {/* Scrollable Screen Viewport with Error Boundary */}
+        <main className="flex-1 overflow-y-auto px-4 sm:px-6 lg:px-8 py-6 pb-20 sm:pb-8 bg-[#F8F9FA] dark:bg-[#080808] transition-colors">
+          <ErrorBoundary>
+            {currentScreen === 'dashboard' && weather && (
+              <DashboardScreen
+                onNavigate={handleNavigate}
+                actions={actions}
+                onToggleAction={handleToggleAction}
+                diagnoses={diagnoses}
+                onSelectDiagnosis={(diag) => {
+                  setCurrentDiagnosis(diag);
+                  handleNavigate('diagnosis-result');
+                }}
+                weather={weather}
+              />
+            )}
 
-          {currentScreen === 'diagnose' && (
-            <DiagnoseScreen
-              onDiagnosisComplete={handleDiagnosisComplete}
-              onNavigate={setCurrentScreen}
-            />
-          )}
+            {currentScreen === 'diagnose' && (
+              <DiagnoseScreen
+                onDiagnosisComplete={handleDiagnosisComplete}
+                onNavigate={handleNavigate}
+              />
+            )}
 
-          {currentScreen === 'diagnosis-result' && (
-            <DiagnosisResultScreen
-              diagnosis={currentDiagnosis}
-              onNavigate={setCurrentScreen}
-              onAskAssistantWithContext={handleAskAssistant}
-            />
-          )}
+            {currentScreen === 'diagnosis-result' && (
+              <DiagnosisResultScreen
+                diagnosis={currentDiagnosis || diagnoses[0]}
+                onNavigate={handleNavigate}
+                onAskAssistantWithContext={handleAskAssistant}
+              />
+            )}
 
-          {currentScreen === 'weather' && (
-            <WeatherScreen
-              weather={CURRENT_WEATHER}
-              hourly={HOURLY_FORECASTS}
-              daily={DAILY_FORECASTS}
-              onNavigate={setCurrentScreen}
-            />
-          )}
+            {currentScreen === 'weather' && weather && (
+              <WeatherScreen
+                weather={weather}
+                hourly={hourlyForecast}
+                daily={dailyForecast}
+                onNavigate={handleNavigate}
+              />
+            )}
 
-          {currentScreen === 'irrigation' && (
-            <IrrigationScreen
-              zones={IRRIGATION_ZONES}
-              totalSavedLitres={SUSTAINABILITY_DATA.waterSavedMonthLitres}
-              onNavigate={setCurrentScreen}
-            />
-          )}
+            {currentScreen === 'irrigation' && sustainability && (
+              <IrrigationScreen
+                zones={irrigationZones}
+                totalSavedLitres={sustainability.waterSavedMonthLitres}
+                onNavigate={handleNavigate}
+              />
+            )}
 
-          {currentScreen === 'sustainability' && (
-            <SustainabilityScreen
-              metrics={SUSTAINABILITY_DATA}
-              onNavigate={setCurrentScreen}
-            />
-          )}
+            {currentScreen === 'sustainability' && sustainability && (
+              <SustainabilityScreen
+                metrics={sustainability}
+                onNavigate={handleNavigate}
+              />
+            )}
 
-          {currentScreen === 'assistant' && (
-            <AssistantScreen
-              initialQuery={assistantQuery}
-              onClearInitialQuery={() => setAssistantQuery('')}
-              currentLanguage={currentLanguage}
-              onLanguageChange={setCurrentLanguage}
-              onNavigate={setCurrentScreen}
-            />
-          )}
+            {currentScreen === 'assistant' && (
+              <AssistantScreen
+                initialQuery={assistantQuery}
+                onClearInitialQuery={() => setAssistantQuery('')}
+                currentLanguage={currentLanguage}
+                onLanguageChange={handleLanguageChange}
+                onNavigate={handleNavigate}
+                activeDiagnosis={currentDiagnosis || undefined}
+                weather={weather || undefined}
+              />
+            )}
+
+            {currentScreen === 'not-found' && (
+              <NotFoundScreen onNavigate={handleNavigate} />
+            )}
+          </ErrorBoundary>
         </main>
       </div>
 
@@ -187,17 +397,21 @@ export default function App() {
       <NotificationDrawer
         isOpen={isNotificationDrawerOpen}
         onClose={() => setIsNotificationDrawerOpen(false)}
-        onNavigate={setCurrentScreen}
+        notifications={notifications}
+        onNavigate={handleNavigate}
+        onMarkAsRead={handleMarkAsRead}
+        onMarkAllAsRead={handleMarkAllAsRead}
       />
 
       {/* 4. Responsive Mobile Bottom Navigation Bar (Touch Optimized) */}
-      <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-xs border-t border-slate-200 px-2 py-1 flex items-center justify-around shadow-lg">
+      <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 dark:bg-[#121212]/95 backdrop-blur-xs border-t border-slate-200 dark:border-[#222222] px-2 py-1 flex items-center justify-around shadow-lg transition-colors">
         <button
           type="button"
-          onClick={() => setCurrentScreen('dashboard')}
-          className={`flex flex-col items-center justify-center p-2 rounded-lg text-[10px] font-semibold transition-colors ${
-            currentScreen === 'dashboard' ? 'text-emerald-800' : 'text-slate-500'
+          onClick={() => handleNavigate('dashboard')}
+          className={`flex flex-col items-center justify-center p-2 rounded-lg text-[10px] font-semibold transition-colors cursor-pointer ${
+            currentScreen === 'dashboard' ? 'text-emerald-800 dark:text-emerald-400' : 'text-slate-500 dark:text-slate-400'
           }`}
+          aria-label="Navigate to Home"
         >
           <LayoutDashboard className="w-4 h-4 mb-0.5" />
           <span>Home</span>
@@ -205,12 +419,13 @@ export default function App() {
 
         <button
           type="button"
-          onClick={() => setCurrentScreen('diagnose')}
-          className={`flex flex-col items-center justify-center p-2 rounded-lg text-[10px] font-semibold transition-colors ${
+          onClick={() => handleNavigate('diagnose')}
+          className={`flex flex-col items-center justify-center p-2 rounded-lg text-[10px] font-semibold transition-colors cursor-pointer ${
             currentScreen === 'diagnose' || currentScreen === 'diagnosis-result'
-              ? 'text-emerald-800'
-              : 'text-slate-500'
+              ? 'text-emerald-800 dark:text-emerald-400'
+              : 'text-slate-500 dark:text-slate-400'
           }`}
+          aria-label="Navigate to Crop Diagnosis"
         >
           <ScanLine className="w-4 h-4 mb-0.5" />
           <span>Diagnose</span>
@@ -218,10 +433,11 @@ export default function App() {
 
         <button
           type="button"
-          onClick={() => setCurrentScreen('weather')}
-          className={`flex flex-col items-center justify-center p-2 rounded-lg text-[10px] font-semibold transition-colors ${
-            currentScreen === 'weather' ? 'text-emerald-800' : 'text-slate-500'
+          onClick={() => handleNavigate('weather')}
+          className={`flex flex-col items-center justify-center p-2 rounded-lg text-[10px] font-semibold transition-colors cursor-pointer ${
+            currentScreen === 'weather' ? 'text-emerald-800 dark:text-emerald-400' : 'text-slate-500 dark:text-slate-400'
           }`}
+          aria-label="Navigate to Weather Intelligence"
         >
           <CloudSun className="w-4 h-4 mb-0.5" />
           <span>Weather</span>
@@ -229,10 +445,11 @@ export default function App() {
 
         <button
           type="button"
-          onClick={() => setCurrentScreen('irrigation')}
-          className={`flex flex-col items-center justify-center p-2 rounded-lg text-[10px] font-semibold transition-colors ${
-            currentScreen === 'irrigation' ? 'text-emerald-800' : 'text-slate-500'
+          onClick={() => handleNavigate('irrigation')}
+          className={`flex flex-col items-center justify-center p-2 rounded-lg text-[10px] font-semibold transition-colors cursor-pointer ${
+            currentScreen === 'irrigation' ? 'text-emerald-800 dark:text-emerald-400' : 'text-slate-500 dark:text-slate-400'
           }`}
+          aria-label="Navigate to Smart Irrigation"
         >
           <Droplets className="w-4 h-4 mb-0.5" />
           <span>Irrigation</span>
@@ -240,10 +457,11 @@ export default function App() {
 
         <button
           type="button"
-          onClick={() => setCurrentScreen('assistant')}
-          className={`flex flex-col items-center justify-center p-2 rounded-lg text-[10px] font-semibold transition-colors ${
-            currentScreen === 'assistant' ? 'text-emerald-800' : 'text-slate-500'
+          onClick={() => handleNavigate('assistant')}
+          className={`flex flex-col items-center justify-center p-2 rounded-lg text-[10px] font-semibold transition-colors cursor-pointer ${
+            currentScreen === 'assistant' ? 'text-emerald-800 dark:text-emerald-400' : 'text-slate-500 dark:text-slate-400'
           }`}
+          aria-label="Navigate to Farmer Assistant"
         >
           <MessageSquareHeart className="w-4 h-4 mb-0.5" />
           <span>Advisor</span>
