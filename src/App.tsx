@@ -54,6 +54,8 @@ import {
 
 function screenToPath(screen: ScreenType): string {
   switch (screen) {
+    case 'landing':
+      return '/';
     case 'login':
       return '/login';
     case 'landing':
@@ -78,6 +80,7 @@ function screenToPath(screen: ScreenType): string {
       return '/assistant';
     default:
       return '/login';
+      return '/';
   }
 }
 
@@ -85,6 +88,10 @@ function pathToScreen(pathname: string, hash: string): ScreenType {
   const cleanPath = (hash && hash.startsWith('#/') ? hash.replace('#', '') : pathname).toLowerCase();
   
   if (cleanPath === '/' || cleanPath === '' || cleanPath === '/login') {
+  if (cleanPath === '/' || cleanPath === '' || cleanPath === '/landing' || cleanPath === '/hero') {
+    return 'landing';
+  }
+  if (cleanPath === '/login') {
     return 'login';
   }
   if (cleanPath === '/landing' || cleanPath === '/hero') {
@@ -115,6 +122,7 @@ function pathToScreen(pathname: string, hash: string): ScreenType {
     return 'assistant';
   }
   return 'not-found';
+  return 'landing';
 }
 
 const PROTECTED_SCREENS: ScreenType[] = [
