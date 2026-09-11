@@ -58,8 +58,6 @@ function screenToPath(screen: ScreenType): string {
       return '/';
     case 'login':
       return '/login';
-    case 'landing':
-      return '/landing';
     case 'signup':
       return '/signup';
     case 'dashboard':
@@ -79,7 +77,6 @@ function screenToPath(screen: ScreenType): string {
     case 'assistant':
       return '/assistant';
     default:
-      return '/login';
       return '/';
   }
 }
@@ -87,15 +84,11 @@ function screenToPath(screen: ScreenType): string {
 function pathToScreen(pathname: string, hash: string): ScreenType {
   const cleanPath = (hash && hash.startsWith('#/') ? hash.replace('#', '') : pathname).toLowerCase();
   
-  if (cleanPath === '/' || cleanPath === '' || cleanPath === '/login') {
   if (cleanPath === '/' || cleanPath === '' || cleanPath === '/landing' || cleanPath === '/hero') {
     return 'landing';
   }
   if (cleanPath === '/login') {
     return 'login';
-  }
-  if (cleanPath === '/landing' || cleanPath === '/hero') {
-    return 'landing';
   }
   if (cleanPath === '/signup') {
     return 'signup';
@@ -121,7 +114,6 @@ function pathToScreen(pathname: string, hash: string): ScreenType {
   if (cleanPath === '/assistant') {
     return 'assistant';
   }
-  return 'not-found';
   return 'landing';
 }
 
