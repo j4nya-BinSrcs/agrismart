@@ -55,20 +55,24 @@ export const LandingScreen: React.FC<LandingScreenProps> = ({ onNavigate }) => {
   const [isDesktop, setIsDesktop] = useState(() => {
     if (typeof window === 'undefined') return false;
     const isMobile =
-      window.innerWidth < 768 ||
+      window.innerWidth < 1024 ||
       /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
         navigator.userAgent
-      );
+      ) ||
+      (window.matchMedia &&
+        window.matchMedia('(pointer: coarse) and (max-width: 1200px)').matches);
     return !isMobile;
   });
 
   useEffect(() => {
     const handleResize = () => {
       const isMobile =
-        window.innerWidth < 768 ||
+        window.innerWidth < 1024 ||
         /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
           navigator.userAgent
-        );
+        ) ||
+        (window.matchMedia &&
+          window.matchMedia('(pointer: coarse) and (max-width: 1200px)').matches);
       setIsDesktop(!isMobile);
     };
     window.addEventListener('resize', handleResize, { passive: true });
@@ -300,11 +304,11 @@ export const LandingScreen: React.FC<LandingScreenProps> = ({ onNavigate }) => {
         )}
       </header>
 
-      {/* 2. HERO SECTION */}
-      <section className="relative pt-28 pb-14 sm:pt-36 sm:pb-20 px-4 sm:px-6 lg:px-8 border-b border-slate-200 dark:border-slate-800 transition-colors overflow-hidden">
-        {/* Background Aurora WebGL Animation (Desktop & Tablet only, removed on mobile) */}
+      {/* 2. HERO SECTION - 100dvh FULL FIRST SCREEN */}
+      <section className="relative min-h-[100dvh] flex flex-col justify-center items-center px-4 sm:px-6 lg:px-8 border-b border-slate-200 dark:border-slate-800 transition-colors overflow-hidden pt-20 pb-12 sm:pt-24 sm:pb-16">
+        {/* Background Aurora WebGL Animation (Desktop only, removed on mobile & tablet) */}
         {isDesktop && (
-          <div className="hidden md:block absolute inset-0 pointer-events-none opacity-25 dark:opacity-40 overflow-hidden">
+          <div className="hidden lg:block absolute inset-0 pointer-events-none opacity-25 dark:opacity-40 overflow-hidden">
             <Aurora
               colorStops={["#075c45", "#1e896c", "#075c45"]}
               blend={0.5}
@@ -316,16 +320,15 @@ export const LandingScreen: React.FC<LandingScreenProps> = ({ onNavigate }) => {
         )}
 
         <motion.div
-          className="relative z-10 max-w-4xl mx-auto text-center"
+          className="relative z-10 max-w-3xl sm:max-w-4xl mx-auto text-center my-auto flex flex-col items-center justify-center py-6 sm:py-10"
           initial="hidden"
           animate="visible"
           variants={staggerContainer}
         >
-
           {/* Hero Headline */}
           <motion.h1
             variants={fadeInUp}
-            className="text-3xl sm:text-5xl lg:text-6xl font-semibold tracking-tight text-slate-900 dark:text-slate-100 leading-[1.15] mb-6"
+            className="text-4xl xs:text-5xl sm:text-6xl md:text-7xl font-bold tracking-tight text-slate-900 dark:text-slate-100 leading-[1.08] sm:leading-[1.1] mb-6 sm:mb-8"
           >
             Smarter decisions.
             <br />
@@ -335,20 +338,20 @@ export const LandingScreen: React.FC<LandingScreenProps> = ({ onNavigate }) => {
           {/* Supporting Text */}
           <motion.p
             variants={fadeInUp}
-            className="max-w-2xl mx-auto text-sm sm:text-base text-slate-600 dark:text-slate-400 leading-relaxed mb-8"
+            className="max-w-xl sm:max-w-2xl mx-auto text-base sm:text-lg md:text-xl text-slate-600 dark:text-slate-300 leading-relaxed mb-8 sm:mb-12 font-normal"
           >
             Crop disease diagnostics, hyper-local weather intelligence, precision irrigation scheduling, and farm sustainability tracking — unified in one agricultural decision-support platform.
           </motion.p>
 
-          {/* Action CTAs: Open Demo -> and Login / Signup */}
+          {/* Action CTAs: Open Demo and Login / Signup */}
           <motion.div
             variants={fadeInUp}
-            className="flex flex-col sm:flex-row items-center justify-center gap-3"
+            className="w-full sm:w-auto flex flex-col sm:flex-row items-center justify-center gap-3.5 sm:gap-4"
           >
             <button
               type="button"
               onClick={handleOpenDemo}
-              className="w-full sm:w-auto px-6 py-3 rounded-md bg-emerald-800 hover:bg-emerald-900 dark:bg-emerald-700 dark:hover:bg-emerald-600 text-white font-medium text-xs sm:text-sm transition-all cursor-pointer flex items-center justify-center gap-2 shadow-sm hover:shadow-md"
+              className="w-full sm:w-auto px-8 py-4 sm:px-9 sm:py-4 rounded-xl bg-emerald-800 hover:bg-emerald-900 dark:bg-emerald-700 dark:hover:bg-emerald-600 text-white font-semibold text-base transition-all cursor-pointer flex items-center justify-center gap-2.5 shadow-md hover:shadow-lg active:scale-[0.98]"
             >
               <span>Open Demo</span>
               <ArrowRight className="w-4 h-4" />
@@ -357,20 +360,22 @@ export const LandingScreen: React.FC<LandingScreenProps> = ({ onNavigate }) => {
             <button
               type="button"
               onClick={handleLoginClick}
-              className="w-full sm:w-auto px-6 py-3 rounded-md bg-white hover:bg-slate-50 dark:bg-slate-900 dark:hover:bg-slate-800 text-slate-900 dark:text-slate-100 border border-slate-300 dark:border-slate-700 font-medium text-xs sm:text-sm transition-colors cursor-pointer shadow-2xs"
+              className="w-full sm:w-auto px-8 py-4 sm:px-9 sm:py-4 rounded-xl bg-white hover:bg-slate-50 dark:bg-slate-900 dark:hover:bg-slate-800 text-slate-900 dark:text-slate-100 border border-slate-300 dark:border-slate-700 font-semibold text-base transition-colors cursor-pointer shadow-xs active:scale-[0.98]"
             >
               Login / Signup
             </button>
           </motion.div>
         </motion.div>
+      </section>
 
-        {/* 3. HERO VISUAL: UI Preview of Patel Farm */}
+      {/* 3. HERO VISUAL: UI Preview of Patel Farm */}
+      <section id="product-preview" className="relative py-14 sm:py-20 px-4 sm:px-6 lg:px-8 border-b border-slate-200 dark:border-slate-800 bg-[#F8F9FA] dark:bg-[#080808] transition-colors">
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.6, delay: 0.2 }}
-          className="relative z-10 w-full max-w-6xl mx-auto mt-12 sm:mt-16"
+          className="relative z-10 w-full max-w-6xl mx-auto"
         >
           <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xl overflow-hidden transition-colors">
             {/* Window bar */}

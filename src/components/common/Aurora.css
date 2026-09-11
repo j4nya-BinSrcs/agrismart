@@ -11,7 +11,7 @@
   height: 100% !important;
 }
 
-@media (max-width: 767px) {
+@media (max-width: 1023px), (pointer: coarse) and (max-width: 1200px) {
   .aurora-container,
   .aurora-container canvas {
     display: none !important;

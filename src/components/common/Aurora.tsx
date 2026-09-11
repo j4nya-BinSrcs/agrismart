@@ -145,13 +145,15 @@ export default function Aurora(props: AuroraProps) {
     const ctn = ctnDom.current;
     if (!ctn) return;
 
-    // Prevent WebGL context and animation initialization on mobile devices
+    // Prevent WebGL context and animation initialization on mobile and tablet devices
     const isMobile =
       typeof window !== 'undefined' &&
-      (window.innerWidth < 768 ||
+      (window.innerWidth < 1024 ||
         /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
           navigator.userAgent
-        ));
+        ) ||
+        (window.matchMedia &&
+          window.matchMedia('(pointer: coarse) and (max-width: 1200px)').matches));
     if (isMobile) return;
 
     const renderer = new Renderer({
