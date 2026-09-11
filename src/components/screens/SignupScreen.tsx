@@ -323,8 +323,9 @@ export const SignupScreen: React.FC<SignupScreenProps> = ({ onNavigate }) => {
         </div>
 
         {/* Footer */}
-        <div className="text-center lg:text-left text-[11px] text-slate-400 dark:text-slate-500 pt-4">
-          AgriSmart AI · Intelligent Agricultural Decision Support
+        <div className="text-center lg:text-left text-[11px] text-slate-400 dark:text-slate-500 pt-4 space-y-1">
+          <div>AgriSmart AI · Intelligent Agricultural Decision Support</div>
+          <div>Need registration or setup assistance? Contact <a href="mailto:support@agrismart.ai" className="text-emerald-700 dark:text-emerald-400 hover:underline">support@agrismart.ai</a></div>
         </div>
       </div>
 

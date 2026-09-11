@@ -76,6 +76,8 @@ function screenToPath(screen: ScreenType): string {
       return '/sustainability';
     case 'assistant':
       return '/assistant';
+    case 'not-found':
+      return '/404';
     default:
       return '/';
   }
@@ -114,7 +116,10 @@ function pathToScreen(pathname: string, hash: string): ScreenType {
   if (cleanPath === '/assistant') {
     return 'assistant';
   }
-  return 'landing';
+  if (cleanPath === '/404' || cleanPath === '/not-found') {
+    return 'not-found';
+  }
+  return 'not-found';
 }
 
 const PROTECTED_SCREENS: ScreenType[] = [
@@ -224,6 +229,27 @@ export default function App() {
       handleNavigate('dashboard');
     }
   }, [isAuthenticated, currentScreen, handleNavigate]);
+
+  // Dynamic meaningful page titles
+  useEffect(() => {
+    const titles: Record<ScreenType, string> = {
+      landing: 'AgriSmart AI — Intelligent Agriculture for a Sustainable Future',
+      login: 'Operator Sign In — AgriSmart AI Operations Console',
+      signup: 'Register Farm — AgriSmart AI',
+      dashboard: 'Farm Operations Dashboard — AgriSmart AI',
+      diagnose: 'Crop Disease Diagnosis — AgriSmart AI',
+      diagnosis: 'Crop Disease Diagnosis — AgriSmart AI',
+      'diagnosis-result': 'Diagnosis Report & Advisory — AgriSmart AI',
+      'diagnosis/result': 'Diagnosis Report & Advisory — AgriSmart AI',
+      weather: 'Weather Intelligence & Spray Windows — AgriSmart AI',
+      irrigation: 'Smart Irrigation & Soil Moisture — AgriSmart AI',
+      sustainability: 'Sustainability & Resource Accounting — AgriSmart AI',
+      assistant: 'Farmer Advisor & AI Agronomist — AgriSmart AI',
+      'not-found': 'Page Not Found (404) — AgriSmart AI',
+    };
+
+    document.title = titles[currentScreen] || 'AgriSmart AI — Agricultural Intelligence Platform';
+  }, [currentScreen]);
 
   // Load initial data through service architecture
   useEffect(() => {
@@ -368,6 +394,14 @@ export default function App() {
 
   if (currentScreen === 'signup') {
     return <SignupScreen onNavigate={handleNavigate} />;
+  }
+
+  if (currentScreen === 'not-found' && !isAuthenticated) {
+    return (
+      <div className="min-h-screen bg-[#F8F9FA] dark:bg-[#080808] text-[#1E293B] dark:text-[#EDEDED] flex items-center justify-center p-4 transition-colors">
+        <NotFoundScreen onNavigate={handleNavigate} />
+      </div>
+    );
   }
 
   return (

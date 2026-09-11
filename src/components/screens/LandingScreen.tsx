@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import {
   Leaf,
@@ -13,6 +13,8 @@ import {
   Sparkles,
   Sun,
   Moon,
+  Phone,
+  Mail,
 } from 'lucide-react';
 import { ScreenType } from '../../types';
 import { useAuth } from '../../context/AuthContext';
@@ -50,6 +52,16 @@ export const LandingScreen: React.FC<LandingScreenProps> = ({ onNavigate }) => {
   const { theme, toggleTheme } = useTheme();
   const { showToast } = useToast();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [isScrolled, setIsScrolled] = useState(false);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 20);
+    };
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    handleScroll();
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   const handleOpenDemo = () => {
     loginAsDemo();
@@ -74,13 +86,46 @@ export const LandingScreen: React.FC<LandingScreenProps> = ({ onNavigate }) => {
 
   return (
     <div className="min-h-screen bg-[#F8F9FA] dark:bg-[#080808] text-[#1E293B] dark:text-[#EDEDED] font-sans antialiased transition-colors duration-200">
-      {/* 1. TOP NAVIGATION */}
-      <header className="sticky top-0 z-50 bg-white/95 dark:bg-[#080808]/95 backdrop-blur-xs border-b border-slate-200 dark:border-slate-800 transition-colors w-full">
-        <div className="w-full px-4 sm:px-6 md:px-8 lg:px-12 h-16 flex items-center justify-between">
-          {/* Brand */}
+      {/* 1. TOP NAVIGATION - PREMIUM DARK GLASSMORPHISM */}
+      <header
+        className={`sticky top-0 z-50 w-full transition-all duration-300 ease-out border-b ${
+          isScrolled
+            ? 'border-slate-200/90 dark:border-[rgba(52,211,153,0.18)] shadow-[0_10px_30px_-4px_rgba(0,0,0,0.45),0_1px_10px_0_rgba(16,185,129,0.06)]'
+            : 'border-slate-200/60 dark:border-[rgba(255,255,255,0.08)] shadow-[0_4px_24px_-2px_rgba(0,0,0,0.25),0_1px_6px_0_rgba(16,185,129,0.04)]'
+        }`}
+        style={{
+          backgroundColor:
+            theme === 'dark'
+              ? isScrolled
+                ? 'rgba(10, 15, 14, 0.88)'
+                : 'rgba(10, 15, 14, 0.60)'
+              : isScrolled
+                ? 'rgba(255, 255, 255, 0.90)'
+                : 'rgba(255, 255, 255, 0.70)',
+          backdropFilter: isScrolled
+            ? 'blur(20px) saturate(140%)'
+            : 'blur(18px) saturate(140%)',
+          WebkitBackdropFilter: isScrolled
+            ? 'blur(20px) saturate(140%)'
+            : 'blur(18px) saturate(140%)',
+        }}
+      >
+        {/* Subtle green glow & reflection accent line across the bottom edge */}
+        <div
+          className={`absolute bottom-0 left-0 right-0 h-[1px] pointer-events-none transition-opacity duration-300 ${
+            isScrolled ? 'opacity-80' : 'opacity-40'
+          }`}
+          style={{
+            background:
+              'linear-gradient(90deg, rgba(16,185,129,0) 0%, rgba(16,185,129,0.28) 25%, rgba(52,211,153,0.38) 50%, rgba(16,185,129,0.28) 75%, rgba(16,185,129,0) 100%)',
+          }}
+        />
+
+        <div className="w-full px-4 sm:px-6 md:px-8 lg:px-12 h-16 flex items-center justify-between relative">
+          {/* Brand - Left */}
           <div
             onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-            className="flex items-center gap-2.5 cursor-pointer select-none"
+            className="flex items-center gap-2.5 cursor-pointer select-none shrink-0"
           >
             <div className="w-8 h-8 rounded-md bg-emerald-800 dark:bg-emerald-900/60 border border-emerald-700/60 dark:border-emerald-700 text-white flex items-center justify-center shadow-xs">
               <Leaf className="w-4 h-4 text-emerald-200 dark:text-emerald-400" />
@@ -95,38 +140,38 @@ export const LandingScreen: React.FC<LandingScreenProps> = ({ onNavigate }) => {
             </div>
           </div>
 
-          {/* Desktop Nav Links */}
-          <nav className="hidden md:flex items-center gap-8 text-xs font-medium text-slate-600 dark:text-slate-400">
+          {/* Desktop Nav Links - Centered */}
+          <nav className="hidden md:flex items-center gap-8 text-xs font-medium absolute left-1/2 -translate-x-1/2">
             <button
               type="button"
               onClick={() => scrollToSection('capabilities')}
-              className="hover:text-slate-900 dark:hover:text-slate-100 transition-colors cursor-pointer"
+              className="text-slate-600 dark:text-zinc-300 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors cursor-pointer"
             >
               Product
             </button>
             <button
               type="button"
               onClick={() => scrollToSection('how-it-works')}
-              className="hover:text-slate-900 dark:hover:text-slate-100 transition-colors cursor-pointer"
+              className="text-slate-600 dark:text-zinc-300 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors cursor-pointer"
             >
               How it Works
             </button>
             <button
               type="button"
               onClick={() => scrollToSection('product-preview')}
-              className="hover:text-slate-900 dark:hover:text-slate-100 transition-colors cursor-pointer"
+              className="text-slate-600 dark:text-zinc-300 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors cursor-pointer"
             >
               Preview
             </button>
           </nav>
 
           {/* Desktop Right Actions: Theme Toggle + Open Demo -> + Login */}
-          <div className="hidden md:flex items-center gap-3">
+          <div className="hidden md:flex items-center gap-3 shrink-0 ml-auto">
             {/* Dark/Light Mode Switcher: ONLY Lucide icon, no text */}
             <button
               type="button"
               onClick={toggleTheme}
-              className="p-2 rounded-md text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-amber-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer flex items-center justify-center"
+              className="p-2 rounded-md text-slate-500 hover:text-slate-800 dark:text-zinc-400 dark:hover:text-amber-400 hover:bg-slate-200/50 dark:hover:bg-white/5 transition-colors cursor-pointer flex items-center justify-center"
               aria-label={theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
               title={theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
             >
@@ -141,7 +186,7 @@ export const LandingScreen: React.FC<LandingScreenProps> = ({ onNavigate }) => {
             <button
               type="button"
               onClick={handleOpenDemo}
-              className="px-3.5 py-1.5 rounded-md text-xs font-medium bg-emerald-800 hover:bg-emerald-900 dark:bg-emerald-700 dark:hover:bg-emerald-600 text-white transition-colors cursor-pointer flex items-center gap-1.5 shadow-xs"
+              className="px-3.5 py-1.5 rounded-md text-xs font-medium bg-emerald-800 hover:bg-emerald-900 dark:bg-emerald-700 dark:hover:bg-emerald-600 text-white transition-all cursor-pointer flex items-center gap-1.5 shadow-xs hover:shadow-sm"
             >
               <span>Open Demo</span>
               <ArrowRight className="w-3.5 h-3.5" />
@@ -151,18 +196,18 @@ export const LandingScreen: React.FC<LandingScreenProps> = ({ onNavigate }) => {
             <button
               type="button"
               onClick={handleLoginClick}
-              className="px-3.5 py-1.5 rounded-md text-xs font-medium text-slate-700 dark:text-slate-200 border border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+              className="px-3.5 py-1.5 rounded-md text-xs font-medium text-slate-700 dark:text-zinc-200 border border-slate-300 dark:border-zinc-700/80 hover:bg-slate-100 dark:hover:bg-white/5 transition-colors cursor-pointer"
             >
               Login
             </button>
           </div>
 
           {/* Mobile Right Controls: Theme + Hamburger */}
-          <div className="md:hidden flex items-center gap-1.5">
+          <div className="md:hidden flex items-center gap-1.5 ml-auto">
             <button
               type="button"
               onClick={toggleTheme}
-              className="p-1.5 rounded-md text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+              className="p-1.5 rounded-md text-slate-600 dark:text-zinc-300 hover:bg-slate-200/50 dark:hover:bg-white/5 transition-colors cursor-pointer"
               aria-label="Toggle Theme"
             >
               {theme === 'dark' ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-slate-600" />}
@@ -171,7 +216,7 @@ export const LandingScreen: React.FC<LandingScreenProps> = ({ onNavigate }) => {
             <button
               type="button"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="p-1.5 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-md transition-colors cursor-pointer"
+              className="p-1.5 text-slate-600 dark:text-zinc-300 hover:bg-slate-200/50 dark:hover:bg-white/5 rounded-md transition-colors cursor-pointer"
               aria-label="Toggle navigation"
             >
               {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
@@ -181,30 +226,40 @@ export const LandingScreen: React.FC<LandingScreenProps> = ({ onNavigate }) => {
 
         {/* Mobile Dropdown */}
         {mobileMenuOpen && (
-          <div className="md:hidden border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 py-4 space-y-3">
+          <div
+            className="md:hidden border-b border-emerald-500/15 px-4 py-4 space-y-3 transition-colors"
+            style={{
+              backgroundColor:
+                theme === 'dark'
+                  ? 'rgba(10, 15, 14, 0.95)'
+                  : 'rgba(255, 255, 255, 0.96)',
+              backdropFilter: 'blur(20px)',
+              WebkitBackdropFilter: 'blur(20px)',
+            }}
+          >
             <button
               type="button"
               onClick={() => scrollToSection('capabilities')}
-              className="w-full text-left py-1 text-xs text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white"
+              className="w-full text-left py-1 text-xs text-slate-600 dark:text-zinc-300 hover:text-slate-900 dark:hover:text-white"
             >
               Product
             </button>
             <button
               type="button"
               onClick={() => scrollToSection('how-it-works')}
-              className="w-full text-left py-1 text-xs text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white"
+              className="w-full text-left py-1 text-xs text-slate-600 dark:text-zinc-300 hover:text-slate-900 dark:hover:text-white"
             >
               How it Works
             </button>
             <button
               type="button"
               onClick={() => scrollToSection('product-preview')}
-              className="w-full text-left py-1 text-xs text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white"
+              className="w-full text-left py-1 text-xs text-slate-600 dark:text-zinc-300 hover:text-slate-900 dark:hover:text-white"
             >
               Preview
             </button>
 
-            <div className="pt-3 border-t border-slate-200 dark:border-slate-800 flex flex-col gap-2">
+            <div className="pt-3 border-t border-slate-200 dark:border-zinc-800 flex flex-col gap-2">
               <button
                 type="button"
                 onClick={handleOpenDemo}
@@ -216,7 +271,7 @@ export const LandingScreen: React.FC<LandingScreenProps> = ({ onNavigate }) => {
               <button
                 type="button"
                 onClick={handleLoginClick}
-                className="w-full py-2 text-xs text-center rounded-md border border-slate-300 dark:border-slate-700 text-slate-800 dark:text-slate-200 font-medium cursor-pointer"
+                className="w-full py-2 text-xs text-center rounded-md border border-slate-300 dark:border-zinc-700 text-slate-800 dark:text-zinc-200 font-medium cursor-pointer"
               >
                 Login
               </button>
@@ -226,7 +281,7 @@ export const LandingScreen: React.FC<LandingScreenProps> = ({ onNavigate }) => {
       </header>
 
       {/* 2. HERO SECTION */}
-      <section className="relative pt-14 pb-14 sm:pt-20 sm:pb-20 px-4 sm:px-6 lg:px-8 border-b border-slate-200 dark:border-slate-800 transition-colors overflow-hidden">
+      <section className="relative -mt-16 pt-28 pb-14 sm:pt-36 sm:pb-20 px-4 sm:px-6 lg:px-8 border-b border-slate-200 dark:border-slate-800 transition-colors overflow-hidden">
         {/* Background Aurora WebGL Animation */}
         <div className="absolute inset-0 pointer-events-none opacity-40 dark:opacity-60 overflow-hidden">
           <Aurora
@@ -741,6 +796,45 @@ export const LandingScreen: React.FC<LandingScreenProps> = ({ onNavigate }) => {
               <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-[11px] text-slate-700 dark:text-slate-300">
                 <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
                 <span>Field Telemetry & Edge AI Operational</span>
+              </div>
+
+              {/* Support & Kisan Helpline (Clickable Tel & Mailto) */}
+              <div className="pt-3 border-t border-slate-200 dark:border-slate-800 space-y-2 text-xs">
+                <div className="text-[11px] font-semibold text-slate-900 dark:text-slate-200 uppercase tracking-wider">
+                  Grower Support & Advisory Helpline
+                </div>
+                <div className="space-y-1.5 text-[11px] text-slate-600 dark:text-slate-400">
+                  <div className="flex items-center gap-2">
+                    <Phone className="w-3.5 h-3.5 text-emerald-700 dark:text-emerald-400 shrink-0" />
+                    <span>Kisan Helpline (Toll-Free):</span>
+                    <a
+                      href="tel:+9118001801551"
+                      className="font-mono font-medium text-emerald-700 dark:text-emerald-400 hover:underline"
+                    >
+                      +91 1800 180 1551
+                    </a>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Mail className="w-3.5 h-3.5 text-emerald-700 dark:text-emerald-400 shrink-0" />
+                    <span>Operator Desk:</span>
+                    <a
+                      href="mailto:support@agrismart.ai"
+                      className="font-medium text-emerald-700 dark:text-emerald-400 hover:underline"
+                    >
+                      support@agrismart.ai
+                    </a>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Phone className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500 shrink-0" />
+                    <span>Anand Agronomy Office:</span>
+                    <a
+                      href="tel:+912692261310"
+                      className="font-mono text-slate-600 dark:text-slate-400 hover:underline"
+                    >
+                      +91 (02692) 261-310
+                    </a>
+                  </div>
+                </div>
               </div>
             </div>
 

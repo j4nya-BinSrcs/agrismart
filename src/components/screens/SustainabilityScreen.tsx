@@ -24,6 +24,27 @@ export const SustainabilityScreen: React.FC<SustainabilityScreenProps> = ({
   const [showCalculationModal, setShowCalculationModal] = useState(false);
   const [showWaterConnectionModal, setShowWaterConnectionModal] = useState(false);
 
+  if (!metrics) {
+    return (
+      <div className="max-w-md mx-auto py-20 px-4 text-center">
+        <div className="w-12 h-12 rounded-full bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 mx-auto flex items-center justify-center mb-3">
+          <Leaf className="w-6 h-6" />
+        </div>
+        <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100 mb-1">Sustainability Data Pending</h3>
+        <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">
+          Sustainability scores are calculated after logging field operations, smart irrigation cycles, and treatment history.
+        </p>
+        <button
+          type="button"
+          onClick={() => onNavigate('dashboard')}
+          className="px-3.5 py-1.5 rounded-md bg-emerald-800 hover:bg-emerald-900 text-white text-xs font-medium cursor-pointer transition-colors shadow-xs"
+        >
+          Return to Dashboard
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-5 max-w-5xl mx-auto pb-12">
       {/* Title & Introduction */}

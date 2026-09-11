@@ -95,7 +95,9 @@ export const DiagnosisResultScreen: React.FC<DiagnosisResultScreenProps> = ({
             <div className="relative mt-3 rounded overflow-hidden flex items-center justify-center bg-slate-100 dark:bg-slate-800 min-h-[340px]">
               <img
                 src={diagnosis.imageUrl}
-                alt={diagnosis.crop}
+                alt={`${diagnosis.crop} - ${diagnosis.diseaseName}`}
+                loading="lazy"
+                decoding="async"
                 className="max-h-[420px] w-auto object-contain"
               />
               {showBoundingBoxes && !diagnosis.isHealthy && (
@@ -241,7 +243,9 @@ export const DiagnosisResultScreen: React.FC<DiagnosisResultScreenProps> = ({
             >
               <img
                 src={diagnosis.imageUrl}
-                alt={diagnosis.crop}
+                alt={`${diagnosis.crop} - ${diagnosis.diseaseName}`}
+                loading="lazy"
+                decoding="async"
                 className="w-full h-full object-cover"
               />
               <div className="absolute inset-0 bg-slate-900/20 group-hover:bg-slate-900/30 transition-colors flex items-center justify-center">

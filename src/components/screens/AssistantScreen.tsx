@@ -5,6 +5,8 @@ import {
   MicOff,
   Bot,
   User,
+  Phone,
+  Mail,
 } from 'lucide-react';
 import { AssistantMessage, Language, ScreenType, DiagnosisRecord, WeatherCondition } from '../../types';
 import { assistantService } from '../../services/assistantService';
@@ -375,6 +377,24 @@ export const AssistantScreen: React.FC<AssistantScreenProps> = ({
               <Send className="w-4 h-4" />
             </button>
           </form>
+        </div>
+      </div>
+
+      {/* Field Support & Kisan Helpline Footer */}
+      <div className="flex flex-wrap items-center justify-between gap-2.5 px-3.5 py-2.5 rounded-lg bg-slate-100/70 dark:bg-slate-850/60 border border-slate-200/80 dark:border-slate-800 text-xs text-slate-600 dark:text-slate-400">
+        <div className="flex items-center gap-1.5">
+          <Phone className="w-3.5 h-3.5 text-emerald-700 dark:text-emerald-400 shrink-0" />
+          <span>Kisan Advisory Helpline (Toll-Free):</span>
+          <a href="tel:+9118001801551" className="font-mono font-medium text-emerald-700 dark:text-emerald-400 hover:underline">
+            +91 1800 180 1551
+          </a>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <Mail className="w-3.5 h-3.5 text-emerald-700 dark:text-emerald-400 shrink-0" />
+          <span>Agronomist Email:</span>
+          <a href="mailto:expert@agrismart.ai" className="font-medium text-emerald-700 dark:text-emerald-400 hover:underline">
+            expert@agrismart.ai
+          </a>
         </div>
       </div>
     </div>

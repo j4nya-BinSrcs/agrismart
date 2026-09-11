@@ -225,6 +225,8 @@ export const DiagnoseScreen: React.FC<DiagnoseScreenProps> = ({
                     <img
                       src={selectedImage}
                       alt="Crop leaf preview"
+                      loading="lazy"
+                      decoding="async"
                       className="max-h-[260px] w-auto object-contain rounded"
                     />
 
@@ -337,6 +339,8 @@ export const DiagnoseScreen: React.FC<DiagnoseScreenProps> = ({
                   <img
                     src={selectedImage || presets[0].image}
                     alt="Camera feed"
+                    loading="lazy"
+                    decoding="async"
                     className="h-full w-full object-cover opacity-90"
                   />
                   <div className="absolute inset-6 border border-white/30 rounded pointer-events-none flex items-center justify-center">
@@ -397,6 +401,8 @@ export const DiagnoseScreen: React.FC<DiagnoseScreenProps> = ({
                       <img
                         src={p.image}
                         alt={p.label}
+                        loading="lazy"
+                        decoding="async"
                         className="w-full h-full object-contain"
                       />
                     </div>

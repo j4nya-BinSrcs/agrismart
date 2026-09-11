@@ -36,6 +36,17 @@
 }
 
 @layer base {
+  *, ::before, ::after {
+    box-sizing: border-box;
+  }
+  html, body {
+    overflow-x: hidden;
+    max-width: 100vw;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    -webkit-tap-highlight-color: transparent;
+  }
   body {
     font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     color: #1E293B;
@@ -44,6 +55,11 @@
   .dark body {
     color: #EDEDED;
     background-color: #080808;
+  }
+  img {
+    max-width: 100%;
+    height: auto;
+    display: block;
   }
 }
 

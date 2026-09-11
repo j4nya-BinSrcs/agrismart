@@ -30,10 +30,31 @@ export const IrrigationScreen: React.FC<IrrigationScreenProps> = ({
   onNavigate,
 }) => {
   const { showToast } = useToast();
-  const [selectedZoneId, setSelectedZoneId] = useState<string>(zones[0].id);
+  const [selectedZoneId, setSelectedZoneId] = useState<string>(zones && zones.length > 0 ? zones[0].id : '');
   const [manualOverrideActive, setManualOverrideActive] = useState<Record<string, boolean>>({});
   const [showReasoningModal, setShowReasoningModal] = useState<boolean>(false);
   const [scenario, setScenario] = useState<IrrigationScenario>('rain_imminent');
+
+  if (!zones || zones.length === 0) {
+    return (
+      <div className="max-w-md mx-auto py-20 px-4 text-center">
+        <div className="w-12 h-12 rounded-full bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 mx-auto flex items-center justify-center mb-3">
+          <Droplets className="w-6 h-6" />
+        </div>
+        <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100 mb-1">No Irrigation Zones Configured</h3>
+        <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">
+          Add sensor-monitored plots to view soil moisture and automated weather-synced pump holds.
+        </p>
+        <button
+          type="button"
+          onClick={() => onNavigate('dashboard')}
+          className="px-3.5 py-1.5 rounded-md bg-emerald-800 hover:bg-emerald-900 text-white text-xs font-medium cursor-pointer transition-colors shadow-xs"
+        >
+          Return to Dashboard
+        </button>
+      </div>
+    );
+  }
 
   const selectedZone = zones.find((z) => z.id === selectedZoneId) || zones[0];
 
