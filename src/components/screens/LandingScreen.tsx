@@ -19,6 +19,7 @@ import { useAuth } from '../../context/AuthContext';
 import type { Variants } from 'motion/react';
 import { useTheme } from '../../context/ThemeContext';
 import { useToast } from '../../context/ToastContext';
+import Aurora from '../common/Aurora';
 
 interface LandingScreenProps {
   onNavigate: (screen: ScreenType) => void;
@@ -225,9 +226,20 @@ export const LandingScreen: React.FC<LandingScreenProps> = ({ onNavigate }) => {
       </header>
 
       {/* 2. HERO SECTION */}
-      <section className="pt-14 pb-14 sm:pt-20 sm:pb-20 px-4 sm:px-6 lg:px-8 border-b border-slate-200 dark:border-slate-800 transition-colors">
+      <section className="relative pt-14 pb-14 sm:pt-20 sm:pb-20 px-4 sm:px-6 lg:px-8 border-b border-slate-200 dark:border-slate-800 transition-colors overflow-hidden">
+        {/* Background Aurora WebGL Animation */}
+        <div className="absolute inset-0 pointer-events-none opacity-40 dark:opacity-60 overflow-hidden">
+          <Aurora
+            colorStops={["#075c45", "#1e896c", "#075c45"]}
+            blend={0.5}
+            amplitude={1.0}
+            speed={0.5}
+            lightMode={theme === 'light'}
+          />
+        </div>
+
         <motion.div
-          className="max-w-4xl mx-auto text-center"
+          className="relative z-10 max-w-4xl mx-auto text-center"
           initial="hidden"
           animate="visible"
           variants={staggerContainer}
@@ -294,7 +306,7 @@ export const LandingScreen: React.FC<LandingScreenProps> = ({ onNavigate }) => {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.6, delay: 0.2 }}
-          className="w-full max-w-6xl mx-auto mt-12 sm:mt-16"
+          className="relative z-10 w-full max-w-6xl mx-auto mt-12 sm:mt-16"
         >
           <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xl overflow-hidden transition-colors">
             {/* Window bar */}
