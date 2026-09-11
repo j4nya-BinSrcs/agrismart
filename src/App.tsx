@@ -143,9 +143,6 @@ export default function App() {
     if (!authed && PROTECTED_SCREENS.includes(initial)) {
       return 'login';
     }
-    if (authed && (initial === 'login' || initial === 'signup')) {
-      return 'dashboard';
-    }
     return initial;
   });
 
@@ -175,8 +172,6 @@ export default function App() {
       let resolved = screen;
       if (!isAuthenticated && PROTECTED_SCREENS.includes(screen)) {
         resolved = 'login';
-      } else if (isAuthenticated && (screen === 'login' || screen === 'signup')) {
-        resolved = 'dashboard';
       }
 
       const targetPath = screenToPath(resolved);
@@ -200,11 +195,6 @@ export default function App() {
       try {
         window.history.replaceState({ screen: 'login' }, '', '/login');
       } catch {}
-    } else if (isAuthenticated && (initialScreen === 'login' || initialScreen === 'signup')) {
-      setCurrentScreen('dashboard');
-      try {
-        window.history.replaceState({ screen: 'dashboard' }, '', '/dashboard');
-      } catch {}
     } else {
       setCurrentScreen(initialScreen);
     }
@@ -213,8 +203,6 @@ export default function App() {
       const target = pathToScreen(window.location.pathname, window.location.hash);
       if (!isAuthenticated && PROTECTED_SCREENS.includes(target)) {
         handleNavigate('login');
-      } else if (isAuthenticated && (target === 'login' || target === 'signup')) {
-        handleNavigate('dashboard');
       } else {
         setCurrentScreen(target);
       }

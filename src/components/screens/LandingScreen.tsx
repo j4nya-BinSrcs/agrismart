@@ -13,7 +13,6 @@ import {
   Sparkles,
   Sun,
   Moon,
-  LogOut,
 } from 'lucide-react';
 import { ScreenType } from '../../types';
 import { useAuth } from '../../context/AuthContext';
@@ -57,9 +56,11 @@ export const LandingScreen: React.FC<LandingScreenProps> = ({ onNavigate }) => {
     onNavigate('dashboard');
   };
 
-  const handleLogout = () => {
-    logout();
-    showToast('Logged out of workspace.', 'info');
+  const handleLoginClick = () => {
+    if (isAuthenticated) {
+      logout();
+    }
+    onNavigate('login');
   };
 
   const scrollToSection = (id: string) => {
@@ -73,8 +74,8 @@ export const LandingScreen: React.FC<LandingScreenProps> = ({ onNavigate }) => {
   return (
     <div className="min-h-screen bg-[#F8F9FA] dark:bg-[#080808] text-[#1E293B] dark:text-[#EDEDED] font-sans antialiased transition-colors duration-200">
       {/* 1. TOP NAVIGATION */}
-      <header className="sticky top-0 z-50 bg-white/95 dark:bg-[#080808]/95 backdrop-blur-xs border-b border-slate-200 dark:border-slate-800 transition-colors">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      <header className="sticky top-0 z-50 bg-white/95 dark:bg-[#080808]/95 backdrop-blur-xs border-b border-slate-200 dark:border-slate-800 transition-colors w-full">
+        <div className="w-full px-4 sm:px-6 md:px-8 lg:px-12 h-16 flex items-center justify-between">
           {/* Brand */}
           <div
             onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
@@ -118,72 +119,41 @@ export const LandingScreen: React.FC<LandingScreenProps> = ({ onNavigate }) => {
             </button>
           </nav>
 
-          {/* Desktop Right Actions: Theme Toggle + Open Demo -> + Login/Signup */}
+          {/* Desktop Right Actions: Theme Toggle + Open Demo -> + Login */}
           <div className="hidden md:flex items-center gap-3">
-            {/* Dark/Light Mode Switcher */}
+            {/* Dark/Light Mode Switcher: ONLY Lucide icon, no text */}
             <button
               type="button"
               onClick={toggleTheme}
-              className="p-2 rounded-md text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-amber-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer flex items-center gap-1.5 text-xs font-medium"
+              className="p-2 rounded-md text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-amber-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer flex items-center justify-center"
               aria-label={theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
               title={theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
             >
               {theme === 'dark' ? (
-                <>
-                  <Sun className="w-4 h-4 text-amber-400" />
-                  <span className="text-[11px] text-slate-300">Light</span>
-                </>
+                <Sun className="w-4 h-4 text-amber-400" />
               ) : (
-                <>
-                  <Moon className="w-4 h-4 text-slate-600" />
-                  <span className="text-[11px] text-slate-600">Dark</span>
-                </>
+                <Moon className="w-4 h-4 text-slate-600" />
               )}
             </button>
 
-            {!isAuthenticated ? (
-              <>
-                {/* 1. Open Demo -> button */}
-                <button
-                  type="button"
-                  onClick={handleOpenDemo}
-                  className="px-3.5 py-1.5 rounded-md text-xs font-medium bg-emerald-800 hover:bg-emerald-900 dark:bg-emerald-700 dark:hover:bg-emerald-600 text-white transition-colors cursor-pointer flex items-center gap-1.5 shadow-xs"
-                >
-                  <span>Open Demo</span>
-                  <ArrowRight className="w-3.5 h-3.5" />
-                </button>
+            {/* 1. Open Demo -> button */}
+            <button
+              type="button"
+              onClick={handleOpenDemo}
+              className="px-3.5 py-1.5 rounded-md text-xs font-medium bg-emerald-800 hover:bg-emerald-900 dark:bg-emerald-700 dark:hover:bg-emerald-600 text-white transition-colors cursor-pointer flex items-center gap-1.5 shadow-xs"
+            >
+              <span>Open Demo</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </button>
 
-                {/* 2. Login/Signup button */}
-                <button
-                  type="button"
-                  onClick={() => onNavigate('login')}
-                  className="px-3.5 py-1.5 rounded-md text-xs font-medium text-slate-700 dark:text-slate-200 border border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
-                >
-                  Login / Signup
-                </button>
-              </>
-            ) : (
-              <>
-                {/* Authenticated Actions */}
-                <button
-                  type="button"
-                  onClick={() => onNavigate('dashboard')}
-                  className="px-3.5 py-1.5 rounded-md text-xs font-medium bg-emerald-800 hover:bg-emerald-900 dark:bg-emerald-700 dark:hover:bg-emerald-600 text-white transition-colors cursor-pointer flex items-center gap-1.5 shadow-xs"
-                >
-                  <span>Go to Dashboard</span>
-                  <ArrowRight className="w-3.5 h-3.5" />
-                </button>
-
-                <button
-                  type="button"
-                  onClick={handleLogout}
-                  className="px-3 py-1.5 rounded-md text-xs font-medium text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-900/60 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors cursor-pointer flex items-center gap-1"
-                >
-                  <LogOut className="w-3.5 h-3.5" />
-                  <span>Log Out</span>
-                </button>
-              </>
-            )}
+            {/* 2. Login button */}
+            <button
+              type="button"
+              onClick={handleLoginClick}
+              className="px-3.5 py-1.5 rounded-md text-xs font-medium text-slate-700 dark:text-slate-200 border border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+            >
+              Login
+            </button>
           </div>
 
           {/* Mobile Right Controls: Theme + Hamburger */}
@@ -234,44 +204,21 @@ export const LandingScreen: React.FC<LandingScreenProps> = ({ onNavigate }) => {
             </button>
 
             <div className="pt-3 border-t border-slate-200 dark:border-slate-800 flex flex-col gap-2">
-              {!isAuthenticated ? (
-                <>
-                  <button
-                    type="button"
-                    onClick={handleOpenDemo}
-                    className="w-full py-2.5 text-xs text-center rounded-md bg-emerald-800 hover:bg-emerald-900 dark:bg-emerald-700 text-white font-medium flex items-center justify-center gap-1.5 cursor-pointer shadow-xs"
-                  >
-                    <span>Open Demo</span>
-                    <ArrowRight className="w-3.5 h-3.5" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => onNavigate('login')}
-                    className="w-full py-2 text-xs text-center rounded-md border border-slate-300 dark:border-slate-700 text-slate-800 dark:text-slate-200 font-medium cursor-pointer"
-                  >
-                    Login / Signup
-                  </button>
-                </>
-              ) : (
-                <>
-                  <button
-                    type="button"
-                    onClick={() => onNavigate('dashboard')}
-                    className="w-full py-2.5 text-xs text-center rounded-md bg-emerald-800 dark:bg-emerald-700 text-white font-medium flex items-center justify-center gap-1.5"
-                  >
-                    <span>Go to Dashboard</span>
-                    <ArrowRight className="w-3.5 h-3.5" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleLogout}
-                    className="w-full py-2 text-xs text-center rounded-md border border-rose-200 dark:border-rose-900/60 text-rose-600 dark:text-rose-400 font-medium flex items-center justify-center gap-1"
-                  >
-                    <LogOut className="w-3.5 h-3.5" />
-                    <span>Log Out</span>
-                  </button>
-                </>
-              )}
+              <button
+                type="button"
+                onClick={handleOpenDemo}
+                className="w-full py-2.5 text-xs text-center rounded-md bg-emerald-800 hover:bg-emerald-900 dark:bg-emerald-700 text-white font-medium flex items-center justify-center gap-1.5 cursor-pointer shadow-xs"
+              >
+                <span>Open Demo</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </button>
+              <button
+                type="button"
+                onClick={handleLoginClick}
+                className="w-full py-2 text-xs text-center rounded-md border border-slate-300 dark:border-slate-700 text-slate-800 dark:text-slate-200 font-medium cursor-pointer"
+              >
+                Login
+              </button>
             </div>
           </div>
         )}
@@ -314,46 +261,22 @@ export const LandingScreen: React.FC<LandingScreenProps> = ({ onNavigate }) => {
             variants={fadeInUp}
             className="flex flex-col sm:flex-row items-center justify-center gap-3"
           >
-            {!isAuthenticated ? (
-              <>
-                <button
-                  type="button"
-                  onClick={handleOpenDemo}
-                  className="w-full sm:w-auto px-6 py-3 rounded-md bg-emerald-800 hover:bg-emerald-900 dark:bg-emerald-700 dark:hover:bg-emerald-600 text-white font-medium text-xs sm:text-sm transition-all cursor-pointer flex items-center justify-center gap-2 shadow-sm hover:shadow-md"
-                >
-                  <span>Open Demo</span>
-                  <ArrowRight className="w-4 h-4" />
-                </button>
+            <button
+              type="button"
+              onClick={handleOpenDemo}
+              className="w-full sm:w-auto px-6 py-3 rounded-md bg-emerald-800 hover:bg-emerald-900 dark:bg-emerald-700 dark:hover:bg-emerald-600 text-white font-medium text-xs sm:text-sm transition-all cursor-pointer flex items-center justify-center gap-2 shadow-sm hover:shadow-md"
+            >
+              <span>Open Demo</span>
+              <ArrowRight className="w-4 h-4" />
+            </button>
 
-                <button
-                  type="button"
-                  onClick={() => onNavigate('login')}
-                  className="w-full sm:w-auto px-6 py-3 rounded-md bg-white hover:bg-slate-50 dark:bg-slate-900 dark:hover:bg-slate-800 text-slate-900 dark:text-slate-100 border border-slate-300 dark:border-slate-700 font-medium text-xs sm:text-sm transition-colors cursor-pointer shadow-2xs"
-                >
-                  Login / Signup
-                </button>
-              </>
-            ) : (
-              <>
-                <button
-                  type="button"
-                  onClick={() => onNavigate('dashboard')}
-                  className="w-full sm:w-auto px-6 py-3 rounded-md bg-emerald-800 hover:bg-emerald-900 dark:bg-emerald-700 dark:hover:bg-emerald-600 text-white font-medium text-xs sm:text-sm transition-all cursor-pointer flex items-center justify-center gap-2 shadow-sm"
-                >
-                  <span>Go to Dashboard</span>
-                  <ArrowRight className="w-4 h-4" />
-                </button>
-
-                <button
-                  type="button"
-                  onClick={handleLogout}
-                  className="w-full sm:w-auto px-6 py-3 rounded-md bg-white dark:bg-slate-900 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-900/60 hover:bg-rose-50 dark:hover:bg-rose-950/30 font-medium text-xs sm:text-sm transition-colors cursor-pointer flex items-center justify-center gap-2"
-                >
-                  <LogOut className="w-4 h-4" />
-                  <span>Log Out</span>
-                </button>
-              </>
-            )}
+            <button
+              type="button"
+              onClick={handleLoginClick}
+              className="w-full sm:w-auto px-6 py-3 rounded-md bg-white hover:bg-slate-50 dark:bg-slate-900 dark:hover:bg-slate-800 text-slate-900 dark:text-slate-100 border border-slate-300 dark:border-slate-700 font-medium text-xs sm:text-sm transition-colors cursor-pointer shadow-2xs"
+            >
+              Login / Signup
+            </button>
 
             <button
               type="button"
@@ -371,7 +294,7 @@ export const LandingScreen: React.FC<LandingScreenProps> = ({ onNavigate }) => {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.6, delay: 0.2 }}
-          className="max-w-5xl mx-auto mt-12 sm:mt-16"
+          className="w-full max-w-6xl mx-auto mt-12 sm:mt-16"
         >
           <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xl overflow-hidden transition-colors">
             {/* Window bar */}
@@ -758,89 +681,197 @@ export const LandingScreen: React.FC<LandingScreenProps> = ({ onNavigate }) => {
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-            {!isAuthenticated ? (
-              <>
-                <button
-                  type="button"
-                  onClick={handleOpenDemo}
-                  className="w-full sm:w-auto px-6 py-3 rounded-md bg-emerald-800 hover:bg-emerald-900 dark:bg-emerald-700 dark:hover:bg-emerald-600 text-white font-medium text-xs sm:text-sm transition-all cursor-pointer flex items-center justify-center gap-2 shadow-sm"
-                >
-                  <span>Open Demo</span>
-                  <ArrowRight className="w-4 h-4" />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => onNavigate('login')}
-                  className="w-full sm:w-auto px-6 py-3 rounded-md bg-white hover:bg-slate-50 dark:bg-slate-900 dark:hover:bg-slate-800 text-slate-900 dark:text-slate-100 border border-slate-300 dark:border-slate-700 font-medium text-xs sm:text-sm transition-colors cursor-pointer"
-                >
-                  Login / Signup
-                </button>
-              </>
-            ) : (
-              <>
-                <button
-                  type="button"
-                  onClick={() => onNavigate('dashboard')}
-                  className="w-full sm:w-auto px-6 py-3 rounded-md bg-emerald-800 dark:bg-emerald-700 text-white font-medium text-xs sm:text-sm transition-colors cursor-pointer flex items-center justify-center gap-2"
-                >
-                  <span>Go to Dashboard</span>
-                  <ArrowRight className="w-4 h-4" />
-                </button>
-                <button
-                  type="button"
-                  onClick={handleLogout}
-                  className="w-full sm:w-auto px-6 py-3 rounded-md border border-rose-200 dark:border-rose-900/60 text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 font-medium text-xs sm:text-sm transition-colors cursor-pointer flex items-center justify-center gap-2"
-                >
-                  <LogOut className="w-4 h-4" />
-                  <span>Log Out</span>
-                </button>
-              </>
-            )}
+            <button
+              type="button"
+              onClick={handleOpenDemo}
+              className="w-full sm:w-auto px-6 py-3 rounded-md bg-emerald-800 hover:bg-emerald-900 dark:bg-emerald-700 dark:hover:bg-emerald-600 text-white font-medium text-xs sm:text-sm transition-all cursor-pointer flex items-center justify-center gap-2 shadow-sm"
+            >
+              <span>Open Demo</span>
+              <ArrowRight className="w-4 h-4" />
+            </button>
+            <button
+              type="button"
+              onClick={handleLoginClick}
+              className="w-full sm:w-auto px-6 py-3 rounded-md bg-white hover:bg-slate-50 dark:bg-slate-900 dark:hover:bg-slate-800 text-slate-900 dark:text-slate-100 border border-slate-300 dark:border-slate-700 font-medium text-xs sm:text-sm transition-colors cursor-pointer"
+            >
+              Login / Signup
+            </button>
           </div>
         </motion.div>
       </section>
 
-      {/* 8. FOOTER */}
-      <footer className="py-8 px-4 sm:px-6 lg:px-8 bg-white dark:bg-[#080808] border-t border-slate-200 dark:border-slate-800 text-xs text-slate-500 dark:text-slate-400 transition-colors">
-        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-2">
-            <div className="w-5 h-5 rounded bg-emerald-800 dark:bg-emerald-900/60 border border-emerald-700 flex items-center justify-center">
-              <Leaf className="w-3 h-3 text-emerald-200 dark:text-emerald-400" />
-            </div>
-            <span className="font-semibold text-slate-900 dark:text-slate-100">AgriSmart AI</span>
-            <span className="text-slate-300 dark:text-slate-700">·</span>
-            <span>Agricultural Decision Support</span>
-          </div>
+      {/* 8. COMPREHENSIVE AGRICULTURAL OPERATIONS FOOTER */}
+      <footer className="w-full bg-white dark:bg-[#080808] border-t border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 transition-colors">
+        {/* Main Multi-Column Footer Grid */}
+        <div className="w-full px-4 sm:px-6 md:px-8 lg:px-12 py-12 sm:py-16">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-8 lg:gap-12">
+            {/* Column 1: Brand & Operational Summary (spans 2 columns on lg) */}
+            <div className="lg:col-span-2 space-y-4">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-md bg-emerald-800 dark:bg-emerald-900/60 border border-emerald-700/60 text-white flex items-center justify-center shadow-xs">
+                  <Leaf className="w-4 h-4 text-emerald-200 dark:text-emerald-400" />
+                </div>
+                <div>
+                  <span className="font-semibold text-sm tracking-tight text-slate-900 dark:text-slate-100">
+                    AGRISMART AI
+                  </span>
+                  <span className="block text-[10px] text-slate-500 dark:text-slate-400 leading-none">
+                    Operations Console
+                  </span>
+                </div>
+              </div>
 
-          <div className="flex items-center gap-6">
-            <button
-              type="button"
-              onClick={() => scrollToSection('capabilities')}
-              className="hover:text-slate-900 dark:hover:text-slate-200 transition-colors"
-            >
-              Product
-            </button>
-            <button
-              type="button"
-              onClick={() => scrollToSection('how-it-works')}
-              className="hover:text-slate-900 dark:hover:text-slate-200 transition-colors"
-            >
-              How it Works
-            </button>
-            <button
-              type="button"
-              onClick={() => onNavigate('login')}
-              className="hover:text-slate-900 dark:hover:text-slate-200 transition-colors"
-            >
-              Login / Signup
-            </button>
-            <button
-              type="button"
-              onClick={handleOpenDemo}
-              className="text-emerald-700 dark:text-emerald-400 hover:text-emerald-800 font-medium transition-colors"
-            >
-              Open Demo →
-            </button>
+              <p className="text-xs text-slate-600 dark:text-slate-400 max-w-sm leading-relaxed">
+                Agricultural decision support platform delivering computer-vision crop pathology diagnostics, hyper-local meteorological forecasts, precision irrigation schedules, and field sustainability tracking.
+              </p>
+
+              {/* Status Badge */}
+              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-[11px] text-slate-700 dark:text-slate-300">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                <span>Field Telemetry & Edge AI Operational</span>
+              </div>
+            </div>
+
+            {/* Column 2: Platform Capabilities */}
+            <div className="space-y-3">
+              <h4 className="text-xs font-semibold text-slate-900 dark:text-slate-100 uppercase tracking-wider">
+                Capabilities
+              </h4>
+              <ul className="space-y-2 text-xs">
+                <li>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      loginAsDemo();
+                      onNavigate('diagnose');
+                    }}
+                    className="hover:text-slate-900 dark:hover:text-slate-200 transition-colors cursor-pointer text-left"
+                  >
+                    Crop Diagnosis AI
+                  </button>
+                </li>
+                <li>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      loginAsDemo();
+                      onNavigate('weather');
+                    }}
+                    className="hover:text-slate-900 dark:hover:text-slate-200 transition-colors cursor-pointer text-left"
+                  >
+                    Weather & Spray Windows
+                  </button>
+                </li>
+                <li>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      loginAsDemo();
+                      onNavigate('irrigation');
+                    }}
+                    className="hover:text-slate-900 dark:hover:text-slate-200 transition-colors cursor-pointer text-left"
+                  >
+                    Precision Irrigation
+                  </button>
+                </li>
+                <li>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      loginAsDemo();
+                      onNavigate('sustainability');
+                    }}
+                    className="hover:text-slate-900 dark:hover:text-slate-200 transition-colors cursor-pointer text-left"
+                  >
+                    Sustainability Scores
+                  </button>
+                </li>
+                <li>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      loginAsDemo();
+                      onNavigate('assistant');
+                    }}
+                    className="hover:text-slate-900 dark:hover:text-slate-200 transition-colors cursor-pointer text-left"
+                  >
+                    Agronomy Assistant
+                  </button>
+                </li>
+              </ul>
+            </div>
+
+            {/* Column 3: Agricultural Standards */}
+            <div className="space-y-3">
+              <h4 className="text-xs font-semibold text-slate-900 dark:text-slate-100 uppercase tracking-wider">
+                Field Standards
+              </h4>
+              <ul className="space-y-2 text-xs">
+                <li className="text-slate-500 dark:text-slate-400">Patel Farm (Anand, Gujarat)</li>
+                <li className="text-slate-500 dark:text-slate-400">ICAR Pathology Database</li>
+                <li className="text-slate-500 dark:text-slate-400">IMD Weather Models</li>
+                <li className="text-slate-500 dark:text-slate-400">CPCB Environmental Metrics</li>
+                <li className="text-slate-500 dark:text-slate-400">Multilingual: EN · GU · HI</li>
+              </ul>
+            </div>
+
+            {/* Column 4: Access & Workspace */}
+            <div className="space-y-3">
+              <h4 className="text-xs font-semibold text-slate-900 dark:text-slate-100 uppercase tracking-wider">
+                Direct Access
+              </h4>
+              <ul className="space-y-2 text-xs">
+                <li>
+                  <button
+                    type="button"
+                    onClick={handleOpenDemo}
+                    className="text-emerald-700 dark:text-emerald-400 hover:text-emerald-800 dark:hover:text-emerald-300 font-medium transition-colors cursor-pointer flex items-center gap-1"
+                  >
+                    <span>Open Demo Console</span>
+                    <ArrowRight className="w-3 h-3" />
+                  </button>
+                </li>
+                <li>
+                  <button
+                    type="button"
+                    onClick={handleLoginClick}
+                    className="hover:text-slate-900 dark:hover:text-slate-200 transition-colors cursor-pointer"
+                  >
+                    Operator Login
+                  </button>
+                </li>
+                <li>
+                  <button
+                    type="button"
+                    onClick={() => onNavigate('signup')}
+                    className="hover:text-slate-900 dark:hover:text-slate-200 transition-colors cursor-pointer"
+                  >
+                    Register New Farm
+                  </button>
+                </li>
+                <li>
+                  <button
+                    type="button"
+                    onClick={() => scrollToSection('how-it-works')}
+                    className="hover:text-slate-900 dark:hover:text-slate-200 transition-colors cursor-pointer"
+                  >
+                    Operational Workflow
+                  </button>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        {/* Full-width Sub-footer Bar */}
+        <div className="w-full px-4 sm:px-6 md:px-8 lg:px-12 py-4 border-t border-slate-200 dark:border-slate-800/80 bg-slate-50 dark:bg-slate-950 text-[11px] text-slate-500 dark:text-slate-500 flex flex-col sm:flex-row items-center justify-between gap-3">
+          <div>
+            © 2026 AgriSmart AI. Agricultural Intelligence Platform. Designed for modern Indian agriculture.
+          </div>
+          <div className="flex items-center gap-4">
+            <span>Confidential & Proprietary</span>
+            <span>·</span>
+            <span>v1.0.0 Frontend Lock</span>
           </div>
         </div>
       </footer>
