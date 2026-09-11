@@ -15,6 +15,7 @@ import {
 import { ScreenType } from '../../types';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
+import { useLanguage } from '../../context/LanguageContext';
 
 interface SidebarProps {
   currentScreen: ScreenType;
@@ -35,6 +36,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 }) => {
   const { user, logout } = useAuth();
   const { showToast } = useToast();
+  const { t } = useLanguage();
   const [showUserMenu, setShowUserMenu] = useState(false);
 
   const displayName = user?.name || 'AgriSmartDemo';
@@ -70,41 +72,41 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const navItems = [
     {
       id: 'dashboard' as ScreenType,
-      label: 'Dashboard',
+      label: t('nav.dashboard', 'Dashboard'),
       icon: LayoutDashboard,
     },
     {
       id: 'diagnose' as ScreenType,
-      label: 'Crop Diagnosis',
+      label: t('nav.diagnose', 'Crop Diagnosis'),
       icon: ScanLine,
     },
     ...(hasActiveDiagnosis
       ? [
           {
             id: 'diagnosis-result' as ScreenType,
-            label: 'Diagnosis Result',
+            label: t('nav.diagnosisResult', 'Diagnosis Report'),
             icon: FileCheck2,
           }
         ]
       : []),
     {
       id: 'weather' as ScreenType,
-      label: 'Weather Intelligence',
+      label: t('nav.weather', 'Weather Intelligence'),
       icon: CloudSun,
     },
     {
       id: 'irrigation' as ScreenType,
-      label: 'Smart Irrigation',
+      label: t('nav.irrigation', 'Smart Irrigation'),
       icon: Droplets,
     },
     {
       id: 'sustainability' as ScreenType,
-      label: 'Sustainability',
+      label: t('nav.sustainability', 'Sustainability'),
       icon: Leaf,
     },
     {
       id: 'assistant' as ScreenType,
-      label: 'Farmer Assistant',
+      label: t('nav.assistant', 'Farmer Advisor'),
       icon: MessageSquareHeart,
     },
   ];
@@ -126,7 +128,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <div className="font-semibold text-sm text-white tracking-tight">
               AGRI SMART
             </div>
-            <div className="text-[10px] text-emerald-300/80">Operations Console</div>
+            <div className="text-[10px] text-emerald-300/80">{t('nav.operationsConsole', 'Operations Console')}</div>
           </div>
         </div>
         {/* Mobile close button */}
@@ -154,10 +156,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
               key={item.id}
               type="button"
               onClick={() => handleItemClick(item.id)}
-              className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-xs font-medium transition-colors text-left cursor-pointer ${
+              aria-current={isActive ? 'page' : undefined}
+              className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-xs font-medium transition-all text-left cursor-pointer ${
                 isActive
                   ? 'bg-emerald-800 text-white font-semibold shadow-xs'
-                  : 'text-zinc-300 hover:text-white hover:bg-zinc-800/70 dark:hover:bg-[#1a1a1a]'
+                  : 'text-zinc-300 hover:text-white hover:bg-zinc-800/70 dark:hover:bg-[#1a1a1a] hover:translate-x-0.5'
               }`}
             >
               <Icon
@@ -167,7 +170,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               />
               <span className="truncate">{item.label}</span>
               {isActive && (
-                <span className="ml-auto w-1 h-3.5 rounded-full bg-emerald-400 shrink-0" />
+                <span className="ml-auto w-1 h-3.5 rounded-full bg-emerald-400 shrink-0 transition-all" />
               )}
             </button>
           );
@@ -227,7 +230,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     className="w-full text-left px-2 py-1.5 mt-1 rounded-md text-xs text-zinc-300 hover:text-white hover:bg-zinc-800 dark:hover:bg-[#242424] flex items-center gap-2 transition-colors cursor-pointer"
                   >
                     <RotateCcw className="w-3.5 h-3.5 text-zinc-400" />
-                    <span>Reset Demo Data</span>
+                    <span>{t('nav.resetDemo', 'Reset Demo')}</span>
                   </button>
                 )}
                 <button
@@ -236,7 +239,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   className="w-full text-left px-2 py-1.5 mt-0.5 rounded-md text-xs text-rose-400 hover:text-rose-300 hover:bg-rose-950/40 flex items-center gap-2 transition-colors cursor-pointer"
                 >
                   <LogOut className="w-3.5 h-3.5 text-rose-400" />
-                  <span>Log Out</span>
+                  <span>{t('nav.signOut', 'Sign Out')}</span>
                 </button>
               </div>
             </>
@@ -288,7 +291,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             className="fixed inset-0 bg-black/60 backdrop-blur-xs"
             onClick={onCloseMobile}
           />
-          <div className="relative w-64 max-w-[85vw] h-full shadow-xl z-10 bg-[#242424] dark:bg-[#0f0f0f] border-r border-zinc-800 dark:border-[#222222]">
+          <div className="drawer-enter-left relative w-64 max-w-[85vw] h-full shadow-xl z-10 bg-[#242424] dark:bg-[#0f0f0f] border-r border-zinc-800 dark:border-[#222222]">
             {content}
           </div>
         </div>

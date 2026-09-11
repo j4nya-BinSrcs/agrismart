@@ -17,6 +17,8 @@ import {
   DailyForecast,
   ScreenType,
 } from '../../types';
+import { useLanguage } from '../../context/LanguageContext';
+import { BackButton } from '../common/BackButton';
 
 interface WeatherScreenProps {
   weather: WeatherCondition;
@@ -33,6 +35,7 @@ export const WeatherScreen: React.FC<WeatherScreenProps> = ({
   daily,
   onNavigate,
 }) => {
+  const { t } = useLanguage();
   const [activeHorizon, setActiveHorizon] = useState<TimeHorizon>('today');
 
   if (!weather || !hourly || !daily) {
@@ -48,9 +51,9 @@ export const WeatherScreen: React.FC<WeatherScreenProps> = ({
         <button
           type="button"
           onClick={() => onNavigate('dashboard')}
-          className="px-3.5 py-1.5 rounded-md bg-emerald-800 hover:bg-emerald-900 text-white text-xs font-medium cursor-pointer transition-colors shadow-xs"
+          className="px-3.5 py-1.5 rounded-md bg-emerald-800 hover:bg-emerald-900 text-white text-xs font-medium cursor-pointer transition-all shadow-xs hover:shadow-md hover:-translate-y-px active:translate-y-0"
         >
-          Return to Dashboard
+          {t('weather.backToDashboard', 'Back to Dashboard')}
         </button>
       </div>
     );
@@ -188,9 +191,10 @@ export const WeatherScreen: React.FC<WeatherScreenProps> = ({
     <div className="space-y-5 max-w-5xl mx-auto pb-12">
       {/* Title & Actions */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-200 dark:border-slate-800">
-        <div>
+        <div className="space-y-1">
+          <BackButton label={t('weather.backToDashboard', 'Back to Dashboard')} onClick={() => onNavigate('dashboard')} />
           <h1 className="text-xl font-semibold text-slate-900 dark:text-slate-100 tracking-tight">
-            Weather Intelligence
+            {t('weather.title', 'Weather Intelligence')}
           </h1>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
             Regional Anand district meteorological data with agronomic advisory implications
@@ -203,14 +207,14 @@ export const WeatherScreen: React.FC<WeatherScreenProps> = ({
             onClick={() => onNavigate('irrigation')}
             className="px-3 py-1.5 text-xs font-medium rounded-md bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-750 transition-colors cursor-pointer shadow-xs"
           >
-            Irrigation Status
+            {t('weather.irrigationStatus', 'Irrigation Status')}
           </button>
           <button
             type="button"
             onClick={() => onNavigate('diagnose')}
             className="px-3 py-1.5 text-xs font-medium rounded-md bg-emerald-800 hover:bg-emerald-900 dark:bg-emerald-700 dark:hover:bg-emerald-600 text-white transition-colors cursor-pointer shadow-xs"
           >
-            Disease Scanner
+            {t('weather.diseaseScanner', 'Disease Scanner')}
           </button>
         </div>
       </div>
@@ -225,9 +229,9 @@ export const WeatherScreen: React.FC<WeatherScreenProps> = ({
           {(['today', 'tomorrow', 'next3days'] as TimeHorizon[]).map((horizon) => {
             const isSelected = activeHorizon === horizon;
             const labels = {
-              today: 'Today',
-              tomorrow: 'Tomorrow',
-              next3days: 'Next 3 Days',
+              today: t('weather.today', 'Today'),
+              tomorrow: t('weather.tomorrow', 'Tomorrow'),
+              next3days: t('weather.next3days', 'Next 3 Days'),
             };
             return (
               <button
@@ -302,25 +306,25 @@ export const WeatherScreen: React.FC<WeatherScreenProps> = ({
       {/* Current Conditions Metrics Row */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5">
         <div className="p-3.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
-          <div className="text-[10px] font-medium text-slate-500 dark:text-slate-400 uppercase mb-0.5">Temperature</div>
+          <div className="text-[10px] font-medium text-slate-500 dark:text-slate-400 uppercase mb-0.5">{t('weather.temperature', 'Temperature')}</div>
           <div className="text-xl font-semibold text-slate-900 dark:text-slate-100">{currentH.temp}°C</div>
           <div className="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5">Feels {currentH.feelsLike}°C</div>
         </div>
 
         <div className="p-3.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
-          <div className="text-[10px] font-medium text-slate-500 dark:text-slate-400 uppercase mb-0.5">Rain Probability</div>
+          <div className="text-[10px] font-medium text-slate-500 dark:text-slate-400 uppercase mb-0.5">{t('weather.rainProbability', 'Rain Probability')}</div>
           <div className="text-xl font-semibold text-slate-900 dark:text-slate-100">{currentH.rainProb}%</div>
           <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">~{currentH.rainfallMm} mm expected</div>
         </div>
 
         <div className="p-3.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
-          <div className="text-[10px] font-medium text-slate-500 dark:text-slate-400 uppercase mb-0.5">Relative Humidity</div>
+          <div className="text-[10px] font-medium text-slate-500 dark:text-slate-400 uppercase mb-0.5">{t('weather.humidity', 'Relative Humidity')}</div>
           <div className="text-xl font-semibold text-slate-900 dark:text-slate-100">{currentH.humidity}%</div>
           <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">{currentH.humidity > 65 ? 'Elevated humidity' : 'Optimal range'}</div>
         </div>
 
         <div className="p-3.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
-          <div className="text-[10px] font-medium text-slate-500 dark:text-slate-400 uppercase mb-0.5">Wind Speed</div>
+          <div className="text-[10px] font-medium text-slate-500 dark:text-slate-400 uppercase mb-0.5">{t('weather.wind', 'Wind Speed')}</div>
           <div className="text-xl font-semibold text-slate-900 dark:text-slate-100">{currentH.windSpeed} km/h</div>
           <div className="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5">Breeze from SW</div>
         </div>
@@ -332,7 +336,7 @@ export const WeatherScreen: React.FC<WeatherScreenProps> = ({
         </div>
 
         <div className="p-3.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
-          <div className="text-[10px] font-medium text-slate-500 dark:text-slate-400 uppercase mb-0.5">Spray Suitability</div>
+          <div className="text-[10px] font-medium text-slate-500 dark:text-slate-400 uppercase mb-0.5">{t('weather.sprayWindows', 'Spray Suitability')}</div>
           <div className="text-sm font-semibold text-slate-900 dark:text-slate-100 mt-1 flex items-center gap-1">
             <span className={`w-2 h-2 rounded-full ${currentH.sprayDotColor}`} />
             <span className="truncate">{currentH.sprayStatus}</span>
@@ -348,7 +352,7 @@ export const WeatherScreen: React.FC<WeatherScreenProps> = ({
         <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
           <div>
             <h3 className="text-xs font-semibold text-slate-900 dark:text-slate-100">
-              Hourly Advisory & Spray Windows
+              {t('weather.hourlyOutlook', 'Hourly Advisory & Spray Windows')}
             </h3>
             <p className="text-[11px] text-slate-500 dark:text-slate-400">
               24-hour operational conditions and precipitation likelihood
@@ -406,7 +410,7 @@ export const WeatherScreen: React.FC<WeatherScreenProps> = ({
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-5 space-y-3">
         <div className="pb-2 border-b border-slate-100 dark:border-slate-800">
           <h3 className="text-xs font-semibold text-slate-900 dark:text-slate-100">
-            5-Day Farm Operational Outlook
+            {t('weather.dailyOutlook', '5-Day Farm Operational Outlook')}
           </h3>
           <p className="text-[11px] text-slate-500 dark:text-slate-400">
             Medium-term planning for planting, spraying, and cultivation tasks

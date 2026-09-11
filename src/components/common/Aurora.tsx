@@ -18,6 +18,7 @@ uniform vec3 uColorStops[3];
 uniform vec2 uResolution;
 uniform float uBlend;
 uniform float uLightMode;
+uniform float uZoom;
 
 out vec4 fragColor;
 
@@ -86,14 +87,22 @@ struct ColorStop {
 
 void main() {
   vec2 uv = gl_FragCoord.xy / uResolution;
-  
+  // Responsive "zoom" — values below 1.0 compress the composition toward
+  // the horizontal center so the same aurora reads as a wider, calmer
+  // band on narrow viewports instead of being cropped/dominant.
+  uv.x = (uv.x - 0.5) / max(uZoom, 0.001) + 0.5;
+
   ColorStop colors[3];
   colors[0] = ColorStop(uColorStops[0], 0.0);
   colors[1] = ColorStop(uColorStops[1], 0.5);
   colors[2] = ColorStop(uColorStops[2], 1.0);
   
   vec3 rampColor;
-  COLOR_RAMP(colors, uv.x, rampColor);
+  // Clamp only the color-ramp lookup to [0,1] — the ramp's stops are only
+  // defined across that domain, and sampling outside it (which the zoomed
+  // uv.x can do on narrow viewports) would linearly extrapolate colors
+  // past the ramp's endpoints and fringe with oversaturated hues.
+  COLOR_RAMP(colors, clamp(uv.x, 0.0, 1.0), rampColor);
   
   float height = snoise(vec2(uv.x * 2.0 + uTime * 0.1, uTime * 0.25)) * 0.5 * uAmplitude;
   height = exp(height);
@@ -128,6 +137,17 @@ export interface AuroraProps {
   className?: string;
 }
 
+// Responsive zoom-out factor so the same aurora composition reads as one
+// consistent design at every breakpoint instead of separate mobile/desktop
+// artwork — narrower viewports get a smaller value which visually
+// compresses/zooms the pattern out rather than cropping it.
+function getResponsiveZoom(width: number): number {
+  if (width < 400) return 0.55;
+  if (width < 640) return 0.65;
+  if (width < 1024) return 0.8;
+  return 1.0;
+}
+
 export default function Aurora(props: AuroraProps) {
   const {
     colorStops = ['#075c45', '#1e896c', '#075c45'],
@@ -145,22 +165,28 @@ export default function Aurora(props: AuroraProps) {
     const ctn = ctnDom.current;
     if (!ctn) return;
 
-    // Prevent WebGL context and animation initialization on mobile and tablet devices
-    const isMobile =
+    // Respect reduced-motion preference — skip the animated WebGL background
+    // entirely rather than force motion on users who opted out.
+    const prefersReducedMotion =
       typeof window !== 'undefined' &&
-      (window.innerWidth < 1024 ||
-        /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
-          navigator.userAgent
-        ) ||
-        (window.matchMedia &&
-          window.matchMedia('(pointer: coarse) and (max-width: 1200px)').matches));
-    if (isMobile) return;
+      window.matchMedia &&
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (prefersReducedMotion) return;
 
-    const renderer = new Renderer({
-      alpha: true,
-      premultipliedAlpha: true,
-      antialias: true,
-    });
+    let renderer: Renderer;
+    try {
+      renderer = new Renderer({
+        alpha: true,
+        premultipliedAlpha: true,
+        antialias: true,
+        // Cap device pixel ratio on smaller/lower-power viewports to keep
+        // the responsive Aurora performant on mobile.
+        dpr: Math.min(window.devicePixelRatio || 1, window.innerWidth < 1024 ? 1.5 : 2),
+      });
+    } catch {
+      // No WebGL2 support — silently skip the decorative background.
+      return;
+    }
     const gl = renderer.gl;
     gl.clearColor(0, 0, 0, 0);
     gl.enable(gl.BLEND);
@@ -176,9 +202,10 @@ export default function Aurora(props: AuroraProps) {
       renderer.setSize(width, height);
       if (program) {
         program.uniforms.uResolution.value = [width, height];
+        program.uniforms.uZoom.value = getResponsiveZoom(width);
       }
     }
-    window.addEventListener('resize', resize);
+    window.addEventListener('resize', resize, { passive: true });
 
     const geometry = new Triangle(gl);
     if ((geometry.attributes as any).uv) {
@@ -200,6 +227,7 @@ export default function Aurora(props: AuroraProps) {
         uResolution: { value: [ctn.offsetWidth, ctn.offsetHeight] },
         uBlend: { value: blend },
         uLightMode: { value: lightMode ? 1 : 0 },
+        uZoom: { value: getResponsiveZoom(ctn.offsetWidth) },
       },
     });
 

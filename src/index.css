@@ -48,7 +48,7 @@
     -webkit-tap-highlight-color: transparent;
   }
   body {
-    font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    font-family: 'Plus Jakarta Sans', 'Noto Sans Devanagari', 'Noto Sans Gujarati', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     color: #1E293B;
     background-color: #F8F9FA;
   }
@@ -83,4 +83,142 @@
 }
 .dark ::-webkit-scrollbar-thumb:hover {
   background: #404040;
+}
+
+/* ==========================================================
+   GLOBAL MOTION & INTERACTION SYSTEM
+   ========================================================== */
+
+:root {
+  --ease-out-standard: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-out-standard: cubic-bezier(0.4, 0, 0.2, 1);
+  --motion-hover: 180ms;
+  --motion-page: 260ms;
+}
+
+/* Baseline transition for common interactive/visual properties. Scoped to
+   elements that opt in via .transition-colors / .transition-all / .transition-transform
+   (Tailwind utilities already applied across the app) plus a light default on
+   buttons, links, and common interactive roles so nothing feels abrupt. */
+a,
+button,
+[role='button'],
+input,
+select,
+textarea {
+  transition-property: background-color, border-color, color, box-shadow, transform, opacity;
+  transition-duration: var(--motion-hover);
+  transition-timing-function: var(--ease-out-standard);
+}
+
+/* Page/route transition wrapper — see App.tsx .page-transition usage */
+.page-transition-enter {
+  animation: page-enter var(--motion-page) var(--ease-out-standard) both;
+}
+
+@keyframes page-enter {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.997);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Slide-over drawer / panel entrance (opt-in utility) — mounts fresh each
+   time the panel opens (conditional render), so the keyframe replays. */
+.drawer-enter-right {
+  animation: drawer-enter-right var(--motion-page) var(--ease-out-standard) both;
+}
+@keyframes drawer-enter-right {
+  from {
+    opacity: 0;
+    transform: translateX(24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+.drawer-enter-left {
+  animation: drawer-enter-left var(--motion-page) var(--ease-out-standard) both;
+}
+@keyframes drawer-enter-left {
+  from {
+    opacity: 0;
+    transform: translateX(-24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Card / surface hover lift (opt-in utility) */
+.hover-lift {
+  transition: transform var(--motion-hover) var(--ease-out-standard),
+    box-shadow var(--motion-hover) var(--ease-out-standard),
+    border-color var(--motion-hover) var(--ease-out-standard),
+    background-color var(--motion-hover) var(--ease-out-standard);
+}
+.hover-lift:hover {
+  transform: translateY(-2px);
+}
+
+/* Icon-button subtle scale (opt-in utility) */
+.hover-scale {
+  transition: transform var(--motion-hover) var(--ease-out-standard),
+    background-color var(--motion-hover) var(--ease-out-standard),
+    color var(--motion-hover) var(--ease-out-standard);
+}
+.hover-scale:hover {
+  transform: scale(1.04);
+}
+.hover-scale:active {
+  transform: scale(0.97);
+}
+
+/* Accessible focus-visible ring, consistent across the app, preserved even
+   where Tailwind's default outline is suppressed */
+a:focus-visible,
+button:focus-visible,
+[role='button']:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid #059669;
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+.dark a:focus-visible,
+.dark button:focus-visible,
+.dark [role='button']:focus-visible,
+.dark input:focus-visible,
+.dark select:focus-visible,
+.dark textarea:focus-visible,
+.dark [tabindex]:focus-visible {
+  outline-color: #34d399;
+}
+
+/* Reduced motion: strip transforms/animations, keep only essential opacity/color state */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+  .page-transition-enter {
+    animation: none !important;
+  }
+  .hover-lift:hover,
+  .hover-scale:hover,
+  .hover-scale:active {
+    transform: none !important;
+  }
 }

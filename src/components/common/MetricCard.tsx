@@ -29,7 +29,7 @@ export const MetricCard: React.FC<MetricCardProps> = ({
   return (
     <div
       id={id}
-      className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-4 flex flex-col justify-between shadow-xs transition-colors"
+      className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-4 flex flex-col justify-between shadow-xs transition-all hover:border-slate-300 dark:hover:border-slate-700 hover:shadow-md hover:-translate-y-0.5"
     >
       <div>
         <div className="flex items-center justify-between gap-2 mb-2">

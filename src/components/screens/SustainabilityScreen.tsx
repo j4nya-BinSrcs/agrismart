@@ -11,6 +11,8 @@ import {
   ExternalLink,
 } from 'lucide-react';
 import { SustainabilityMetric, ScreenType } from '../../types';
+import { useLanguage } from '../../context/LanguageContext';
+import { BackButton } from '../common/BackButton';
 
 interface SustainabilityScreenProps {
   metrics: SustainabilityMetric;
@@ -21,6 +23,7 @@ export const SustainabilityScreen: React.FC<SustainabilityScreenProps> = ({
   metrics,
   onNavigate,
 }) => {
+  const { t } = useLanguage();
   const [showCalculationModal, setShowCalculationModal] = useState(false);
   const [showWaterConnectionModal, setShowWaterConnectionModal] = useState(false);
 
@@ -37,9 +40,9 @@ export const SustainabilityScreen: React.FC<SustainabilityScreenProps> = ({
         <button
           type="button"
           onClick={() => onNavigate('dashboard')}
-          className="px-3.5 py-1.5 rounded-md bg-emerald-800 hover:bg-emerald-900 text-white text-xs font-medium cursor-pointer transition-colors shadow-xs"
+          className="px-3.5 py-1.5 rounded-md bg-emerald-800 hover:bg-emerald-900 text-white text-xs font-medium cursor-pointer transition-all shadow-xs hover:shadow-md hover:-translate-y-px active:translate-y-0"
         >
-          Return to Dashboard
+          {t('sustainability.backToDashboard', 'Back to Dashboard')}
         </button>
       </div>
     );
@@ -49,9 +52,10 @@ export const SustainabilityScreen: React.FC<SustainabilityScreenProps> = ({
     <div className="space-y-5 max-w-5xl mx-auto pb-12">
       {/* Title & Introduction */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-200 dark:border-slate-800">
-        <div>
+        <div className="space-y-1">
+          <BackButton label={t('sustainability.backToDashboard', 'Back to Dashboard')} onClick={() => onNavigate('dashboard')} />
           <h1 className="text-xl font-semibold text-slate-900 dark:text-slate-100 tracking-tight">
-            Sustainability Scorecard
+            {t('sustainability.title', 'Sustainability Scorecard')}
           </h1>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
             Resource conservation accounting: water savings, reduced chemical load, and agricultural carbon footprint
@@ -64,7 +68,7 @@ export const SustainabilityScreen: React.FC<SustainabilityScreenProps> = ({
           className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-750 transition-colors cursor-pointer shrink-0 shadow-xs"
         >
           <HelpCircle className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500" />
-          <span>How is this calculated?</span>
+          <span>{t('sustainability.howCalculated', 'How is this calculated?')}</span>
         </button>
       </div>
 
@@ -84,7 +88,7 @@ export const SustainabilityScreen: React.FC<SustainabilityScreenProps> = ({
             <div>
               <div className="flex items-center gap-2 mb-0.5">
                 <span className="text-xs font-semibold text-slate-900 dark:text-slate-100">
-                  Overall Sustainability Index
+                  {t('sustainability.ecoScore', 'Overall Sustainability Index')}
                 </span>
                 <span className="inline-flex items-center gap-1 text-[11px] text-emerald-800 dark:text-emerald-300 font-medium bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-800 px-1.5 py-0.5 rounded">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-700 dark:bg-emerald-400" />
@@ -215,7 +219,7 @@ export const SustainabilityScreen: React.FC<SustainabilityScreenProps> = ({
             onClick={() => onNavigate('irrigation')}
             className="px-3 py-1.5 text-xs font-medium rounded-md bg-emerald-800 hover:bg-emerald-900 dark:bg-emerald-700 dark:hover:bg-emerald-600 text-white transition-colors cursor-pointer inline-flex items-center gap-1 shadow-xs"
           >
-            <span>View Irrigation Plan</span>
+            <span>{t('sustainability.viewIrrigationPlan', 'View Irrigation Plan')}</span>
             <ArrowRight className="w-3.5 h-3.5" />
           </button>
         </div>
@@ -225,7 +229,7 @@ export const SustainabilityScreen: React.FC<SustainabilityScreenProps> = ({
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-5 space-y-3">
         <div className="pb-2 border-b border-slate-100 dark:border-slate-800">
           <h3 className="text-xs font-semibold text-slate-900 dark:text-slate-100">
-            Measurable Resource Savings (Current Month)
+            {t('sustainability.resourceAccounting', 'Measurable Resource Savings (Current Month)')}
           </h3>
           <p className="text-[11px] text-slate-500 dark:text-slate-400">
             Verified reductions recorded through AgriSmart AI operational advisories
@@ -238,7 +242,7 @@ export const SustainabilityScreen: React.FC<SustainabilityScreenProps> = ({
             className="p-3.5 rounded-md bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 hover:border-emerald-300 dark:hover:border-emerald-600 transition-colors cursor-pointer group"
           >
             <div className="flex items-center justify-between">
-              <div className="text-[10px] font-medium text-slate-500 dark:text-slate-400 uppercase">Estimated Water Saved</div>
+              <div className="text-[10px] font-medium text-slate-500 dark:text-slate-400 uppercase">{t('sustainability.waterConserved', 'Estimated Water Saved')}</div>
               <ExternalLink className="w-3 h-3 text-slate-400 group-hover:text-emerald-700 dark:group-hover:text-emerald-400 transition-colors" />
             </div>
             <div className="text-xl font-semibold text-slate-900 dark:text-slate-100 font-sans my-1">
@@ -250,7 +254,7 @@ export const SustainabilityScreen: React.FC<SustainabilityScreenProps> = ({
           </div>
 
           <div className="p-3.5 rounded-md bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700">
-            <div className="text-[10px] font-medium text-slate-500 dark:text-slate-400 uppercase">Carbon Offset (Pumping Power)</div>
+            <div className="text-[10px] font-medium text-slate-500 dark:text-slate-400 uppercase">{t('sustainability.carbonOffset', 'Carbon Offset (Pumping Power)')}</div>
             <div className="text-xl font-semibold text-slate-900 dark:text-slate-100 font-sans my-1">
               {metrics.carbonOffsetKg} kg CO₂e
             </div>

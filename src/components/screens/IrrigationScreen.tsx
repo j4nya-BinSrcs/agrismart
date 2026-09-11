@@ -15,6 +15,8 @@ import {
 import { IrrigationZone, ScreenType } from '../../types';
 import { StatusBadge } from '../common/StatusBadge';
 import { useToast } from '../../context/ToastContext';
+import { useLanguage } from '../../context/LanguageContext';
+import { BackButton } from '../common/BackButton';
 
 interface IrrigationScreenProps {
   zones: IrrigationZone[];
@@ -30,6 +32,7 @@ export const IrrigationScreen: React.FC<IrrigationScreenProps> = ({
   onNavigate,
 }) => {
   const { showToast } = useToast();
+  const { t } = useLanguage();
   const [selectedZoneId, setSelectedZoneId] = useState<string>(zones && zones.length > 0 ? zones[0].id : '');
   const [manualOverrideActive, setManualOverrideActive] = useState<Record<string, boolean>>({});
   const [showReasoningModal, setShowReasoningModal] = useState<boolean>(false);
@@ -48,9 +51,9 @@ export const IrrigationScreen: React.FC<IrrigationScreenProps> = ({
         <button
           type="button"
           onClick={() => onNavigate('dashboard')}
-          className="px-3.5 py-1.5 rounded-md bg-emerald-800 hover:bg-emerald-900 text-white text-xs font-medium cursor-pointer transition-colors shadow-xs"
+          className="px-3.5 py-1.5 rounded-md bg-emerald-800 hover:bg-emerald-900 text-white text-xs font-medium cursor-pointer transition-all shadow-xs hover:shadow-md hover:-translate-y-px active:translate-y-0"
         >
-          Return to Dashboard
+          {t('irrigation.backToDashboard', 'Back to Dashboard')}
         </button>
       </div>
     );
@@ -196,9 +199,10 @@ export const IrrigationScreen: React.FC<IrrigationScreenProps> = ({
 
       {/* Screen Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-200 dark:border-slate-800">
-        <div>
+        <div className="space-y-1">
+          <BackButton label={t('irrigation.backToDashboard', 'Back to Dashboard')} onClick={() => onNavigate('dashboard')} />
           <h1 className="text-xl font-semibold text-slate-900 dark:text-slate-100 tracking-tight">
-            Smart Irrigation Management
+            {t('irrigation.title', 'Smart Irrigation Management')}
           </h1>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
             Soil sensor telemetry correlated with local precipitation forecast
@@ -211,14 +215,14 @@ export const IrrigationScreen: React.FC<IrrigationScreenProps> = ({
             onClick={() => onNavigate('weather')}
             className="px-3 py-1.5 text-xs font-medium rounded-md bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-750 transition-colors cursor-pointer shadow-xs"
           >
-            Weather Forecast
+            {t('irrigation.weatherForecast', 'Weather Forecast')}
           </button>
           <button
             type="button"
             onClick={() => onNavigate('sustainability')}
             className="px-3 py-1.5 text-xs font-medium rounded-md bg-emerald-800 hover:bg-emerald-900 dark:bg-emerald-700 dark:hover:bg-emerald-600 text-white transition-colors cursor-pointer shadow-xs"
           >
-            Water Savings
+            {t('irrigation.waterSavings', 'Water Savings')}
           </button>
         </div>
       </div>
@@ -270,7 +274,7 @@ export const IrrigationScreen: React.FC<IrrigationScreenProps> = ({
                 className="ml-1 inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium text-emerald-800 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-800 rounded hover:bg-emerald-100 dark:hover:bg-emerald-900/60 transition-colors cursor-pointer"
               >
                 <HelpCircle className="w-3 h-3" />
-                <span>View reasoning</span>
+                <span>{t('irrigation.viewReasoning', 'View reasoning')}</span>
               </button>
             </div>
 
@@ -298,7 +302,7 @@ export const IrrigationScreen: React.FC<IrrigationScreenProps> = ({
           <div className="w-full lg:w-80 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-md p-3.5 space-y-2 text-xs">
             <div className="flex items-center justify-between">
               <span className="font-semibold text-slate-900 dark:text-slate-100">
-                Recommendation
+                {t('irrigation.recommendation', 'Recommendation')}
               </span>
               <span className="text-[11px] text-slate-500 dark:text-slate-400 font-mono">
                 {currentScen.waterSavedToday} Saved
@@ -321,7 +325,7 @@ export const IrrigationScreen: React.FC<IrrigationScreenProps> = ({
       <div className="space-y-3">
         <div className="flex items-center justify-between">
           <h2 className="text-xs font-semibold text-slate-900 dark:text-slate-100">
-            Field Zones
+            {t('irrigation.zones', 'Field Zones')}
           </h2>
           <span className="text-[11px] text-slate-400 dark:text-slate-500">
             Select a zone to inspect depth telemetry
@@ -338,7 +342,7 @@ export const IrrigationScreen: React.FC<IrrigationScreenProps> = ({
               <div
                 key={zone.id}
                 onClick={() => setSelectedZoneId(zone.id)}
-                className={`p-4 rounded-lg border transition-colors cursor-pointer flex flex-col justify-between ${
+                className={`p-4 rounded-lg border transition-all cursor-pointer flex flex-col justify-between hover:-translate-y-0.5 hover:shadow-xs ${
                   isSelected
                     ? 'border-emerald-800 dark:border-emerald-500 bg-white dark:bg-slate-900 ring-1 ring-emerald-800/30 dark:ring-emerald-500/30'
                     : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-slate-300 dark:hover:border-slate-700'
@@ -402,7 +406,7 @@ export const IrrigationScreen: React.FC<IrrigationScreenProps> = ({
                         : 'bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700'
                     }`}
                   >
-                    {isManuallyOn ? 'Stop Pump' : 'Manual Run'}
+                    {isManuallyOn ? t('irrigation.stopCycle', 'Stop Pump') : t('irrigation.startCycle', 'Manual Run')}
                   </button>
                 </div>
               </div>

@@ -8,7 +8,6 @@ import {
   MessageSquareHeart,
   CheckSquare,
   Square,
-  ArrowLeft,
   Share2,
   Printer,
   Calendar,
@@ -30,6 +29,8 @@ import {
 import { DiagnosisRecord, ScreenType } from '../../types';
 import { StatusBadge } from '../common/StatusBadge';
 import { useToast } from '../../context/ToastContext';
+import { useLanguage } from '../../context/LanguageContext';
+import { BackButton } from '../common/BackButton';
 
 interface DiagnosisResultScreenProps {
   diagnosis: DiagnosisRecord;
@@ -43,6 +44,7 @@ export const DiagnosisResultScreen: React.FC<DiagnosisResultScreenProps> = ({
   onAskAssistantWithContext,
 }) => {
   const { showToast } = useToast();
+  const { t } = useLanguage();
   const [completedSteps, setCompletedSteps] = useState<number[]>([]);
   const [selectedProtocolTab, setSelectedProtocolTab] = useState<'organic' | 'conventional'>('organic');
   const [reportSaved, setReportSaved] = useState<boolean>(false);
@@ -131,14 +133,11 @@ export const DiagnosisResultScreen: React.FC<DiagnosisResultScreenProps> = ({
 
       {/* Top Breadcrumb & Controls */}
       <div className="flex items-center justify-between pb-2 border-b border-slate-200/80 dark:border-slate-800">
-        <button
-          type="button"
-          onClick={() => onNavigate('diagnose')}
-          className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 transition-colors cursor-pointer"
-        >
-          <ArrowLeft className="w-3.5 h-3.5" />
-          <span>Back to Scanner</span>
-        </button>
+        <div className="flex items-center gap-1">
+          <BackButton label={t('diagnosis.backToScanner', 'Back to Scanner')} onClick={() => onNavigate('diagnose')} className="-ml-2.5" />
+          <span className="text-slate-300 dark:text-slate-700">|</span>
+          <BackButton label={t('diagnosis.backToDashboard', 'Back to Dashboard')} onClick={() => onNavigate('dashboard')} className="-ml-1" />
+        </div>
 
         <div className="flex items-center gap-2">
           <button
@@ -147,16 +146,16 @@ export const DiagnosisResultScreen: React.FC<DiagnosisResultScreenProps> = ({
             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-750 transition-colors cursor-pointer shadow-xs"
           >
             <Printer className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
-            <span>{reportSaved ? 'Saved ✓' : 'Export Report'}</span>
+            <span>{reportSaved ? 'Saved ✓' : t('diagnosis.exportPdf', 'Export Report')}</span>
           </button>
 
           <button
             type="button"
             onClick={() => onNavigate('diagnose')}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-emerald-800 hover:bg-emerald-900 dark:bg-emerald-700 dark:hover:bg-emerald-600 text-white text-xs font-medium transition-colors cursor-pointer shadow-xs"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-emerald-800 hover:bg-emerald-900 dark:bg-emerald-700 dark:hover:bg-emerald-600 text-white text-xs font-medium transition-all cursor-pointer shadow-xs hover:shadow-md hover:-translate-y-px active:translate-y-0"
           >
             <Camera className="w-3.5 h-3.5" />
-            <span>Scan Another</span>
+            <span>{t('diagnosis.scanAnother', 'Scan Another')}</span>
           </button>
         </div>
       </div>
@@ -166,7 +165,7 @@ export const DiagnosisResultScreen: React.FC<DiagnosisResultScreenProps> = ({
         <div className="flex flex-col md:flex-row md:items-start justify-between gap-6">
           <div className="flex-1 min-w-0">
             <div className="flex flex-wrap items-center gap-2 mb-1.5 text-xs text-slate-500 dark:text-slate-400">
-              <span className="font-medium text-slate-700 dark:text-slate-300">Diagnostic Report</span>
+              <span className="font-medium text-slate-700 dark:text-slate-300">{t('diagnosis.report', 'Diagnostic Report')}</span>
               <span>•</span>
               <span>{diagnosis.fieldLocation}</span>
               <span>•</span>
@@ -190,7 +189,7 @@ export const DiagnosisResultScreen: React.FC<DiagnosisResultScreenProps> = ({
             <div className="flex flex-wrap items-center gap-3 mt-3 text-xs">
               <StatusBadge
                 status={diagnosis.isHealthy ? 'healthy' : 'warning'}
-                label={diagnosis.isHealthy ? 'Healthy' : `${diagnosis.confidence}% Confidence`}
+                label={diagnosis.isHealthy ? t('diagnosis.healthy', 'Healthy') : `${diagnosis.confidence}% ${t('diagnosis.confidence', 'Confidence')}`}
                 size="md"
               />
 
@@ -327,7 +326,7 @@ export const DiagnosisResultScreen: React.FC<DiagnosisResultScreenProps> = ({
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-slate-100 dark:border-slate-800">
             <div>
               <h3 className="text-xs font-semibold text-slate-900 dark:text-slate-100">
-                Treatment Protocols
+                {t('diagnosis.treatmentProtocol', 'Treatment Protocols')}
               </h3>
               <p className="text-[11px] text-slate-500 dark:text-slate-400">
                 Compare biological management and conventional treatment options
@@ -344,7 +343,7 @@ export const DiagnosisResultScreen: React.FC<DiagnosisResultScreenProps> = ({
                     : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
                 }`}
               >
-                Organic / Bio
+                {t('diagnosis.organic', 'Organic / Bio')}
               </button>
               <button
                 type="button"
@@ -355,7 +354,7 @@ export const DiagnosisResultScreen: React.FC<DiagnosisResultScreenProps> = ({
                     : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
                 }`}
               >
-                Conventional
+                {t('diagnosis.conventional', 'Conventional')}
               </button>
             </div>
           </div>
@@ -404,7 +403,7 @@ export const DiagnosisResultScreen: React.FC<DiagnosisResultScreenProps> = ({
             <div className="flex items-center justify-between mb-3 pb-2 border-b border-slate-100 dark:border-slate-800">
               <div>
                 <h3 className="text-xs font-semibold text-slate-900 dark:text-slate-100">
-                  Action Steps
+                  {t('diagnosis.checklist', 'Action Steps')}
                 </h3>
                 <p className="text-[11px] text-slate-500 dark:text-slate-400">
                   Recommended order of field execution
@@ -468,7 +467,7 @@ export const DiagnosisResultScreen: React.FC<DiagnosisResultScreenProps> = ({
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-5">
             <h3 className="text-xs font-semibold text-slate-900 dark:text-slate-100 mb-2 flex items-center gap-1.5">
               <ShieldAlert className="w-3.5 h-3.5 text-amber-700 dark:text-amber-400" />
-              <span>Field Precautions</span>
+              <span>{t('diagnosis.fieldPrecautions', 'Field Precautions')}</span>
             </h3>
 
             <ul className="space-y-1.5">
@@ -526,7 +525,7 @@ export const DiagnosisResultScreen: React.FC<DiagnosisResultScreenProps> = ({
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-4 space-y-3">
             <div className="border-b border-slate-100 dark:border-slate-800 pb-2">
               <h3 className="text-xs font-semibold text-slate-900 dark:text-slate-100">
-                Cross-System Implications
+                {t('diagnosis.crossSystem', 'Cross-System Implications')}
               </h3>
               <p className="text-[11px] text-slate-500 dark:text-slate-400">
                 Correlated impact on weather, irrigation, and sustainability
@@ -607,7 +606,7 @@ export const DiagnosisResultScreen: React.FC<DiagnosisResultScreenProps> = ({
               className="w-full py-2 px-3 rounded-md bg-emerald-800 text-white hover:bg-emerald-900 dark:bg-emerald-700 dark:hover:bg-emerald-600 text-xs font-medium transition-colors flex items-center justify-center gap-1.5 cursor-pointer shadow-xs"
             >
               <MessageSquareHeart className="w-3.5 h-3.5" />
-              <span>Ask Advisor About This Diagnosis</span>
+              <span>{t('diagnosis.askAdvisor', 'Ask Advisor About This Diagnosis')}</span>
             </button>
           </div>
         </div>

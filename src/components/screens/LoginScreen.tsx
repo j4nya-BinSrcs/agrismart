@@ -19,6 +19,7 @@ import { ScreenType } from '../../types';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
 import { useTheme } from '../../context/ThemeContext';
+import { useLanguage } from '../../context/LanguageContext';
 
 interface LoginScreenProps {
   onNavigate: (screen: ScreenType) => void;
@@ -28,6 +29,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onNavigate }) => {
   const { login, loginAsDemo } = useAuth();
   const { showToast } = useToast();
   const { theme, toggleTheme } = useTheme();
+  const { t } = useLanguage();
 
   const [usernameOrEmail, setUsernameOrEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -140,7 +142,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onNavigate }) => {
             <div className="flex items-center gap-2 text-[11px] text-slate-700 dark:text-slate-300">
               <KeyRound className="w-4 h-4 text-emerald-700 dark:text-emerald-400 shrink-0" />
               <span>
-                Demo: <strong className="font-mono text-emerald-800 dark:text-emerald-400">AgriSmartDemo</strong> · <strong className="font-mono text-slate-900 dark:text-slate-100">Agri@2026</strong>
+                {t('auth.demoCredentials', 'Demo Credentials')}: <strong className="font-mono text-emerald-800 dark:text-emerald-400">AgriSmartDemo</strong> · <strong className="font-mono text-slate-900 dark:text-slate-100">Agri@2026</strong>
               </span>
             </div>
             <button
@@ -167,7 +169,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onNavigate }) => {
                 htmlFor="usernameOrEmail"
                 className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1.5"
               >
-                Username or Email
+                {t('auth.username', 'Username or Email')}
               </label>
               <div className="relative">
                 <UserIcon className="w-4 h-4 text-slate-400 absolute left-3 top-2.5 pointer-events-none" />
@@ -189,7 +191,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onNavigate }) => {
                 htmlFor="password"
                 className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1.5"
               >
-                Password
+                {t('auth.password', 'Password')}
               </label>
               <div className="relative">
                 <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-2.5 pointer-events-none" />
@@ -214,7 +216,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onNavigate }) => {
               {isLoading ? (
                 <span>Signing in...</span>
               ) : (
-                <span>Sign In</span>
+                <span>{t('auth.login', 'Sign In')}</span>
               )}
             </button>
           </form>
@@ -245,13 +247,12 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onNavigate }) => {
 
           {/* Switch to Signup */}
           <div className="mt-6 text-center text-xs text-slate-500 dark:text-slate-400">
-            <span>Don&apos;t have an account? </span>
             <button
               type="button"
               onClick={() => onNavigate('signup')}
               className="text-emerald-700 dark:text-emerald-400 hover:underline font-semibold transition-colors cursor-pointer"
             >
-              Create account
+              {t('auth.switchToSignup', "Don't have an account? Register")}
             </button>
           </div>
         </div>

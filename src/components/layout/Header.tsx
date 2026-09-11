@@ -12,6 +12,7 @@ import {
 import { ScreenType, Language } from '../../types';
 import { useToast } from '../../context/ToastContext';
 import { useTheme } from '../../context/ThemeContext';
+import { useLanguage } from '../../context/LanguageContext';
 
 interface HeaderProps {
   currentScreen: ScreenType;
@@ -35,6 +36,7 @@ export const Header: React.FC<HeaderProps> = ({
 }) => {
   const { showToast } = useToast();
   const { theme, toggleTheme } = useTheme();
+  const { t } = useLanguage();
   const [showFarmMenu, setShowFarmMenu] = useState(false);
   const [showLangMenu, setShowLangMenu] = useState(false);
 
@@ -59,8 +61,8 @@ export const Header: React.FC<HeaderProps> = ({
           <button
             type="button"
             onClick={onToggleMobileSidebar}
-            className="lg:hidden p-1.5 rounded-md text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800 transition-colors cursor-pointer"
-            aria-label="Open navigation"
+            className="lg:hidden p-1.5 rounded-md text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800 hover:scale-105 active:scale-95 transition-all cursor-pointer"
+            aria-label={t('nav.openNavigation', 'Open navigation')}
           >
             <Menu className="w-5 h-5" />
           </button>
@@ -93,7 +95,7 @@ export const Header: React.FC<HeaderProps> = ({
                 />
                 <div className="absolute left-0 mt-2 w-72 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-lg p-1.5 z-20">
                   <div className="px-2.5 py-1.5 text-[11px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider">
-                    Select Farm
+                    {t('nav.selectFarm', 'Select Farm')}
                   </div>
                   {farms.map((f) => (
                     <button
@@ -147,11 +149,11 @@ export const Header: React.FC<HeaderProps> = ({
             <button
               type="button"
               onClick={() => onNavigate('diagnose')}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-emerald-800 hover:bg-emerald-900 dark:bg-emerald-700 dark:hover:bg-emerald-600 text-white text-xs font-medium transition-colors cursor-pointer shadow-xs"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-emerald-800 hover:bg-emerald-900 dark:bg-emerald-700 dark:hover:bg-emerald-600 text-white text-xs font-medium transition-all cursor-pointer shadow-xs hover:shadow-md hover:-translate-y-px active:translate-y-0"
             >
               <Camera className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Diagnose Crop</span>
-              <span className="sm:hidden">Diagnose</span>
+              <span className="hidden sm:inline">{t('nav.diagnoseCrop', 'Diagnose Crop')}</span>
+              <span className="sm:hidden">{t('nav.diagnose.short', 'Diagnose')}</span>
             </button>
           )}
 
@@ -162,6 +164,8 @@ export const Header: React.FC<HeaderProps> = ({
               onClick={() => setShowLangMenu(!showLangMenu)}
               className="px-1.5 sm:px-2 py-1 text-xs text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white flex items-center gap-1 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
               aria-label="Select language"
+              aria-haspopup="menu"
+              aria-expanded={showLangMenu}
             >
               <span className="hidden sm:inline">{languages.find((l) => l.code === currentLanguage)?.native}</span>
               <span className="sm:hidden font-mono uppercase text-[11px] font-semibold">{currentLanguage}</span>
@@ -203,8 +207,8 @@ export const Header: React.FC<HeaderProps> = ({
           <button
             type="button"
             onClick={onOpenNotifications}
-            className="relative p-1.5 rounded-md text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
-            aria-label="Farm notifications"
+            className="relative p-1.5 rounded-md text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 hover:scale-105 active:scale-95 transition-all cursor-pointer"
+            aria-label={t('nav.notifications', 'Notifications')}
           >
             <Bell className="w-4 h-4" />
             {unreadCount > 0 && (

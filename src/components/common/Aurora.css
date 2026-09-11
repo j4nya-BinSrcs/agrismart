@@ -11,13 +11,8 @@
   height: 100% !important;
 }
 
-@media (max-width: 1023px), (pointer: coarse) and (max-width: 1200px) {
-  .aurora-container,
-  .aurora-container canvas {
-    display: none !important;
-    visibility: hidden !important;
-    opacity: 0 !important;
-    pointer-events: none !important;
-  }
-}
+/* The Aurora renders at every breakpoint — see the uZoom shader uniform in
+   Aurora.tsx for the responsive "zoom out" behavior on narrow viewports.
+   Users who prefer reduced motion never initialize the WebGL context at
+   all (handled in Aurora.tsx), so no separate CSS disable is needed here. */
 

@@ -41,7 +41,8 @@ import { LoadingState } from './components/common/LoadingState';
 import { ErrorBoundary } from './components/common/ErrorBoundary';
 import { useToast } from './context/ToastContext';
 import { useAuth } from './context/AuthContext';
-import { getStoredItem, setStoredItem } from './utils/storage';
+import { useLanguage } from './context/LanguageContext';
+import { getStoredItem } from './utils/storage';
 
 // Mobile bottom navigation icons
 import {
@@ -83,9 +84,38 @@ function screenToPath(screen: ScreenType): string {
   }
 }
 
+/**
+ * Normalize a raw pathname/hash pair into a canonical route string.
+ *
+ * Handles (Section 6/7 of the localization + routing plan):
+ *  - hash-based fallback routing ("#/weather")
+ *  - stray query strings or fragments leaking into the path segment
+ *  - trailing slashes ("/weather/" -> "/weather")
+ *  - case differences
+ *
+ * so that "/weather", "/weather/", "/weather?test=true", and
+ * "/weather#section" all resolve to the same canonical "/weather" route
+ * instead of accidentally falling through to the 404 screen.
+ */
+function normalizePath(pathname: string, hash: string): string {
+  let path = hash && hash.startsWith('#/') ? hash.slice(1) : pathname;
+
+  // Strip any query string / fragment that ended up inside the path segment.
+  path = path.split('?')[0].split('#')[0];
+
+  path = path.toLowerCase().trim();
+
+  // Collapse a trailing slash, but keep the root "/" intact.
+  if (path.length > 1 && path.endsWith('/')) {
+    path = path.replace(/\/+$/, '');
+  }
+
+  return path || '/';
+}
+
 function pathToScreen(pathname: string, hash: string): ScreenType {
-  const cleanPath = (hash && hash.startsWith('#/') ? hash.replace('#', '') : pathname).toLowerCase();
-  
+  const cleanPath = normalizePath(pathname, hash);
+
   if (cleanPath === '/' || cleanPath === '' || cleanPath === '/landing' || cleanPath === '/hero') {
     return 'landing';
   }
@@ -122,6 +152,26 @@ function pathToScreen(pathname: string, hash: string): ScreenType {
   return 'not-found';
 }
 
+const VALID_SCREENS: ScreenType[] = [
+  'landing',
+  'login',
+  'signup',
+  'dashboard',
+  'diagnose',
+  'diagnosis',
+  'diagnosis-result',
+  'diagnosis/result',
+  'weather',
+  'irrigation',
+  'sustainability',
+  'assistant',
+  'not-found',
+];
+
+function isValidScreen(value: unknown): value is ScreenType {
+  return typeof value === 'string' && VALID_SCREENS.includes(value as ScreenType);
+}
+
 const PROTECTED_SCREENS: ScreenType[] = [
   'dashboard',
   'diagnose',
@@ -134,11 +184,10 @@ const PROTECTED_SCREENS: ScreenType[] = [
   'assistant',
 ];
 
-const LANG_STORAGE_KEY = 'selected_language';
-
 export default function App() {
   const { showToast } = useToast();
   const { isAuthenticated } = useAuth();
+  const { currentLanguage, setLanguage, t } = useLanguage();
 
   // App navigation and view state
   const [currentScreen, setCurrentScreen] = useState<ScreenType>(() => {
@@ -151,9 +200,6 @@ export default function App() {
     return initial;
   });
 
-  const [currentLanguage, setCurrentLanguage] = useState<Language>(() =>
-    getStoredItem<Language>(LANG_STORAGE_KEY, 'en')
-  );
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState<boolean>(false);
   const [isNotificationDrawerOpen, setIsNotificationDrawerOpen] = useState<boolean>(false);
 
@@ -204,22 +250,41 @@ export default function App() {
       setCurrentScreen(initialScreen);
     }
 
-    const handlePopState = () => {
-      const target = pathToScreen(window.location.pathname, window.location.hash);
+    // Browser Back/Forward handler (Section 7 of the routing plan):
+    //  1. Prefer the screen recorded in history.state when it is present and
+    //     still a valid screen — this survives cases where the same
+    //     normalized path can represent more than one in-app screen variant.
+    //  2. Otherwise fall back to resolving the (normalized) current URL.
+    //  3. Route unauthenticated users away from protected screens.
+    //  4. Only ever land on "not-found" when the route is genuinely unknown
+    //     — normalization already absorbs trailing slashes, query strings,
+    //     and fragments before this point, so those never misfire a 404.
+    const handlePopState = (event: PopStateEvent) => {
+      const stateScreen = event.state?.screen;
+      const target = isValidScreen(stateScreen)
+        ? stateScreen
+        : pathToScreen(window.location.pathname, window.location.hash);
+
       if (!isAuthenticated && PROTECTED_SCREENS.includes(target)) {
-        handleNavigate('login');
+        setCurrentScreen('login');
+        try {
+          window.history.replaceState({ screen: 'login' }, '', '/login');
+        } catch {}
       } else {
         setCurrentScreen(target);
       }
     };
 
     window.addEventListener('popstate', handlePopState);
-    window.addEventListener('hashchange', handlePopState);
+    window.addEventListener('hashchange', handlePopState as EventListener);
     return () => {
       window.removeEventListener('popstate', handlePopState);
-      window.removeEventListener('hashchange', handlePopState);
+      window.removeEventListener('hashchange', handlePopState as EventListener);
     };
-  }, [isAuthenticated, handleNavigate]);
+    // Only re-bind when auth state changes — handleNavigate is stable enough
+    // that including it here would re-run this on every render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAuthenticated]);
 
   // Auth guard effect for screen transitions
   useEffect(() => {
@@ -301,10 +366,10 @@ export default function App() {
     };
   }, []);
 
-  // Handle language change and persist
+  // Handle language change and persist (delegated to LanguageContext, which
+  // persists to localStorage and updates document.documentElement.lang)
   const handleLanguageChange = (lang: Language) => {
-    setCurrentLanguage(lang);
-    setStoredItem(LANG_STORAGE_KEY, lang);
+    setLanguage(lang);
   };
 
   // Toggle action completion through service
@@ -371,8 +436,7 @@ export default function App() {
       }
       setActions(actList);
       setNotifications(notifList);
-      setCurrentLanguage('en');
-      setStoredItem(LANG_STORAGE_KEY, 'en');
+      setLanguage('en');
       setAssistantQuery('');
       handleNavigate('dashboard');
       showToast('Demo data restored to initial Patel Farm state.', 'success');
@@ -383,23 +447,40 @@ export default function App() {
 
   const unreadNotificationsCount = notifications.filter((n) => !n.read).length;
 
-  // 1. Public non-authenticated screens render full-bleed without app shell
+  // 1. Public non-authenticated screens render full-bleed without app shell.
+  // Each is keyed by screen so route changes between them replay the
+  // page-transition-enter animation (Section 2.2 of the motion plan).
   if (currentScreen === 'landing') {
-    return <LandingScreen onNavigate={handleNavigate} />;
+    return (
+      <div key="landing" className="page-transition-enter">
+        <LandingScreen onNavigate={handleNavigate} />
+      </div>
+    );
   }
 
   if (currentScreen === 'login') {
-    return <LoginScreen onNavigate={handleNavigate} />;
+    return (
+      <div key="login" className="page-transition-enter">
+        <LoginScreen onNavigate={handleNavigate} />
+      </div>
+    );
   }
 
   if (currentScreen === 'signup') {
-    return <SignupScreen onNavigate={handleNavigate} />;
+    return (
+      <div key="signup" className="page-transition-enter">
+        <SignupScreen onNavigate={handleNavigate} />
+      </div>
+    );
   }
 
   if (currentScreen === 'not-found' && !isAuthenticated) {
     return (
-      <div className="min-h-screen bg-[#F8F9FA] dark:bg-[#080808] text-[#1E293B] dark:text-[#EDEDED] flex items-center justify-center p-4 transition-colors">
-        <NotFoundScreen onNavigate={handleNavigate} />
+      <div
+        key="not-found"
+        className="page-transition-enter min-h-screen bg-[#F8F9FA] dark:bg-[#080808] text-[#1E293B] dark:text-[#EDEDED] flex items-center justify-center p-4 transition-colors"
+      >
+        <NotFoundScreen onNavigate={handleNavigate} requestedPath={window.location.pathname} />
       </div>
     );
   }
@@ -413,6 +494,7 @@ export default function App() {
         isMobileOpen={isMobileSidebarOpen}
         onCloseMobile={() => setIsMobileSidebarOpen(false)}
         hasActiveDiagnosis={Boolean(currentDiagnosis)}
+        onResetDemo={handleResetDemoData}
       />
 
       {/* 2. Main Work Area */}
@@ -432,6 +514,11 @@ export default function App() {
         {/* Scrollable Screen Viewport with Error Boundary */}
         <main className="flex-1 overflow-y-auto px-4 sm:px-6 lg:px-8 py-6 pb-20 sm:pb-8 bg-[#F8F9FA] dark:bg-[#080808] transition-colors">
           <ErrorBoundary>
+          {/* Keyed by screen so navigating between routes (sidebar, header,
+              bottom nav, CTAs, or browser Back/Forward) replays a subtle
+              fade + upward-motion page-transition instead of an abrupt
+              content swap (Section 2.2 of the motion plan). */}
+          <div key={currentScreen} className="page-transition-enter">
             {currentScreen === 'dashboard' && (
               weather ? (
                 <DashboardScreen
@@ -502,8 +589,9 @@ export default function App() {
             )}
 
             {currentScreen === 'not-found' && (
-              <NotFoundScreen onNavigate={handleNavigate} />
+              <NotFoundScreen onNavigate={handleNavigate} requestedPath={window.location.pathname} />
             )}
+          </div>
           </ErrorBoundary>
         </main>
       </div>
@@ -523,63 +611,68 @@ export default function App() {
         <button
           type="button"
           onClick={() => handleNavigate('dashboard')}
-          className={`flex flex-col items-center justify-center p-2 rounded-lg text-[10px] font-semibold transition-colors cursor-pointer ${
+          className={`flex flex-col items-center justify-center p-2 rounded-lg text-[10px] font-semibold transition-colors cursor-pointer active:scale-95 hover:bg-slate-100 dark:hover:bg-white/5 ${
             currentScreen === 'dashboard' ? 'text-emerald-800 dark:text-emerald-400' : 'text-slate-500 dark:text-slate-400'
           }`}
           aria-label="Navigate to Home"
+          aria-current={currentScreen === 'dashboard' ? 'page' : undefined}
         >
           <LayoutDashboard className="w-4 h-4 mb-0.5" />
-          <span>Home</span>
+          <span>{t('nav.home', 'Home')}</span>
         </button>
 
         <button
           type="button"
           onClick={() => handleNavigate('diagnose')}
-          className={`flex flex-col items-center justify-center p-2 rounded-lg text-[10px] font-semibold transition-colors cursor-pointer ${
+          className={`flex flex-col items-center justify-center p-2 rounded-lg text-[10px] font-semibold transition-colors cursor-pointer active:scale-95 hover:bg-slate-100 dark:hover:bg-white/5 ${
             currentScreen === 'diagnose' || currentScreen === 'diagnosis-result'
               ? 'text-emerald-800 dark:text-emerald-400'
               : 'text-slate-500 dark:text-slate-400'
           }`}
           aria-label="Navigate to Crop Diagnosis"
+          aria-current={currentScreen === 'diagnose' ? 'page' : undefined}
         >
           <ScanLine className="w-4 h-4 mb-0.5" />
-          <span>Diagnose</span>
+          <span>{t('nav.diagnose.short', 'Diagnose')}</span>
         </button>
 
         <button
           type="button"
           onClick={() => handleNavigate('weather')}
-          className={`flex flex-col items-center justify-center p-2 rounded-lg text-[10px] font-semibold transition-colors cursor-pointer ${
+          className={`flex flex-col items-center justify-center p-2 rounded-lg text-[10px] font-semibold transition-colors cursor-pointer active:scale-95 hover:bg-slate-100 dark:hover:bg-white/5 ${
             currentScreen === 'weather' ? 'text-emerald-800 dark:text-emerald-400' : 'text-slate-500 dark:text-slate-400'
           }`}
           aria-label="Navigate to Weather Intelligence"
+          aria-current={currentScreen === 'weather' ? 'page' : undefined}
         >
           <CloudSun className="w-4 h-4 mb-0.5" />
-          <span>Weather</span>
+          <span>{t('nav.weather', 'Weather')}</span>
         </button>
 
         <button
           type="button"
           onClick={() => handleNavigate('irrigation')}
-          className={`flex flex-col items-center justify-center p-2 rounded-lg text-[10px] font-semibold transition-colors cursor-pointer ${
+          className={`flex flex-col items-center justify-center p-2 rounded-lg text-[10px] font-semibold transition-colors cursor-pointer active:scale-95 hover:bg-slate-100 dark:hover:bg-white/5 ${
             currentScreen === 'irrigation' ? 'text-emerald-800 dark:text-emerald-400' : 'text-slate-500 dark:text-slate-400'
           }`}
           aria-label="Navigate to Smart Irrigation"
+          aria-current={currentScreen === 'irrigation' ? 'page' : undefined}
         >
           <Droplets className="w-4 h-4 mb-0.5" />
-          <span>Irrigation</span>
+          <span>{t('nav.irrigation', 'Irrigation')}</span>
         </button>
 
         <button
           type="button"
           onClick={() => handleNavigate('assistant')}
-          className={`flex flex-col items-center justify-center p-2 rounded-lg text-[10px] font-semibold transition-colors cursor-pointer ${
+          className={`flex flex-col items-center justify-center p-2 rounded-lg text-[10px] font-semibold transition-colors cursor-pointer active:scale-95 hover:bg-slate-100 dark:hover:bg-white/5 ${
             currentScreen === 'assistant' ? 'text-emerald-800 dark:text-emerald-400' : 'text-slate-500 dark:text-slate-400'
           }`}
           aria-label="Navigate to Farmer Assistant"
+          aria-current={currentScreen === 'assistant' ? 'page' : undefined}
         >
           <MessageSquareHeart className="w-4 h-4 mb-0.5" />
-          <span>Advisor</span>
+          <span>{t('notFound.advisor', 'Advisor')}</span>
         </button>
       </div>
     </div>

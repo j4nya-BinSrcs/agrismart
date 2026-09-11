@@ -31,10 +31,10 @@ export const ActionCard: React.FC<ActionCardProps> = ({
   return (
     <div
       id={`action-item-${action.id}`}
-      className={`rounded-lg border p-4 transition-colors ${
+      className={`rounded-lg border p-4 transition-all ${
         action.completed
           ? 'bg-slate-50/70 dark:bg-slate-900/40 border-slate-200 dark:border-slate-800 opacity-60'
-          : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-xs'
+          : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-xs hover:border-slate-300 dark:hover:border-slate-700 hover:shadow-md'
       }`}
     >
       <div className="flex items-start gap-3">

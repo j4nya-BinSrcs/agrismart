@@ -14,12 +14,17 @@ import {
   Moon,
   Phone,
   Mail,
+  Globe,
+  ChevronDown,
+  Check,
 } from 'lucide-react';
-import { ScreenType } from '../../types';
+import { ScreenType, Language } from '../../types';
 import { useAuth } from '../../context/AuthContext';
 import type { Variants } from 'motion/react';
 import { useTheme } from '../../context/ThemeContext';
 import { useToast } from '../../context/ToastContext';
+import { useLanguage } from '../../context/LanguageContext';
+import { LANGUAGE_OPTIONS } from '../../i18n/translations';
 import Aurora from '../common/Aurora';
 
 interface LandingScreenProps {
@@ -50,34 +55,17 @@ export const LandingScreen: React.FC<LandingScreenProps> = ({ onNavigate }) => {
   const { isAuthenticated, loginAsDemo, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const { showToast } = useToast();
+  const { currentLanguage, setLanguage, t } = useLanguage();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [showLangMenu, setShowLangMenu] = useState(false);
   const [scrollY, setScrollY] = useState(0);
-  const [isDesktop, setIsDesktop] = useState(() => {
-    if (typeof window === 'undefined') return false;
-    const isMobile =
-      window.innerWidth < 1024 ||
-      /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
-        navigator.userAgent
-      ) ||
-      (window.matchMedia &&
-        window.matchMedia('(pointer: coarse) and (max-width: 1200px)').matches);
-    return !isMobile;
-  });
 
-  useEffect(() => {
-    const handleResize = () => {
-      const isMobile =
-        window.innerWidth < 1024 ||
-        /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
-          navigator.userAgent
-        ) ||
-        (window.matchMedia &&
-          window.matchMedia('(pointer: coarse) and (max-width: 1200px)').matches);
-      setIsDesktop(!isMobile);
-    };
-    window.addEventListener('resize', handleResize, { passive: true });
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
+  const handleLanguageSelect = (lang: Language) => {
+    setLanguage(lang);
+    setShowLangMenu(false);
+    const opt = LANGUAGE_OPTIONS.find((l) => l.code === lang);
+    if (opt) showToast(`Language set to ${opt.native} (${opt.label})`, 'info');
+  };
 
   useEffect(() => {
     let ticking = false;
@@ -181,26 +169,70 @@ export const LandingScreen: React.FC<LandingScreenProps> = ({ onNavigate }) => {
               onClick={() => scrollToSection('capabilities')}
               className="text-slate-600 dark:text-zinc-300 hover:text-slate-900 dark:hover:text-white px-3 py-1.5 rounded-md hover:bg-slate-100 dark:hover:bg-zinc-800/60 transition-colors cursor-pointer"
             >
-              Platform Features
+              {t('landing.platformFeatures', 'Platform Features')}
             </button>
             <button
               type="button"
               onClick={() => scrollToSection('how-it-works')}
               className="text-slate-600 dark:text-zinc-300 hover:text-slate-900 dark:hover:text-white px-3 py-1.5 rounded-md hover:bg-slate-100 dark:hover:bg-zinc-800/60 transition-colors cursor-pointer"
             >
-              Field Workflow
+              {t('landing.fieldWorkflow', 'Field Workflow')}
             </button>
             <button
               type="button"
               onClick={() => scrollToSection('product-preview')}
               className="text-slate-600 dark:text-zinc-300 hover:text-slate-900 dark:hover:text-white px-3 py-1.5 rounded-md hover:bg-slate-100 dark:hover:bg-zinc-800/60 transition-colors cursor-pointer"
             >
-              Console Preview
+              {t('landing.consolePreview', 'Console Preview')}
             </button>
           </nav>
 
-          {/* Desktop Right Actions: Theme Toggle + Open Demo + Login */}
+          {/* Desktop Right Actions: Language + Theme Toggle + Open Demo + Login */}
           <div className="hidden md:flex items-center gap-2.5 shrink-0 ml-auto">
+            {/* Language Switcher */}
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setShowLangMenu(!showLangMenu)}
+                className="px-2 py-2 rounded-md text-slate-500 hover:text-slate-800 dark:text-zinc-400 dark:hover:text-zinc-200 hover:bg-slate-100 dark:hover:bg-zinc-800/60 transition-colors cursor-pointer flex items-center gap-1"
+                aria-label={t('landing.language', 'Language')}
+                aria-haspopup="menu"
+                aria-expanded={showLangMenu}
+              >
+                <Globe className="w-4 h-4" />
+                <span className="text-xs font-medium">
+                  {LANGUAGE_OPTIONS.find((l) => l.code === currentLanguage)?.native}
+                </span>
+                <ChevronDown className={`w-3 h-3 transition-transform duration-200 ${showLangMenu ? 'rotate-180' : ''}`} />
+              </button>
+
+              {showLangMenu && (
+                <>
+                  <div className="fixed inset-0 z-10" onClick={() => setShowLangMenu(false)} />
+                  <div className="absolute right-0 mt-1.5 w-40 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-lg p-1 z-20">
+                    {LANGUAGE_OPTIONS.map((l) => (
+                      <button
+                        key={l.code}
+                        type="button"
+                        onClick={() => handleLanguageSelect(l.code)}
+                        className={`w-full text-left px-2.5 py-1.5 rounded-md text-xs flex items-center justify-between gap-2 transition-colors cursor-pointer ${
+                          currentLanguage === l.code
+                            ? 'bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white font-medium'
+                            : 'hover:bg-slate-50 dark:hover:bg-slate-800/60 text-slate-700 dark:text-slate-300'
+                        }`}
+                      >
+                        <span className="flex items-center gap-1.5">
+                          <span>{l.native}</span>
+                          <span className="text-[10px] text-slate-400 dark:text-slate-500">{l.label}</span>
+                        </span>
+                        {currentLanguage === l.code && <Check className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />}
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+
             {/* Dark/Light Mode Switcher: ONLY Lucide icon, no text */}
             <button
               type="button"
@@ -220,9 +252,9 @@ export const LandingScreen: React.FC<LandingScreenProps> = ({ onNavigate }) => {
             <button
               type="button"
               onClick={handleOpenDemo}
-              className="px-3.5 py-1.5 rounded-md text-xs font-medium bg-emerald-800 hover:bg-emerald-900 dark:bg-emerald-700 dark:hover:bg-emerald-600 text-white transition-all cursor-pointer flex items-center gap-1.5 shadow-xs"
+              className="px-3.5 py-1.5 rounded-md text-xs font-medium bg-emerald-800 hover:bg-emerald-900 dark:bg-emerald-700 dark:hover:bg-emerald-600 text-white transition-all cursor-pointer flex items-center gap-1.5 shadow-xs hover:shadow-md hover:-translate-y-px active:translate-y-0"
             >
-              <span>Open Demo</span>
+              <span>{t('landing.openDemo', 'Open Demo')}</span>
               <ArrowRight className="w-3.5 h-3.5" />
             </button>
 
@@ -232,12 +264,46 @@ export const LandingScreen: React.FC<LandingScreenProps> = ({ onNavigate }) => {
               onClick={handleLoginClick}
               className="px-3.5 py-1.5 rounded-md text-xs font-medium text-slate-700 dark:text-zinc-200 border border-slate-300 dark:border-zinc-700 hover:bg-slate-100 dark:hover:bg-zinc-800/60 transition-colors cursor-pointer"
             >
-              Login
+              {t('landing.login', 'Login')}
             </button>
           </div>
 
-          {/* Mobile Right Controls: Theme + Hamburger */}
-          <div className="md:hidden flex items-center gap-1.5 ml-auto">
+          {/* Mobile Right Controls: Language + Theme + Hamburger */}
+          <div className="md:hidden flex items-center gap-1 ml-auto">
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setShowLangMenu(!showLangMenu)}
+                className="p-1.5 rounded-md text-slate-600 dark:text-zinc-300 hover:bg-slate-200/50 dark:hover:bg-white/5 transition-colors cursor-pointer flex items-center gap-0.5"
+                aria-label={t('landing.language', 'Language')}
+              >
+                <Globe className="w-4 h-4" />
+                <span className="text-[10px] font-mono uppercase font-semibold">{currentLanguage}</span>
+              </button>
+              {showLangMenu && (
+                <>
+                  <div className="fixed inset-0 z-10" onClick={() => setShowLangMenu(false)} />
+                  <div className="absolute right-0 mt-1.5 w-36 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-lg p-1 z-20">
+                    {LANGUAGE_OPTIONS.map((l) => (
+                      <button
+                        key={l.code}
+                        type="button"
+                        onClick={() => handleLanguageSelect(l.code)}
+                        className={`w-full text-left px-2.5 py-1.5 rounded-md text-xs flex items-center justify-between transition-colors cursor-pointer ${
+                          currentLanguage === l.code
+                            ? 'bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white font-medium'
+                            : 'hover:bg-slate-50 dark:hover:bg-slate-800/60 text-slate-700 dark:text-slate-300'
+                        }`}
+                      >
+                        <span>{l.native}</span>
+                        {currentLanguage === l.code && <Check className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />}
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+
             <button
               type="button"
               onClick={toggleTheme}
@@ -264,40 +330,40 @@ export const LandingScreen: React.FC<LandingScreenProps> = ({ onNavigate }) => {
             <button
               type="button"
               onClick={() => scrollToSection('capabilities')}
-              className="w-full text-left px-2 py-1.5 rounded text-xs text-slate-600 dark:text-zinc-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-zinc-800/50"
+              className="w-full text-left px-2 py-1.5 rounded text-xs text-slate-600 dark:text-zinc-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-zinc-800/50 transition-colors"
             >
-              Platform Features
+              {t('landing.platformFeatures', 'Platform Features')}
             </button>
             <button
               type="button"
               onClick={() => scrollToSection('how-it-works')}
-              className="w-full text-left px-2 py-1.5 rounded text-xs text-slate-600 dark:text-zinc-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-zinc-800/50"
+              className="w-full text-left px-2 py-1.5 rounded text-xs text-slate-600 dark:text-zinc-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-zinc-800/50 transition-colors"
             >
-              Field Workflow
+              {t('landing.fieldWorkflow', 'Field Workflow')}
             </button>
             <button
               type="button"
               onClick={() => scrollToSection('product-preview')}
-              className="w-full text-left px-2 py-1.5 rounded text-xs text-slate-600 dark:text-zinc-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-zinc-800/50"
+              className="w-full text-left px-2 py-1.5 rounded text-xs text-slate-600 dark:text-zinc-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-zinc-800/50 transition-colors"
             >
-              Console Preview
+              {t('landing.consolePreview', 'Console Preview')}
             </button>
 
             <div className="pt-3 border-t border-slate-200 dark:border-zinc-800 flex flex-col gap-2">
               <button
                 type="button"
                 onClick={handleOpenDemo}
-                className="w-full py-2.5 text-xs text-center rounded-md bg-emerald-800 hover:bg-emerald-900 dark:bg-emerald-700 text-white font-medium flex items-center justify-center gap-1.5 cursor-pointer shadow-xs"
+                className="w-full py-2.5 text-xs text-center rounded-md bg-emerald-800 hover:bg-emerald-900 dark:bg-emerald-700 text-white font-medium flex items-center justify-center gap-1.5 cursor-pointer shadow-xs transition-colors"
               >
-                <span>Open Demo</span>
+                <span>{t('landing.openDemo', 'Open Demo')}</span>
                 <ArrowRight className="w-3.5 h-3.5" />
               </button>
               <button
                 type="button"
                 onClick={handleLoginClick}
-                className="w-full py-2 text-xs text-center rounded-md border border-slate-300 dark:border-zinc-700 text-slate-800 dark:text-zinc-200 font-medium cursor-pointer hover:bg-slate-100 dark:hover:bg-zinc-800/60"
+                className="w-full py-2 text-xs text-center rounded-md border border-slate-300 dark:border-zinc-700 text-slate-800 dark:text-zinc-200 font-medium cursor-pointer hover:bg-slate-100 dark:hover:bg-zinc-800/60 transition-colors"
               >
-                Login
+                {t('landing.login', 'Login')}
               </button>
             </div>
           </div>
@@ -306,18 +372,19 @@ export const LandingScreen: React.FC<LandingScreenProps> = ({ onNavigate }) => {
 
       {/* 2. HERO SECTION - 100dvh FULL FIRST SCREEN */}
       <section className="relative min-h-[100dvh] flex flex-col justify-center items-center px-4 sm:px-6 lg:px-8 border-b border-slate-200 dark:border-slate-800 transition-colors overflow-hidden pt-20 pb-12 sm:pt-24 sm:pb-16">
-        {/* Background Aurora WebGL Animation (Desktop only, removed on mobile & tablet) */}
-        {isDesktop && (
-          <div className="hidden lg:block absolute inset-0 pointer-events-none opacity-25 dark:opacity-40 overflow-hidden">
-            <Aurora
-              colorStops={["#075c45", "#1e896c", "#075c45"]}
-              blend={0.5}
-              amplitude={1.0}
-              speed={0.5}
-              lightMode={theme === 'light'}
-            />
-          </div>
-        )}
+        {/* Background Aurora WebGL Animation — same composition at every
+            breakpoint, responsively zoomed out on smaller screens (see
+            Aurora.tsx). Intensity is toned down on mobile via opacity so it
+            never dominates the hero content. */}
+        <div className="absolute inset-0 pointer-events-none opacity-10 sm:opacity-16 lg:opacity-25 dark:opacity-16 dark:sm:opacity-24 dark:lg:opacity-40 overflow-hidden transition-opacity duration-500">
+          <Aurora
+            colorStops={["#075c45", "#1e896c", "#075c45"]}
+            blend={0.5}
+            amplitude={1.0}
+            speed={0.5}
+            lightMode={theme === 'light'}
+          />
+        </div>
 
         <motion.div
           className="relative z-10 max-w-3xl sm:max-w-4xl mx-auto text-center my-auto flex flex-col items-center justify-center py-6 sm:py-10"
@@ -330,9 +397,9 @@ export const LandingScreen: React.FC<LandingScreenProps> = ({ onNavigate }) => {
             variants={fadeInUp}
             className="text-4xl xs:text-5xl sm:text-6xl md:text-7xl font-bold tracking-tight text-slate-900 dark:text-slate-100 leading-[1.08] sm:leading-[1.1] mb-6 sm:mb-8"
           >
-            Smarter decisions.
+            {t('landing.heroTitleLine1', 'Smarter decisions.')}
             <br />
-            Healthier farms.
+            {t('landing.heroTitleLine2', 'Healthier farms.')}
           </motion.h1>
 
           {/* Supporting Text */}
@@ -340,7 +407,10 @@ export const LandingScreen: React.FC<LandingScreenProps> = ({ onNavigate }) => {
             variants={fadeInUp}
             className="max-w-xl sm:max-w-2xl mx-auto text-base sm:text-lg md:text-xl text-slate-600 dark:text-slate-300 leading-relaxed mb-8 sm:mb-12 font-normal"
           >
-            Crop disease diagnostics, hyper-local weather intelligence, precision irrigation scheduling, and farm sustainability tracking — unified in one agricultural decision-support platform.
+            {t(
+              'landing.heroDescription',
+              'Crop disease diagnostics, hyper-local weather intelligence, precision irrigation scheduling, and farm sustainability tracking — unified in one agricultural decision-support platform.'
+            )}
           </motion.p>
 
           {/* Action CTAs: Open Demo and Login / Signup */}
@@ -353,7 +423,7 @@ export const LandingScreen: React.FC<LandingScreenProps> = ({ onNavigate }) => {
               onClick={handleOpenDemo}
               className="w-full sm:w-auto px-8 py-4 sm:px-9 sm:py-4 rounded-xl bg-emerald-800 hover:bg-emerald-900 dark:bg-emerald-700 dark:hover:bg-emerald-600 text-white font-semibold text-base transition-all cursor-pointer flex items-center justify-center gap-2.5 shadow-md hover:shadow-lg active:scale-[0.98]"
             >
-              <span>Open Demo</span>
+              <span>{t('landing.openDemo', 'Open Demo')}</span>
               <ArrowRight className="w-4 h-4" />
             </button>
 
@@ -362,7 +432,7 @@ export const LandingScreen: React.FC<LandingScreenProps> = ({ onNavigate }) => {
               onClick={handleLoginClick}
               className="w-full sm:w-auto px-8 py-4 sm:px-9 sm:py-4 rounded-xl bg-white hover:bg-slate-50 dark:bg-slate-900 dark:hover:bg-slate-800 text-slate-900 dark:text-slate-100 border border-slate-300 dark:border-slate-700 font-semibold text-base transition-colors cursor-pointer shadow-xs active:scale-[0.98]"
             >
-              Login / Signup
+              {t('landing.loginSignup', 'Login / Signup')}
             </button>
           </motion.div>
         </motion.div>
@@ -463,7 +533,7 @@ export const LandingScreen: React.FC<LandingScreenProps> = ({ onNavigate }) => {
                   onClick={handleOpenDemo}
                   className="px-3.5 py-1.5 rounded-md text-xs bg-emerald-800 hover:bg-emerald-900 dark:bg-emerald-700 dark:hover:bg-emerald-600 text-white font-medium transition-colors cursor-pointer shrink-0 shadow-2xs flex items-center gap-1.5"
                 >
-                  <span>Open Demo</span>
+                  <span>{t('landing.openDemo', 'Open Demo')}</span>
                   <ArrowRight className="w-3.5 h-3.5" />
                 </button>
               </div>
@@ -737,7 +807,7 @@ export const LandingScreen: React.FC<LandingScreenProps> = ({ onNavigate }) => {
                 onClick={handleOpenDemo}
                 className="px-4 py-2 rounded-md bg-emerald-800 hover:bg-emerald-900 dark:bg-emerald-700 dark:hover:bg-emerald-600 text-white font-medium transition-colors cursor-pointer shadow-xs flex items-center gap-1.5"
               >
-                <span>Open Demo</span>
+                <span>{t('landing.openDemo', 'Open Demo')}</span>
                 <ArrowRight className="w-3.5 h-3.5" />
               </button>
             </div>
@@ -767,7 +837,7 @@ export const LandingScreen: React.FC<LandingScreenProps> = ({ onNavigate }) => {
               onClick={handleOpenDemo}
               className="w-full sm:w-auto px-6 py-3 rounded-md bg-emerald-800 hover:bg-emerald-900 dark:bg-emerald-700 dark:hover:bg-emerald-600 text-white font-medium text-xs sm:text-sm transition-all cursor-pointer flex items-center justify-center gap-2 shadow-sm"
             >
-              <span>Open Demo</span>
+              <span>{t('landing.openDemo', 'Open Demo')}</span>
               <ArrowRight className="w-4 h-4" />
             </button>
             <button
@@ -775,7 +845,7 @@ export const LandingScreen: React.FC<LandingScreenProps> = ({ onNavigate }) => {
               onClick={handleLoginClick}
               className="w-full sm:w-auto px-6 py-3 rounded-md bg-white hover:bg-slate-50 dark:bg-slate-900 dark:hover:bg-slate-800 text-slate-900 dark:text-slate-100 border border-slate-300 dark:border-slate-700 font-medium text-xs sm:text-sm transition-colors cursor-pointer"
             >
-              Login / Signup
+              {t('landing.loginSignup', 'Login / Signup')}
             </button>
           </div>
         </motion.div>
@@ -855,7 +925,7 @@ export const LandingScreen: React.FC<LandingScreenProps> = ({ onNavigate }) => {
             {/* Column 2: Platform Capabilities */}
             <div className="space-y-3">
               <h4 className="text-xs font-semibold text-slate-900 dark:text-slate-100 uppercase tracking-wider">
-                Capabilities
+                {t('landing.capabilities', 'Capabilities')}
               </h4>
               <ul className="space-y-2 text-xs">
                 <li>
@@ -924,7 +994,7 @@ export const LandingScreen: React.FC<LandingScreenProps> = ({ onNavigate }) => {
             {/* Column 3: Agricultural Standards */}
             <div className="space-y-3">
               <h4 className="text-xs font-semibold text-slate-900 dark:text-slate-100 uppercase tracking-wider">
-                Field Standards
+                {t('landing.fieldStandards', 'Field Standards')}
               </h4>
               <ul className="space-y-2 text-xs">
                 <li className="text-slate-500 dark:text-slate-400">Patel Farm (Anand, Gujarat)</li>
@@ -938,7 +1008,7 @@ export const LandingScreen: React.FC<LandingScreenProps> = ({ onNavigate }) => {
             {/* Column 4: Access & Workspace */}
             <div className="space-y-3">
               <h4 className="text-xs font-semibold text-slate-900 dark:text-slate-100 uppercase tracking-wider">
-                Direct Access
+                {t('landing.directAccess', 'Direct Access')}
               </h4>
               <ul className="space-y-2 text-xs">
                 <li>
@@ -947,7 +1017,7 @@ export const LandingScreen: React.FC<LandingScreenProps> = ({ onNavigate }) => {
                     onClick={handleOpenDemo}
                     className="text-emerald-700 dark:text-emerald-400 hover:text-emerald-800 dark:hover:text-emerald-300 font-medium transition-colors cursor-pointer flex items-center gap-1"
                   >
-                    <span>Open Demo Console</span>
+                    <span>{t('landing.openDemo', 'Open Demo')} Console</span>
                     <ArrowRight className="w-3 h-3" />
                   </button>
                 </li>
@@ -957,7 +1027,7 @@ export const LandingScreen: React.FC<LandingScreenProps> = ({ onNavigate }) => {
                     onClick={handleLoginClick}
                     className="hover:text-slate-900 dark:hover:text-slate-200 transition-colors cursor-pointer"
                   >
-                    Operator Login
+                    {t('landing.login', 'Login')}
                   </button>
                 </li>
                 <li>
@@ -966,7 +1036,7 @@ export const LandingScreen: React.FC<LandingScreenProps> = ({ onNavigate }) => {
                     onClick={() => onNavigate('signup')}
                     className="hover:text-slate-900 dark:hover:text-slate-200 transition-colors cursor-pointer"
                   >
-                    Register New Farm
+                    {t('landing.registerFarm', 'Register New Farm')}
                   </button>
                 </li>
                 <li>

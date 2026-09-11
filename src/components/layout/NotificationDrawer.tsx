@@ -2,6 +2,7 @@ import React from 'react';
 import { X, ArrowRight, CheckCheck, Check, BellOff } from 'lucide-react';
 import { ScreenType, AppNotification } from '../../types';
 import { StatusBadge } from '../common/StatusBadge';
+import { useLanguage } from '../../context/LanguageContext';
 
 interface NotificationDrawerProps {
   isOpen: boolean;
@@ -20,6 +21,8 @@ export const NotificationDrawer: React.FC<NotificationDrawerProps> = ({
   onMarkAsRead,
   onMarkAllAsRead,
 }) => {
+  const { t } = useLanguage();
+
   if (!isOpen) return null;
 
   const unreadCount = notifications.filter((n) => !n.read).length;
@@ -28,19 +31,19 @@ export const NotificationDrawer: React.FC<NotificationDrawerProps> = ({
     <div className="fixed inset-0 z-50 flex justify-end">
       {/* Backdrop */}
       <div
-        className="fixed inset-0 bg-slate-900/40 dark:bg-black/70 backdrop-blur-xs transition-opacity"
+        className="fixed inset-0 bg-slate-900/40 dark:bg-black/70 backdrop-blur-xs transition-opacity duration-300"
         onClick={onClose}
       />
 
       {/* Slideover Panel */}
-      <div className="relative w-full max-w-md bg-white dark:bg-slate-900 h-full shadow-xl z-10 flex flex-col border-l border-slate-200 dark:border-slate-800 transition-colors">
+      <div className="drawer-enter-right relative w-full max-w-md bg-white dark:bg-slate-900 h-full shadow-xl z-10 flex flex-col border-l border-slate-200 dark:border-slate-800 transition-colors duration-300 ease-out">
         <div className="p-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
           <div>
             <div className="flex items-center gap-2">
-              <h3 className="font-semibold text-slate-900 dark:text-slate-100 text-sm">Notifications & Alerts</h3>
+              <h3 className="font-semibold text-slate-900 dark:text-slate-100 text-sm">{t('notifications.title', 'Notifications & Alerts')}</h3>
               {unreadCount > 0 && (
                 <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300">
-                  {unreadCount} unread
+                  {unreadCount} {t('notifications.unread', 'unread')}
                 </span>
               )}
             </div>
@@ -62,16 +65,16 @@ export const NotificationDrawer: React.FC<NotificationDrawerProps> = ({
               <div className="w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500 flex items-center justify-center">
                 <BellOff className="w-5 h-5" />
               </div>
-              <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">You're all caught up.</p>
+              <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">{t('notifications.allCaughtUp', "You're all caught up.")}</p>
               <p className="text-xs text-slate-500 dark:text-slate-400 max-w-xs">
-                No pending farm alerts at this time. All crop conditions are stable.
+                {t('notifications.noAlerts', 'No pending farm alerts at this time. All crop conditions are stable.')}
               </p>
             </div>
           ) : (
             notifications.map((n) => (
               <div
                 key={n.id}
-                className={`p-3.5 rounded-lg border transition-colors text-left relative ${
+                className={`p-3.5 rounded-lg border transition-all text-left relative hover:border-slate-300 dark:hover:border-slate-600 hover:shadow-xs ${
                   n.read
                     ? 'border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/40'
                     : 'border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800/90 shadow-xs'
@@ -124,7 +127,7 @@ export const NotificationDrawer: React.FC<NotificationDrawerProps> = ({
                       onClick={() => onMarkAsRead(n.id)}
                       className="text-[11px] font-medium text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 transition-colors cursor-pointer"
                     >
-                      Mark read
+                      {t('notifications.markRead', 'Mark read')}
                     </button>
                   )}
                 </div>
@@ -140,10 +143,10 @@ export const NotificationDrawer: React.FC<NotificationDrawerProps> = ({
             <button
               type="button"
               onClick={onMarkAllAsRead}
-              className="font-medium text-emerald-800 dark:text-emerald-400 hover:text-emerald-950 dark:hover:text-emerald-300 inline-flex items-center gap-1 cursor-pointer"
+              className="font-medium text-emerald-800 dark:text-emerald-400 hover:text-emerald-950 dark:hover:text-emerald-300 inline-flex items-center gap-1 cursor-pointer transition-colors"
             >
               <CheckCheck className="w-3.5 h-3.5" />
-              <span>Mark all as read</span>
+              <span>{t('notifications.markAllRead', 'Mark all as read')}</span>
             </button>
           )}
         </div>
