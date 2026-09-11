@@ -1,4 +1,7 @@
 export type ScreenType =
+  | 'landing'
+  | 'login'
+  | 'signup'
   | 'dashboard'
   | 'diagnose'
   | 'diagnosis'
@@ -9,6 +12,32 @@ export type ScreenType =
   | 'sustainability'
   | 'assistant'
   | 'not-found';
+
+export interface User {
+  id: string;
+  name: string;
+  username?: string;
+  email: string;
+  role: string;
+  farmName: string;
+  location: string;
+}
+
+export interface AuthContextType {
+  isAuthenticated: boolean;
+  user: User | null;
+  login: (usernameOrEmail: string, password: string) => Promise<{ success: boolean; error?: string }>;
+  loginAsDemo: () => void;
+  signup: (data: {
+    name: string;
+    username?: string;
+    email: string;
+    password: string;
+    farmName: string;
+    location: string;
+  }) => Promise<{ success: boolean; error?: string }>;
+  logout: () => void;
+}
 
 export type Language = 'en' | 'hi' | 'gu';
 

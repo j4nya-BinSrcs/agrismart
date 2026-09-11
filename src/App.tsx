@@ -34,8 +34,13 @@ import { IrrigationScreen } from './components/screens/IrrigationScreen';
 import { SustainabilityScreen } from './components/screens/SustainabilityScreen';
 import { AssistantScreen } from './components/screens/AssistantScreen';
 import { NotFoundScreen } from './components/screens/NotFoundScreen';
+import { LandingScreen } from './components/screens/LandingScreen';
+import { LoginScreen } from './components/screens/LoginScreen';
+import { SignupScreen } from './components/screens/SignupScreen';
+import { LoadingState } from './components/common/LoadingState';
 import { ErrorBoundary } from './components/common/ErrorBoundary';
 import { useToast } from './context/ToastContext';
+import { useAuth } from './context/AuthContext';
 import { getStoredItem, setStoredItem } from './utils/storage';
 
 // Mobile bottom navigation icons
@@ -49,6 +54,12 @@ import {
 
 function screenToPath(screen: ScreenType): string {
   switch (screen) {
+    case 'login':
+      return '/login';
+    case 'landing':
+      return '/landing';
+    case 'signup':
+      return '/signup';
     case 'dashboard':
       return '/dashboard';
     case 'diagnose':
@@ -66,14 +77,23 @@ function screenToPath(screen: ScreenType): string {
     case 'assistant':
       return '/assistant';
     default:
-      return '/dashboard';
+      return '/login';
   }
 }
 
 function pathToScreen(pathname: string, hash: string): ScreenType {
   const cleanPath = (hash && hash.startsWith('#/') ? hash.replace('#', '') : pathname).toLowerCase();
   
-  if (cleanPath === '/' || cleanPath === '' || cleanPath === '/dashboard') {
+  if (cleanPath === '/' || cleanPath === '' || cleanPath === '/login') {
+    return 'login';
+  }
+  if (cleanPath === '/landing' || cleanPath === '/hero') {
+    return 'landing';
+  }
+  if (cleanPath === '/signup') {
+    return 'signup';
+  }
+  if (cleanPath === '/dashboard') {
     return 'dashboard';
   }
   if (cleanPath === '/diagnose' || cleanPath === '/diagnosis') {
@@ -97,13 +117,38 @@ function pathToScreen(pathname: string, hash: string): ScreenType {
   return 'not-found';
 }
 
+const PROTECTED_SCREENS: ScreenType[] = [
+  'dashboard',
+  'diagnose',
+  'diagnosis',
+  'diagnosis-result',
+  'diagnosis/result',
+  'weather',
+  'irrigation',
+  'sustainability',
+  'assistant',
+];
+
 const LANG_STORAGE_KEY = 'selected_language';
 
 export default function App() {
   const { showToast } = useToast();
+  const { isAuthenticated } = useAuth();
 
   // App navigation and view state
-  const [currentScreen, setCurrentScreen] = useState<ScreenType>('dashboard');
+  const [currentScreen, setCurrentScreen] = useState<ScreenType>(() => {
+    const initial = pathToScreen(window.location.pathname, window.location.hash);
+    const session = getStoredItem<{ isAuthenticated: boolean } | null>('agrismart_auth_session', null);
+    const authed = session?.isAuthenticated === true;
+    if (!authed && PROTECTED_SCREENS.includes(initial)) {
+      return 'login';
+    }
+    if (authed && (initial === 'login' || initial === 'signup')) {
+      return 'dashboard';
+    }
+    return initial;
+  });
+
   const [currentLanguage, setCurrentLanguage] = useState<Language>(() =>
     getStoredItem<Language>(LANG_STORAGE_KEY, 'en')
   );
@@ -125,32 +170,54 @@ export default function App() {
   const [sustainability, setSustainability] = useState<SustainabilityMetric | null>(null);
 
   // URL synchronization
-  const handleNavigate = useCallback((screen: ScreenType) => {
-    const targetPath = screenToPath(screen);
-    if (window.location.pathname !== targetPath) {
-      try {
-        window.history.pushState({ screen }, '', targetPath);
-      } catch {
-        window.location.hash = targetPath;
+  const handleNavigate = useCallback(
+    (screen: ScreenType) => {
+      let resolved = screen;
+      if (!isAuthenticated && PROTECTED_SCREENS.includes(screen)) {
+        resolved = 'login';
+      } else if (isAuthenticated && (screen === 'login' || screen === 'signup')) {
+        resolved = 'dashboard';
       }
-    }
-    setCurrentScreen(screen);
-  }, []);
 
-  // Listen to browser navigation (Back, Forward, Refresh, Direct URL)
+      const targetPath = screenToPath(resolved);
+      if (window.location.pathname !== targetPath) {
+        try {
+          window.history.pushState({ screen: resolved }, '', targetPath);
+        } catch {
+          window.location.hash = targetPath;
+        }
+      }
+      setCurrentScreen(resolved);
+    },
+    [isAuthenticated]
+  );
+
+  // Synchronize URL on popstate/hashchange & auth updates
   useEffect(() => {
     const initialScreen = pathToScreen(window.location.pathname, window.location.hash);
-    setCurrentScreen(initialScreen);
-
-    if (window.location.pathname === '/' || window.location.pathname === '') {
+    if (!isAuthenticated && PROTECTED_SCREENS.includes(initialScreen)) {
+      setCurrentScreen('login');
+      try {
+        window.history.replaceState({ screen: 'login' }, '', '/login');
+      } catch {}
+    } else if (isAuthenticated && (initialScreen === 'login' || initialScreen === 'signup')) {
+      setCurrentScreen('dashboard');
       try {
         window.history.replaceState({ screen: 'dashboard' }, '', '/dashboard');
       } catch {}
+    } else {
+      setCurrentScreen(initialScreen);
     }
 
     const handlePopState = () => {
       const target = pathToScreen(window.location.pathname, window.location.hash);
-      setCurrentScreen(target);
+      if (!isAuthenticated && PROTECTED_SCREENS.includes(target)) {
+        handleNavigate('login');
+      } else if (isAuthenticated && (target === 'login' || target === 'signup')) {
+        handleNavigate('dashboard');
+      } else {
+        setCurrentScreen(target);
+      }
     };
 
     window.addEventListener('popstate', handlePopState);
@@ -159,7 +226,16 @@ export default function App() {
       window.removeEventListener('popstate', handlePopState);
       window.removeEventListener('hashchange', handlePopState);
     };
-  }, []);
+  }, [isAuthenticated, handleNavigate]);
+
+  // Auth guard effect for screen transitions
+  useEffect(() => {
+    if (!isAuthenticated && PROTECTED_SCREENS.includes(currentScreen)) {
+      handleNavigate('login');
+    } else if (isAuthenticated && (currentScreen === 'login' || currentScreen === 'signup')) {
+      handleNavigate('dashboard');
+    }
+  }, [isAuthenticated, currentScreen, handleNavigate]);
 
   // Load initial data through service architecture
   useEffect(() => {
@@ -293,6 +369,19 @@ export default function App() {
 
   const unreadNotificationsCount = notifications.filter((n) => !n.read).length;
 
+  // 1. Public non-authenticated screens render full-bleed without app shell
+  if (currentScreen === 'landing') {
+    return <LandingScreen onNavigate={handleNavigate} />;
+  }
+
+  if (currentScreen === 'login') {
+    return <LoginScreen onNavigate={handleNavigate} />;
+  }
+
+  if (currentScreen === 'signup') {
+    return <SignupScreen onNavigate={handleNavigate} />;
+  }
+
   return (
     <div className="flex h-screen bg-[#F8F9FA] dark:bg-[#080808] text-[#1E293B] dark:text-[#EDEDED] overflow-hidden transition-colors">
       {/* 1. Desktop & Mobile Sidebar Navigation */}
@@ -321,18 +410,22 @@ export default function App() {
         {/* Scrollable Screen Viewport with Error Boundary */}
         <main className="flex-1 overflow-y-auto px-4 sm:px-6 lg:px-8 py-6 pb-20 sm:pb-8 bg-[#F8F9FA] dark:bg-[#080808] transition-colors">
           <ErrorBoundary>
-            {currentScreen === 'dashboard' && weather && (
-              <DashboardScreen
-                onNavigate={handleNavigate}
-                actions={actions}
-                onToggleAction={handleToggleAction}
-                diagnoses={diagnoses}
-                onSelectDiagnosis={(diag) => {
-                  setCurrentDiagnosis(diag);
-                  handleNavigate('diagnosis-result');
-                }}
-                weather={weather}
-              />
+            {currentScreen === 'dashboard' && (
+              weather ? (
+                <DashboardScreen
+                  onNavigate={handleNavigate}
+                  actions={actions}
+                  onToggleAction={handleToggleAction}
+                  diagnoses={diagnoses}
+                  onSelectDiagnosis={(diag) => {
+                    setCurrentDiagnosis(diag);
+                    handleNavigate('diagnosis-result');
+                  }}
+                  weather={weather}
+                />
+              ) : (
+                <LoadingState message="Loading farm operations console..." />
+              )
             )}
 
             {currentScreen === 'diagnose' && (

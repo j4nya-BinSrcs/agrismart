@@ -8,8 +8,10 @@ import {
   Leaf,
   MessageSquareHeart,
   X,
+  LogOut,
 } from 'lucide-react';
 import { ScreenType } from '../../types';
+import { useAuth } from '../../context/AuthContext';
 
 interface SidebarProps {
   currentScreen: ScreenType;
@@ -26,6 +28,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onCloseMobile,
   hasActiveDiagnosis,
 }) => {
+  const { logout } = useAuth();
   const navItems = [
     {
       id: 'dashboard' as ScreenType,
@@ -158,6 +161,23 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <span>Irrigation delayed</span>
           </div>
         </div>
+      </div>
+
+      {/* Direct Log Out in Sidebar */}
+      <div className="px-3 pb-3">
+        <button
+          type="button"
+          onClick={() => {
+            onCloseMobile();
+            logout();
+            onNavigate('landing');
+          }}
+          className="w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-xs font-medium text-rose-400 hover:text-rose-300 hover:bg-rose-950/40 border border-rose-900/30 transition-colors cursor-pointer"
+          title="Sign out of operations console"
+        >
+          <LogOut className="w-4 h-4 text-rose-400 shrink-0" />
+          <span>Log Out</span>
+        </button>
       </div>
     </div>
   );
