@@ -116,12 +116,18 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
         </div>
 
-        {/* Center: Clean current farm/weather context */}
+        {/* Center: Weather snippet — a soft ambient glow chip so this
+            live-status readout is visually distinguished from the plain
+            header row around it, instead of blending into the toolbar. */}
         <div
           onClick={() => onNavigate('weather')}
-          className="hidden md:flex items-center gap-2 text-xs text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 cursor-pointer transition-colors"
+          className="hidden md:flex relative items-center gap-2 text-xs text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-slate-100 cursor-pointer transition-all px-3 py-1.5 rounded-full bg-white/80 dark:bg-slate-800/60 backdrop-blur-sm border border-slate-200/70 dark:border-slate-700/60 shadow-[0_0_16px_-4px_rgba(16,185,129,0.35)] hover:shadow-[0_0_22px_-4px_rgba(16,185,129,0.5)] hover:border-emerald-300/70 dark:hover:border-emerald-700/60"
           title="View Weather details"
         >
+          <span
+            aria-hidden="true"
+            className="absolute inset-0 -z-10 rounded-full blur-xl opacity-70 bg-gradient-to-r from-emerald-200/60 via-amber-100/40 to-emerald-200/60 dark:from-emerald-500/20 dark:via-amber-500/10 dark:to-emerald-500/20"
+          />
           <span className="font-medium text-slate-900 dark:text-slate-200">28°C</span>
           <span className="text-slate-300 dark:text-slate-600">·</span>
           <span>82% Rain expected</span>

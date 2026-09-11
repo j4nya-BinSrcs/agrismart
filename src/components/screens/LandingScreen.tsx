@@ -12,8 +12,6 @@ import {
   X,
   Sun,
   Moon,
-  Phone,
-  Mail,
 } from 'lucide-react';
 import { ScreenType } from '../../types';
 import { useAuth } from '../../context/AuthContext';
@@ -100,38 +98,41 @@ export const LandingScreen: React.FC<LandingScreenProps> = ({ onNavigate }) => {
       {/* Classic dot + ring cursor (desktop / fine-pointer only) */}
       <CustomCursor />
 
-      {/* 1. TOP NAVIGATION - FIXED & STATIC WITH PROGRESSIVE SLOW BLUR.
-          Always carries a slight glass blur/tint, even at the very top of
-          the hero, so it never reads as a bare unstyled bar — it just
-          deepens into a fuller glass surface as the page scrolls. */}
-      <header
-        className="fixed top-0 left-0 right-0 z-50 w-full transition-all duration-300 ease-out border-b"
-        style={{
-          backgroundColor:
-            mobileMenuOpen
-              ? theme === 'dark'
-                ? 'rgba(12, 16, 14, 0.96)'
-                : 'rgba(255, 255, 255, 0.98)'
-              : theme === 'dark'
-              ? `rgba(12, 16, 14, ${(0.32 + scrollProgress * 0.62).toFixed(3)})`
-              : `rgba(255, 255, 255, ${(0.32 + scrollProgress * 0.63).toFixed(3)})`,
-          borderBottomColor:
-            mobileMenuOpen
-              ? theme === 'dark'
-                ? 'rgba(39, 39, 42, 0.8)'
-                : 'rgba(226, 232, 240, 0.8)'
-              : theme === 'dark'
-              ? `rgba(39, 39, 42, ${(0.18 + scrollProgress * 0.62).toFixed(3)})`
-              : `rgba(226, 232, 240, ${(0.18 + scrollProgress * 0.62).toFixed(3)})`,
-          backdropFilter: `blur(${mobileMenuOpen ? 16 : 7 + blurAmount}px)`,
-          WebkitBackdropFilter: `blur(${mobileMenuOpen ? 16 : 7 + blurAmount}px)`,
-          boxShadow:
-            scrollProgress > 0.2
-              ? `0 1px 3px 0 rgba(0, 0, 0, ${(scrollProgress * 0.06).toFixed(3)})`
-              : 'none',
-        }}
-      >
-        <div className="w-full px-4 sm:px-6 md:px-8 lg:px-12 h-16 flex items-center justify-between relative">
+      {/* 1. TOP NAVIGATION — a floating fixed pill, detached from the
+          viewport edges, that stays pinned in place while the hero
+          scrolls beneath it. Always carries a slight glass blur/tint,
+          even at the very top of the page, so it never reads as a bare
+          unstyled bar — it just deepens into a fuller glass surface as
+          the page scrolls further. */}
+      <header className="fixed top-3 sm:top-4 inset-x-3 sm:inset-x-4 md:inset-x-6 lg:inset-x-8 z-50 transition-all duration-300 ease-out">
+        <div className="max-w-6xl mx-auto">
+          <div
+            className="rounded-2xl border h-14 sm:h-16 px-4 sm:px-6 md:px-8 flex items-center justify-between relative transition-all duration-300 ease-out"
+            style={{
+              backgroundColor:
+                mobileMenuOpen
+                  ? theme === 'dark'
+                    ? 'rgba(12, 16, 14, 0.96)'
+                    : 'rgba(255, 255, 255, 0.98)'
+                  : theme === 'dark'
+                  ? `rgba(12, 16, 14, ${(0.32 + scrollProgress * 0.62).toFixed(3)})`
+                  : `rgba(255, 255, 255, ${(0.32 + scrollProgress * 0.63).toFixed(3)})`,
+              borderColor:
+                mobileMenuOpen
+                  ? theme === 'dark'
+                    ? 'rgba(39, 39, 42, 0.8)'
+                    : 'rgba(226, 232, 240, 0.8)'
+                  : theme === 'dark'
+                  ? `rgba(39, 39, 42, ${(0.18 + scrollProgress * 0.62).toFixed(3)})`
+                  : `rgba(226, 232, 240, ${(0.18 + scrollProgress * 0.62).toFixed(3)})`,
+              backdropFilter: `blur(${mobileMenuOpen ? 16 : 7 + blurAmount}px)`,
+              WebkitBackdropFilter: `blur(${mobileMenuOpen ? 16 : 7 + blurAmount}px)`,
+              boxShadow:
+                scrollProgress > 0.2
+                  ? `0 8px 24px -8px rgba(0, 0, 0, ${(scrollProgress * 0.18).toFixed(3)})`
+                  : '0 1px 2px 0 rgba(0, 0, 0, 0.03)',
+            }}
+          >
           {/* Brand - Left */}
           <div
             onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
@@ -163,7 +164,6 @@ export const LandingScreen: React.FC<LandingScreenProps> = ({ onNavigate }) => {
               className="group relative text-slate-600 dark:text-zinc-300 hover:text-slate-900 dark:hover:text-white px-3 py-1.5 rounded-md hover:bg-white/70 dark:hover:bg-white/[0.07] hover:backdrop-blur-md hover:shadow-[0_0_16px_rgba(16,185,129,0.45)] hover:ring-1 hover:ring-emerald-400/40 dark:hover:ring-emerald-400/30 transition-all duration-300 cursor-pointer"
             >
               <span>Platform Features</span>
-              <span className="absolute left-3 right-3 -bottom-px h-px bg-emerald-600 dark:bg-emerald-400 scale-x-0 group-hover:scale-x-100 origin-center transition-transform duration-300" />
             </button>
             <button
               type="button"
@@ -171,7 +171,6 @@ export const LandingScreen: React.FC<LandingScreenProps> = ({ onNavigate }) => {
               className="group relative text-slate-600 dark:text-zinc-300 hover:text-slate-900 dark:hover:text-white px-3 py-1.5 rounded-md hover:bg-white/70 dark:hover:bg-white/[0.07] hover:backdrop-blur-md hover:shadow-[0_0_16px_rgba(16,185,129,0.45)] hover:ring-1 hover:ring-emerald-400/40 dark:hover:ring-emerald-400/30 transition-all duration-300 cursor-pointer"
             >
               <span>Field Workflow</span>
-              <span className="absolute left-3 right-3 -bottom-px h-px bg-emerald-600 dark:bg-emerald-400 scale-x-0 group-hover:scale-x-100 origin-center transition-transform duration-300" />
             </button>
             <button
               type="button"
@@ -179,7 +178,6 @@ export const LandingScreen: React.FC<LandingScreenProps> = ({ onNavigate }) => {
               className="group relative text-slate-600 dark:text-zinc-300 hover:text-slate-900 dark:hover:text-white px-3 py-1.5 rounded-md hover:bg-white/70 dark:hover:bg-white/[0.07] hover:backdrop-blur-md hover:shadow-[0_0_16px_rgba(16,185,129,0.45)] hover:ring-1 hover:ring-emerald-400/40 dark:hover:ring-emerald-400/30 transition-all duration-300 cursor-pointer"
             >
               <span>Console Preview</span>
-              <span className="absolute left-3 right-3 -bottom-px h-px bg-emerald-600 dark:bg-emerald-400 scale-x-0 group-hover:scale-x-100 origin-center transition-transform duration-300" />
             </button>
           </nav>
 
@@ -240,11 +238,12 @@ export const LandingScreen: React.FC<LandingScreenProps> = ({ onNavigate }) => {
               {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
             </button>
           </div>
-        </div>
+          </div>
 
-        {/* Mobile Dropdown */}
-        {mobileMenuOpen && (
-          <div className="md:hidden border-b border-slate-200 dark:border-zinc-800 bg-white/95 dark:bg-[#0c100e]/95 backdrop-blur-md px-4 py-4 space-y-2 transition-colors">
+          {/* Mobile Dropdown — a separate floating card below the pill,
+              rather than a sheet fused to its bottom edge. */}
+          {mobileMenuOpen && (
+            <div className="md:hidden mt-2 rounded-2xl border border-slate-200 dark:border-zinc-800 bg-white/95 dark:bg-[#0c100e]/95 backdrop-blur-md shadow-lg px-4 py-4 space-y-2 transition-colors">
             <button
               type="button"
               onClick={() => scrollToSection('capabilities')}
@@ -285,7 +284,8 @@ export const LandingScreen: React.FC<LandingScreenProps> = ({ onNavigate }) => {
               </button>
             </div>
           </div>
-        )}
+          )}
+        </div>
       </header>
 
       {/* 2. HERO SECTION - 100dvh FULL FIRST SCREEN */}
@@ -795,45 +795,6 @@ export const LandingScreen: React.FC<LandingScreenProps> = ({ onNavigate }) => {
               <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-[11px] text-slate-700 dark:text-slate-300">
                 <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
                 <span>Field Telemetry & Edge AI Operational</span>
-              </div>
-
-              {/* Support & Kisan Helpline (Clickable Tel & Mailto) */}
-              <div className="pt-3 border-t border-slate-200 dark:border-slate-800 space-y-2 text-xs">
-                <div className="text-[11px] font-semibold text-slate-900 dark:text-slate-200 uppercase tracking-wider">
-                  Grower Support & Advisory Helpline
-                </div>
-                <div className="space-y-1.5 text-[11px] text-slate-600 dark:text-slate-400">
-                  <div className="flex items-center gap-2">
-                    <Phone className="w-3.5 h-3.5 text-emerald-700 dark:text-emerald-400 shrink-0" />
-                    <span>Kisan Helpline (Toll-Free):</span>
-                    <a
-                      href="tel:+9118001801551"
-                      className="font-mono font-medium text-emerald-700 dark:text-emerald-400 hover:underline"
-                    >
-                      +91 1800 180 1551
-                    </a>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Mail className="w-3.5 h-3.5 text-emerald-700 dark:text-emerald-400 shrink-0" />
-                    <span>Operator Desk:</span>
-                    <a
-                      href="mailto:support@agrismart.ai"
-                      className="font-medium text-emerald-700 dark:text-emerald-400 hover:underline"
-                    >
-                      support@agrismart.ai
-                    </a>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Phone className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500 shrink-0" />
-                    <span>Anand Agronomy Office:</span>
-                    <a
-                      href="tel:+912692261310"
-                      className="font-mono text-slate-600 dark:text-slate-400 hover:underline"
-                    >
-                      +91 (02692) 261-310
-                    </a>
-                  </div>
-                </div>
               </div>
             </div>
 

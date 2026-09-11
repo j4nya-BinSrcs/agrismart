@@ -5,8 +5,7 @@ import {
   MicOff,
   Bot,
   User,
-  Phone,
-  Mail,
+  Sparkles,
 } from 'lucide-react';
 import { AssistantMessage, ScreenType, DiagnosisRecord, WeatherCondition } from '../../types';
 import { assistantService } from '../../services/assistantService';
@@ -122,7 +121,7 @@ export const AssistantScreen: React.FC<AssistantScreenProps> = ({
   };
 
   return (
-    <div className="space-y-6 pb-8">
+    <div className="space-y-6">
       {/* Title */}
       <div className="pb-2 border-b border-slate-200/80 dark:border-slate-800">
         <h1 className="text-lg sm:text-xl font-semibold text-slate-900 dark:text-slate-100 tracking-tight">
@@ -134,7 +133,7 @@ export const AssistantScreen: React.FC<AssistantScreenProps> = ({
       </div>
 
       {/* Suggested Prompt Chips */}
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-3.5 space-y-2">
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-xs p-3.5 space-y-2">
         <div className="text-[10px] font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
           Suggested Queries
         </div>
@@ -144,7 +143,7 @@ export const AssistantScreen: React.FC<AssistantScreenProps> = ({
               key={i}
               type="button"
               onClick={() => handleUserSubmit(prompt)}
-              className="text-xs text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-slate-100 bg-slate-50 dark:bg-slate-800/70 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-700 px-2.5 py-1 rounded-md transition-colors text-left cursor-pointer"
+              className="text-xs text-slate-700 dark:text-slate-300 hover:text-emerald-800 dark:hover:text-emerald-400 bg-slate-50 dark:bg-slate-800/70 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 border border-slate-200 dark:border-slate-700 hover:border-emerald-300 dark:hover:border-emerald-700 px-2.5 py-1 rounded-md transition-all hover:-translate-y-px text-left cursor-pointer"
             >
               {prompt}
             </button>
@@ -152,9 +151,28 @@ export const AssistantScreen: React.FC<AssistantScreenProps> = ({
         </div>
       </div>
 
-      {/* Main Conversation Stream */}
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-4 sm:p-5 min-h-[420px] flex flex-col justify-between">
-        <div className="space-y-4 mb-4">
+      {/* Main Conversation Stream — hugs its content (so a short chat, like
+          just the welcome message, never leaves dead space or forces a
+          page scroll) but is capped at a max height once the conversation
+          grows, at which point the message list scrolls internally while
+          the header and input bar stay pinned in place. */}
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-sm flex flex-col max-h-[480px] sm:max-h-[560px] overflow-hidden">
+        {/* Chat header */}
+        <div className="shrink-0 flex items-center gap-2.5 px-4 sm:px-5 py-3 border-b border-slate-200 dark:border-slate-800">
+          <div className="relative shrink-0">
+            <div className="w-8 h-8 rounded-full bg-emerald-800 dark:bg-emerald-700 text-white flex items-center justify-center shadow-xs">
+              <Sparkles className="w-4 h-4" />
+            </div>
+            <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-500 ring-2 ring-white dark:ring-slate-900" />
+          </div>
+          <div className="min-w-0">
+            <div className="text-xs font-semibold text-slate-900 dark:text-slate-100">AgriSmart Advisor</div>
+            <div className="text-[10px] text-emerald-700 dark:text-emerald-400 font-medium">Online · Replies instantly</div>
+          </div>
+        </div>
+
+        {/* Scrollable message list — internal scroll, no visible scrollbar */}
+        <div className="scrollbar-hide flex-1 min-h-0 overflow-y-auto px-4 sm:px-5 pt-4 pb-2 space-y-4">
           {messages.map((msg) => {
             const isBot = msg.sender === 'assistant';
 
@@ -165,7 +183,7 @@ export const AssistantScreen: React.FC<AssistantScreenProps> = ({
               >
                 {/* Avatar */}
                 <div
-                  className={`w-7 h-7 rounded-md flex items-center justify-center shrink-0 text-xs font-medium shadow-xs ${
+                  className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 text-xs font-medium shadow-xs ${
                     isBot
                       ? 'bg-emerald-800 dark:bg-emerald-700 text-white'
                       : 'bg-slate-800 dark:bg-slate-700 text-white'
@@ -176,10 +194,10 @@ export const AssistantScreen: React.FC<AssistantScreenProps> = ({
 
                 {/* Message Bubble */}
                 <div
-                  className={`max-w-[85%] rounded-lg p-3.5 text-xs sm:text-sm leading-relaxed ${
+                  className={`max-w-[85%] rounded-2xl p-3.5 text-xs sm:text-sm leading-relaxed shadow-xs ${
                     isBot
-                      ? 'bg-slate-50 dark:bg-slate-800/80 text-slate-900 dark:text-slate-100 border border-slate-200 dark:border-slate-700'
-                      : 'bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900'
+                      ? 'bg-slate-50 dark:bg-slate-800/80 text-slate-900 dark:text-slate-100 border border-slate-200 dark:border-slate-700 rounded-tl-md'
+                      : 'bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 rounded-tr-md'
                   }`}
                 >
                   {/* Context Tag if provided */}
@@ -206,7 +224,7 @@ export const AssistantScreen: React.FC<AssistantScreenProps> = ({
                             key={idx}
                             type="button"
                             onClick={() => handleUserSubmit(sug)}
-                            className="text-xs bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-slate-100 border border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 px-2 py-0.5 rounded transition-colors cursor-pointer"
+                            className="text-xs bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 hover:text-emerald-800 dark:hover:text-emerald-400 border border-slate-200 dark:border-slate-700 hover:border-emerald-300 dark:hover:border-emerald-700 px-2 py-0.5 rounded-md transition-all hover:-translate-y-px cursor-pointer"
                           >
                             {sug}
                           </button>
@@ -228,10 +246,10 @@ export const AssistantScreen: React.FC<AssistantScreenProps> = ({
           })}
           {isTyping && (
             <div className="flex items-start gap-2.5">
-              <div className="w-7 h-7 rounded-md flex items-center justify-center shrink-0 bg-emerald-800 dark:bg-emerald-700 text-white">
+              <div className="w-7 h-7 rounded-full flex items-center justify-center shrink-0 bg-emerald-800 dark:bg-emerald-700 text-white">
                 <Bot className="w-3.5 h-3.5" />
               </div>
-              <div className="rounded-lg p-3 text-xs bg-slate-50 dark:bg-slate-800/80 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 flex items-center gap-2">
+              <div className="rounded-2xl rounded-tl-md p-3 text-xs bg-slate-50 dark:bg-slate-800/80 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 shadow-xs flex items-center gap-2">
                 <div className="flex items-center gap-1">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-700 dark:bg-emerald-400 animate-pulse" />
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-700 dark:bg-emerald-400 animate-pulse [animation-delay:150ms]" />
@@ -244,8 +262,8 @@ export const AssistantScreen: React.FC<AssistantScreenProps> = ({
           <div ref={messagesEndRef} />
         </div>
 
-        {/* Input Bar with Voice UI */}
-        <div className="pt-3 border-t border-slate-200 dark:border-slate-800">
+        {/* Input Bar with Voice UI — pinned to the bottom of the card */}
+        <div className="shrink-0 p-3 sm:p-4 border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
           {isVoiceRecording && (
             <div className="mb-2.5 p-2.5 rounded-md bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-800 dark:text-slate-200 flex items-center justify-between text-xs">
               <div className="flex items-center gap-2">
@@ -274,10 +292,10 @@ export const AssistantScreen: React.FC<AssistantScreenProps> = ({
             <button
               type="button"
               onClick={toggleVoiceRecording}
-              className={`p-2.5 rounded-md border transition-colors cursor-pointer shadow-xs ${
+              className={`p-2.5 rounded-full border transition-all cursor-pointer shadow-xs shrink-0 ${
                 isVoiceRecording
                   ? 'bg-rose-700 text-white border-rose-800'
-                  : 'bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-750 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-700'
+                  : 'bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-750 hover:border-emerald-300 dark:hover:border-emerald-700 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-700'
               }`}
               title={isVoiceRecording ? 'Stop recording' : 'Voice input'}
               aria-label="Voice input"
@@ -291,37 +309,19 @@ export const AssistantScreen: React.FC<AssistantScreenProps> = ({
               value={inputVal}
               onChange={(e) => setInputVal(e.target.value)}
               placeholder="Ask about crops, diseases, irrigation timing, or weather impact..."
-              className="flex-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-md px-3.5 py-2 text-xs sm:text-sm text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:border-slate-400 dark:focus:border-slate-500"
+              className="flex-1 min-w-0 bg-slate-50 dark:bg-slate-800/70 border border-slate-200 dark:border-slate-700 rounded-full px-4 py-2.5 text-xs sm:text-sm text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 transition-all focus:outline-none focus:bg-white dark:focus:bg-slate-900 focus:border-emerald-500 dark:focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10"
             />
 
             {/* Send button */}
             <button
               type="submit"
               disabled={!inputVal.trim() || isTyping}
-              className="p-2.5 rounded-md bg-emerald-800 hover:bg-emerald-900 dark:bg-emerald-700 dark:hover:bg-emerald-600 text-white transition-colors disabled:opacity-40 cursor-pointer shadow-xs"
+              className="p-2.5 rounded-full bg-emerald-800 hover:bg-emerald-900 dark:bg-emerald-700 dark:hover:bg-emerald-600 text-white transition-all disabled:opacity-40 disabled:hover:translate-y-0 disabled:hover:shadow-xs cursor-pointer shadow-xs hover:shadow-md hover:-translate-y-px active:translate-y-0 shrink-0"
               aria-label="Send query"
             >
               <Send className="w-4 h-4" />
             </button>
           </form>
-        </div>
-      </div>
-
-      {/* Field Support & Kisan Helpline Footer */}
-      <div className="flex flex-wrap items-center justify-between gap-2.5 px-3.5 py-2.5 rounded-lg bg-slate-100/70 dark:bg-slate-850/60 border border-slate-200/80 dark:border-slate-800 text-xs text-slate-600 dark:text-slate-400">
-        <div className="flex items-center gap-1.5">
-          <Phone className="w-3.5 h-3.5 text-emerald-700 dark:text-emerald-400 shrink-0" />
-          <span>Kisan Advisory Helpline (Toll-Free):</span>
-          <a href="tel:+9118001801551" className="font-mono font-medium text-emerald-700 dark:text-emerald-400 hover:underline">
-            +91 1800 180 1551
-          </a>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <Mail className="w-3.5 h-3.5 text-emerald-700 dark:text-emerald-400 shrink-0" />
-          <span>Agronomist Email:</span>
-          <a href="mailto:expert@agrismart.ai" className="font-medium text-emerald-700 dark:text-emerald-400 hover:underline">
-            expert@agrismart.ai
-          </a>
         </div>
       </div>
     </div>

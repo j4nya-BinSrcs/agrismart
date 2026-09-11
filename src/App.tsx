@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useCallback, useRef } from 'react';
 import {
   ScreenType,
   DiagnosisRecord,
@@ -40,7 +40,7 @@ import { LoadingState } from './components/common/LoadingState';
 import { ErrorBoundary } from './components/common/ErrorBoundary';
 import { useToast } from './context/ToastContext';
 import { useAuth } from './context/AuthContext';
-import { getStoredItem, setStoredItem } from './utils/storage';
+import { getStoredItem } from './utils/storage';
 
 // Mobile bottom navigation icons
 import {
@@ -185,6 +185,7 @@ const PROTECTED_SCREENS: ScreenType[] = [
 export default function App() {
   const { showToast } = useToast();
   const { isAuthenticated } = useAuth();
+  const mainScrollRef = useRef<HTMLElement>(null);
 
   // App navigation and view state
   const [currentScreen, setCurrentScreen] = useState<ScreenType>(() => {
@@ -311,6 +312,23 @@ export default function App() {
     };
 
     document.title = titles[currentScreen] || 'AgriSmart AI — Agricultural Intelligence Platform';
+  }, [currentScreen]);
+
+  // Reset scroll position on every screen change. Without this, a new
+  // screen can render already scrolled to wherever the previous one left
+  // off — the document scroll for Landing/Login/Signup/404 (which scroll
+  // the window), or the app shell's internal <main> scroll for the
+  // authenticated screens (Dashboard, Diagnose, Weather, ...) — instead of
+  // starting at the top on laptop, tablet, and mobile alike. Runs via
+  // useLayoutEffect so the jump happens before paint, with no visible
+  // flash of the old scroll position. Fires for sidebar/header/bottom-nav
+  // clicks, CTA navigation, and browser Back/Forward alike, since all of
+  // them go through the same currentScreen state change.
+  useLayoutEffect(() => {
+    window.scrollTo(0, 0);
+    if (mainScrollRef.current) {
+      mainScrollRef.current.scrollTop = 0;
+    }
   }, [currentScreen]);
 
   // Load initial data through service architecture
@@ -500,7 +518,10 @@ export default function App() {
         />
 
         {/* Scrollable Screen Viewport with Error Boundary */}
-        <main className="flex-1 overflow-y-auto px-4 sm:px-6 lg:px-8 xl:px-10 2xl:px-12 py-6 sm:py-7 xl:py-8 pb-20 sm:pb-8 bg-[#F8F9FA] dark:bg-[#080808] transition-colors">
+        <main
+          ref={mainScrollRef}
+          className="flex-1 overflow-y-auto px-4 sm:px-6 lg:px-8 xl:px-10 2xl:px-12 py-6 sm:py-7 xl:py-8 pb-20 sm:pb-8 bg-[#F8F9FA] dark:bg-[#080808] transition-colors"
+        >
           <ErrorBoundary>
           {/* Keyed by screen so navigating between routes (sidebar, header,
               bottom nav, CTAs, or browser Back/Forward) replays a subtle
