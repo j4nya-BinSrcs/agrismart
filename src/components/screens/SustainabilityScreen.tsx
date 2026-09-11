@@ -318,8 +318,14 @@ export const SustainabilityScreen: React.FC<SustainabilityScreenProps> = ({
 
       {/* "How is this calculated?" Methodology Modal */}
       {showCalculationModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 dark:bg-black/75 backdrop-blur-xs">
-          <div className="relative bg-white dark:bg-slate-900 rounded-xl max-w-lg w-full p-5 shadow-xl z-10 border border-slate-200 dark:border-slate-800 space-y-4">
+        <div
+          onClick={() => setShowCalculationModal(false)}
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 dark:bg-black/75 backdrop-blur-xs cursor-pointer"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="relative bg-white dark:bg-slate-900 rounded-xl max-w-lg w-full p-5 shadow-xl z-10 border border-slate-200 dark:border-slate-800 space-y-4 cursor-default"
+          >
             <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
               <div>
                 <h3 className="font-semibold text-sm text-slate-900 dark:text-slate-100">
@@ -398,8 +404,14 @@ export const SustainabilityScreen: React.FC<SustainabilityScreenProps> = ({
 
       {/* "Water saved through delayed irrigation" Connection Modal */}
       {showWaterConnectionModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 dark:bg-black/75 backdrop-blur-xs">
-          <div className="relative bg-white dark:bg-slate-900 rounded-xl max-w-lg w-full p-5 shadow-xl z-10 border border-slate-200 dark:border-slate-800 space-y-4">
+        <div
+          onClick={() => setShowWaterConnectionModal(false)}
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 dark:bg-black/75 backdrop-blur-xs cursor-pointer"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="relative bg-white dark:bg-slate-900 rounded-xl max-w-lg w-full p-5 shadow-xl z-10 border border-slate-200 dark:border-slate-800 space-y-4 cursor-default"
+          >
             <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
               <div>
                 <h3 className="font-semibold text-sm text-slate-900 dark:text-slate-100">

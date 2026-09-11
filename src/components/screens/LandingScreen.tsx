@@ -344,14 +344,6 @@ export const LandingScreen: React.FC<LandingScreenProps> = ({ onNavigate }) => {
             >
               Login / Signup
             </button>
-
-            <button
-              type="button"
-              onClick={() => scrollToSection('product-preview')}
-              className="w-full sm:w-auto px-4 py-3 rounded-md text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 text-xs font-medium transition-colors cursor-pointer"
-            >
-              Explore Platform ↓
-            </button>
           </motion.div>
         </motion.div>
 

@@ -70,9 +70,7 @@ export const useToast = (): ToastContextType => {
   const context = useContext(ToastContext);
   if (!context) {
     return {
-      showToast: (message: string, type?: 'success' | 'info' | 'warning' | 'error') => {
-        console.info(`[Toast: ${type || 'info'}] ${message}`);
-      },
+      showToast: () => {},
     };
   }
   return context;

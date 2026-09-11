@@ -92,7 +92,15 @@ export const ActionCard: React.FC<ActionCardProps> = ({
                 onClick={() => onNavigate(action.actionRoute)}
                 className="inline-flex items-center gap-1 text-xs font-medium text-emerald-800 dark:text-emerald-400 hover:text-emerald-950 dark:hover:text-emerald-300 transition-colors cursor-pointer"
               >
-                <span>View {action.actionRoute.replace('-', ' ')}</span>
+                <span>
+                  {action.actionRoute === 'diagnosis-result'
+                    ? 'View Diagnosis Report'
+                    : action.actionRoute === 'irrigation'
+                    ? 'View Irrigation Plan'
+                    : action.actionRoute === 'weather'
+                    ? 'View Weather Timeline'
+                    : `View ${action.actionRoute.replace('-', ' ')}`}
+                </span>
                 <ArrowRight className="w-3.5 h-3.5" />
               </button>
             </div>
