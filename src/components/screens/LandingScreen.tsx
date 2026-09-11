@@ -10,7 +10,6 @@ import {
   CheckCircle2,
   Menu,
   X,
-  Sparkles,
   Sun,
   Moon,
   Phone,
@@ -52,16 +51,38 @@ export const LandingScreen: React.FC<LandingScreenProps> = ({ onNavigate }) => {
   const { theme, toggleTheme } = useTheme();
   const { showToast } = useToast();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [isScrolled, setIsScrolled] = useState(false);
+  const [scrollY, setScrollY] = useState(0);
+  const [isDesktop, setIsDesktop] = useState(() =>
+    typeof window !== 'undefined' ? window.innerWidth >= 768 : false
+  );
 
   useEffect(() => {
+    const handleResize = () => {
+      setIsDesktop(window.innerWidth >= 768);
+    };
+    window.addEventListener('resize', handleResize, { passive: true });
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  useEffect(() => {
+    let ticking = false;
     const handleScroll = () => {
-      setIsScrolled(window.scrollY > 20);
+      if (!ticking) {
+        window.requestAnimationFrame(() => {
+          setScrollY(window.scrollY);
+          ticking = false;
+        });
+        ticking = true;
+      }
     };
     window.addEventListener('scroll', handleScroll, { passive: true });
     handleScroll();
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
+
+  // Progressive slow blur and background transition as user scrolls from 0px to 140px
+  const scrollProgress = Math.min(1, Math.max(0, scrollY / 140));
+  const blurAmount = Math.round(scrollProgress * 16); // 0px -> 16px blur
 
   const handleOpenDemo = () => {
     loginAsDemo();
@@ -86,92 +107,90 @@ export const LandingScreen: React.FC<LandingScreenProps> = ({ onNavigate }) => {
 
   return (
     <div className="min-h-screen bg-[#F8F9FA] dark:bg-[#080808] text-[#1E293B] dark:text-[#EDEDED] font-sans antialiased transition-colors duration-200">
-      {/* 1. TOP NAVIGATION - PREMIUM DARK GLASSMORPHISM */}
+      {/* 1. TOP NAVIGATION - FIXED & STATIC WITH PROGRESSIVE SLOW BLUR */}
       <header
-        className={`sticky top-0 z-50 w-full transition-all duration-300 ease-out border-b ${
-          isScrolled
-            ? 'border-slate-200/90 dark:border-[rgba(52,211,153,0.18)] shadow-[0_10px_30px_-4px_rgba(0,0,0,0.45),0_1px_10px_0_rgba(16,185,129,0.06)]'
-            : 'border-slate-200/60 dark:border-[rgba(255,255,255,0.08)] shadow-[0_4px_24px_-2px_rgba(0,0,0,0.25),0_1px_6px_0_rgba(16,185,129,0.04)]'
-        }`}
+        className="fixed top-0 left-0 right-0 z-50 w-full transition-all duration-300 ease-out border-b"
         style={{
           backgroundColor:
-            theme === 'dark'
-              ? isScrolled
-                ? 'rgba(10, 15, 14, 0.88)'
-                : 'rgba(10, 15, 14, 0.60)'
-              : isScrolled
-                ? 'rgba(255, 255, 255, 0.90)'
-                : 'rgba(255, 255, 255, 0.70)',
-          backdropFilter: isScrolled
-            ? 'blur(20px) saturate(140%)'
-            : 'blur(18px) saturate(140%)',
-          WebkitBackdropFilter: isScrolled
-            ? 'blur(20px) saturate(140%)'
-            : 'blur(18px) saturate(140%)',
+            mobileMenuOpen
+              ? theme === 'dark'
+                ? 'rgba(12, 16, 14, 0.96)'
+                : 'rgba(255, 255, 255, 0.98)'
+              : theme === 'dark'
+              ? `rgba(12, 16, 14, ${(scrollProgress * 0.94).toFixed(3)})`
+              : `rgba(255, 255, 255, ${(scrollProgress * 0.95).toFixed(3)})`,
+          borderBottomColor:
+            mobileMenuOpen
+              ? theme === 'dark'
+                ? 'rgba(39, 39, 42, 0.8)'
+                : 'rgba(226, 232, 240, 0.8)'
+              : theme === 'dark'
+              ? `rgba(39, 39, 42, ${(scrollProgress * 0.8).toFixed(3)})`
+              : `rgba(226, 232, 240, ${(scrollProgress * 0.8).toFixed(3)})`,
+          backdropFilter: `blur(${mobileMenuOpen ? 16 : blurAmount}px)`,
+          WebkitBackdropFilter: `blur(${mobileMenuOpen ? 16 : blurAmount}px)`,
+          boxShadow:
+            scrollProgress > 0.2
+              ? `0 1px 3px 0 rgba(0, 0, 0, ${(scrollProgress * 0.06).toFixed(3)})`
+              : 'none',
         }}
       >
-        {/* Subtle green glow & reflection accent line across the bottom edge */}
-        <div
-          className={`absolute bottom-0 left-0 right-0 h-[1px] pointer-events-none transition-opacity duration-300 ${
-            isScrolled ? 'opacity-80' : 'opacity-40'
-          }`}
-          style={{
-            background:
-              'linear-gradient(90deg, rgba(16,185,129,0) 0%, rgba(16,185,129,0.28) 25%, rgba(52,211,153,0.38) 50%, rgba(16,185,129,0.28) 75%, rgba(16,185,129,0) 100%)',
-          }}
-        />
-
         <div className="w-full px-4 sm:px-6 md:px-8 lg:px-12 h-16 flex items-center justify-between relative">
           {/* Brand - Left */}
           <div
             onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
             className="flex items-center gap-2.5 cursor-pointer select-none shrink-0"
           >
-            <div className="w-8 h-8 rounded-md bg-emerald-800 dark:bg-emerald-900/60 border border-emerald-700/60 dark:border-emerald-700 text-white flex items-center justify-center shadow-xs">
+            <div className="w-8 h-8 rounded-md bg-emerald-800 dark:bg-emerald-900/80 border border-emerald-700/60 dark:border-emerald-700 text-white flex items-center justify-center shadow-xs">
               <Leaf className="w-4 h-4 text-emerald-200 dark:text-emerald-400" />
             </div>
             <div>
-              <span className="font-semibold text-sm tracking-tight text-slate-900 dark:text-slate-100">
-                AGRISMART AI
-              </span>
-              <span className="block text-[10px] text-slate-500 dark:text-slate-400 leading-none">
-                Operations Console
+              <div className="flex items-center gap-1.5">
+                <span className="font-bold text-sm tracking-tight text-slate-900 dark:text-white">
+                  AgriSmart
+                </span>
+                <span className="text-[10px] font-semibold px-1.5 py-0.2 rounded bg-emerald-100/80 dark:bg-emerald-950/80 border border-emerald-300/60 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300">
+                  Platform
+                </span>
+              </div>
+              <span className="block text-[10px] text-slate-500 dark:text-slate-400 leading-none mt-0.5">
+                Farm Operations Console
               </span>
             </div>
           </div>
 
           {/* Desktop Nav Links - Centered */}
-          <nav className="hidden md:flex items-center gap-8 text-xs font-medium absolute left-1/2 -translate-x-1/2">
+          <nav className="hidden md:flex items-center gap-1 sm:gap-2 text-xs font-medium absolute left-1/2 -translate-x-1/2">
             <button
               type="button"
               onClick={() => scrollToSection('capabilities')}
-              className="text-slate-600 dark:text-zinc-300 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors cursor-pointer"
+              className="text-slate-600 dark:text-zinc-300 hover:text-slate-900 dark:hover:text-white px-3 py-1.5 rounded-md hover:bg-slate-100 dark:hover:bg-zinc-800/60 transition-colors cursor-pointer"
             >
-              Product
+              Platform Features
             </button>
             <button
               type="button"
               onClick={() => scrollToSection('how-it-works')}
-              className="text-slate-600 dark:text-zinc-300 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors cursor-pointer"
+              className="text-slate-600 dark:text-zinc-300 hover:text-slate-900 dark:hover:text-white px-3 py-1.5 rounded-md hover:bg-slate-100 dark:hover:bg-zinc-800/60 transition-colors cursor-pointer"
             >
-              How it Works
+              Field Workflow
             </button>
             <button
               type="button"
               onClick={() => scrollToSection('product-preview')}
-              className="text-slate-600 dark:text-zinc-300 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors cursor-pointer"
+              className="text-slate-600 dark:text-zinc-300 hover:text-slate-900 dark:hover:text-white px-3 py-1.5 rounded-md hover:bg-slate-100 dark:hover:bg-zinc-800/60 transition-colors cursor-pointer"
             >
-              Preview
+              Console Preview
             </button>
           </nav>
 
-          {/* Desktop Right Actions: Theme Toggle + Open Demo -> + Login */}
-          <div className="hidden md:flex items-center gap-3 shrink-0 ml-auto">
+          {/* Desktop Right Actions: Theme Toggle + Open Demo + Login */}
+          <div className="hidden md:flex items-center gap-2.5 shrink-0 ml-auto">
             {/* Dark/Light Mode Switcher: ONLY Lucide icon, no text */}
             <button
               type="button"
               onClick={toggleTheme}
-              className="p-2 rounded-md text-slate-500 hover:text-slate-800 dark:text-zinc-400 dark:hover:text-amber-400 hover:bg-slate-200/50 dark:hover:bg-white/5 transition-colors cursor-pointer flex items-center justify-center"
+              className="p-2 rounded-md text-slate-500 hover:text-slate-800 dark:text-zinc-400 dark:hover:text-zinc-200 hover:bg-slate-100 dark:hover:bg-zinc-800/60 transition-colors cursor-pointer flex items-center justify-center"
               aria-label={theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
               title={theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
             >
@@ -182,11 +201,11 @@ export const LandingScreen: React.FC<LandingScreenProps> = ({ onNavigate }) => {
               )}
             </button>
 
-            {/* 1. Open Demo -> button */}
+            {/* 1. Open Demo button */}
             <button
               type="button"
               onClick={handleOpenDemo}
-              className="px-3.5 py-1.5 rounded-md text-xs font-medium bg-emerald-800 hover:bg-emerald-900 dark:bg-emerald-700 dark:hover:bg-emerald-600 text-white transition-all cursor-pointer flex items-center gap-1.5 shadow-xs hover:shadow-sm"
+              className="px-3.5 py-1.5 rounded-md text-xs font-medium bg-emerald-800 hover:bg-emerald-900 dark:bg-emerald-700 dark:hover:bg-emerald-600 text-white transition-all cursor-pointer flex items-center gap-1.5 shadow-xs"
             >
               <span>Open Demo</span>
               <ArrowRight className="w-3.5 h-3.5" />
@@ -196,7 +215,7 @@ export const LandingScreen: React.FC<LandingScreenProps> = ({ onNavigate }) => {
             <button
               type="button"
               onClick={handleLoginClick}
-              className="px-3.5 py-1.5 rounded-md text-xs font-medium text-slate-700 dark:text-zinc-200 border border-slate-300 dark:border-zinc-700/80 hover:bg-slate-100 dark:hover:bg-white/5 transition-colors cursor-pointer"
+              className="px-3.5 py-1.5 rounded-md text-xs font-medium text-slate-700 dark:text-zinc-200 border border-slate-300 dark:border-zinc-700 hover:bg-slate-100 dark:hover:bg-zinc-800/60 transition-colors cursor-pointer"
             >
               Login
             </button>
@@ -216,7 +235,7 @@ export const LandingScreen: React.FC<LandingScreenProps> = ({ onNavigate }) => {
             <button
               type="button"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="p-1.5 text-slate-600 dark:text-zinc-300 hover:bg-slate-200/50 dark:hover:bg-white/5 rounded-md transition-colors cursor-pointer"
+              className="p-1.5 rounded-md text-slate-600 dark:text-zinc-300 hover:bg-slate-200/50 dark:hover:bg-white/5 transition-colors cursor-pointer"
               aria-label="Toggle navigation"
             >
               {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
@@ -226,37 +245,27 @@ export const LandingScreen: React.FC<LandingScreenProps> = ({ onNavigate }) => {
 
         {/* Mobile Dropdown */}
         {mobileMenuOpen && (
-          <div
-            className="md:hidden border-b border-emerald-500/15 px-4 py-4 space-y-3 transition-colors"
-            style={{
-              backgroundColor:
-                theme === 'dark'
-                  ? 'rgba(10, 15, 14, 0.95)'
-                  : 'rgba(255, 255, 255, 0.96)',
-              backdropFilter: 'blur(20px)',
-              WebkitBackdropFilter: 'blur(20px)',
-            }}
-          >
+          <div className="md:hidden border-b border-slate-200 dark:border-zinc-800 bg-white/95 dark:bg-[#0c100e]/95 backdrop-blur-md px-4 py-4 space-y-2 transition-colors">
             <button
               type="button"
               onClick={() => scrollToSection('capabilities')}
-              className="w-full text-left py-1 text-xs text-slate-600 dark:text-zinc-300 hover:text-slate-900 dark:hover:text-white"
+              className="w-full text-left px-2 py-1.5 rounded text-xs text-slate-600 dark:text-zinc-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-zinc-800/50"
             >
-              Product
+              Platform Features
             </button>
             <button
               type="button"
               onClick={() => scrollToSection('how-it-works')}
-              className="w-full text-left py-1 text-xs text-slate-600 dark:text-zinc-300 hover:text-slate-900 dark:hover:text-white"
+              className="w-full text-left px-2 py-1.5 rounded text-xs text-slate-600 dark:text-zinc-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-zinc-800/50"
             >
-              How it Works
+              Field Workflow
             </button>
             <button
               type="button"
               onClick={() => scrollToSection('product-preview')}
-              className="w-full text-left py-1 text-xs text-slate-600 dark:text-zinc-300 hover:text-slate-900 dark:hover:text-white"
+              className="w-full text-left px-2 py-1.5 rounded text-xs text-slate-600 dark:text-zinc-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-zinc-800/50"
             >
-              Preview
+              Console Preview
             </button>
 
             <div className="pt-3 border-t border-slate-200 dark:border-zinc-800 flex flex-col gap-2">
@@ -271,7 +280,7 @@ export const LandingScreen: React.FC<LandingScreenProps> = ({ onNavigate }) => {
               <button
                 type="button"
                 onClick={handleLoginClick}
-                className="w-full py-2 text-xs text-center rounded-md border border-slate-300 dark:border-zinc-700 text-slate-800 dark:text-zinc-200 font-medium cursor-pointer"
+                className="w-full py-2 text-xs text-center rounded-md border border-slate-300 dark:border-zinc-700 text-slate-800 dark:text-zinc-200 font-medium cursor-pointer hover:bg-slate-100 dark:hover:bg-zinc-800/60"
               >
                 Login
               </button>
@@ -281,17 +290,19 @@ export const LandingScreen: React.FC<LandingScreenProps> = ({ onNavigate }) => {
       </header>
 
       {/* 2. HERO SECTION */}
-      <section className="relative -mt-16 pt-28 pb-14 sm:pt-36 sm:pb-20 px-4 sm:px-6 lg:px-8 border-b border-slate-200 dark:border-slate-800 transition-colors overflow-hidden">
-        {/* Background Aurora WebGL Animation */}
-        <div className="absolute inset-0 pointer-events-none opacity-40 dark:opacity-60 overflow-hidden">
-          <Aurora
-            colorStops={["#075c45", "#1e896c", "#075c45"]}
-            blend={0.5}
-            amplitude={1.0}
-            speed={0.5}
-            lightMode={theme === 'light'}
-          />
-        </div>
+      <section className="relative pt-28 pb-14 sm:pt-36 sm:pb-20 px-4 sm:px-6 lg:px-8 border-b border-slate-200 dark:border-slate-800 transition-colors overflow-hidden">
+        {/* Background Aurora WebGL Animation (Desktop & Tablet only, removed on mobile) */}
+        {isDesktop && (
+          <div className="hidden md:block absolute inset-0 pointer-events-none opacity-25 dark:opacity-40 overflow-hidden">
+            <Aurora
+              colorStops={["#075c45", "#1e896c", "#075c45"]}
+              blend={0.5}
+              amplitude={1.0}
+              speed={0.5}
+              lightMode={theme === 'light'}
+            />
+          </div>
+        )}
 
         <motion.div
           className="relative z-10 max-w-4xl mx-auto text-center"
@@ -299,11 +310,6 @@ export const LandingScreen: React.FC<LandingScreenProps> = ({ onNavigate }) => {
           animate="visible"
           variants={staggerContainer}
         >
-          {/* Tag */}
-          <motion.div variants={fadeInUp} className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-400 text-[11px] font-medium uppercase tracking-wider mb-6">
-            <Sparkles className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
-            <span>AGRISMART AI</span>
-          </motion.div>
 
           {/* Hero Headline */}
           <motion.h1
@@ -320,7 +326,7 @@ export const LandingScreen: React.FC<LandingScreenProps> = ({ onNavigate }) => {
             variants={fadeInUp}
             className="max-w-2xl mx-auto text-sm sm:text-base text-slate-600 dark:text-slate-400 leading-relaxed mb-8"
           >
-            AI-powered crop diagnosis, weather intelligence, irrigation guidance and sustainability insights — brought together in one simple agricultural decision-support platform.
+            Crop disease diagnostics, hyper-local weather intelligence, precision irrigation scheduling, and farm sustainability tracking — unified in one agricultural decision-support platform.
           </motion.p>
 
           {/* Action CTAs: Open Demo -> and Login / Signup */}
