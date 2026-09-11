@@ -9,16 +9,13 @@ import {
   Sun,
   Moon,
 } from 'lucide-react';
-import { ScreenType, Language } from '../../types';
+import { ScreenType } from '../../types';
 import { useToast } from '../../context/ToastContext';
 import { useTheme } from '../../context/ThemeContext';
-import { useLanguage } from '../../context/LanguageContext';
 
 interface HeaderProps {
   currentScreen: ScreenType;
   onNavigate: (screen: ScreenType) => void;
-  currentLanguage: Language;
-  onLanguageChange: (lang: Language) => void;
   onToggleMobileSidebar: () => void;
   onOpenNotifications: () => void;
   unreadCount: number;
@@ -28,29 +25,19 @@ interface HeaderProps {
 export const Header: React.FC<HeaderProps> = ({
   currentScreen,
   onNavigate,
-  currentLanguage,
-  onLanguageChange,
   onToggleMobileSidebar,
   onOpenNotifications,
   unreadCount,
 }) => {
   const { showToast } = useToast();
   const { theme, toggleTheme } = useTheme();
-  const { t } = useLanguage();
   const [showFarmMenu, setShowFarmMenu] = useState(false);
-  const [showLangMenu, setShowLangMenu] = useState(false);
 
   const [selectedFarm, setSelectedFarm] = useState('Patel Farm (Anand, Gujarat)');
 
   const farms = [
     { id: 'f1', name: 'Patel Farm (Anand, Gujarat)', size: '18.5 Acres', crops: 'Tomato, Cotton, Wheat' },
     { id: 'f2', name: 'Narmada Valley Plot (Bharuch)', size: '12.0 Acres', crops: 'Sugarcane, Banana' },
-  ];
-
-  const languages = [
-    { code: 'en' as Language, label: 'English', native: 'English' },
-    { code: 'hi' as Language, label: 'Hindi', native: 'हिन्दी' },
-    { code: 'gu' as Language, label: 'Gujarati', native: 'ગુજરાતી' },
   ];
 
   return (
@@ -62,7 +49,7 @@ export const Header: React.FC<HeaderProps> = ({
             type="button"
             onClick={onToggleMobileSidebar}
             className="lg:hidden p-1.5 rounded-md text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800 hover:scale-105 active:scale-95 transition-all cursor-pointer"
-            aria-label={t('nav.openNavigation', 'Open navigation')}
+            aria-label="Open navigation"
           >
             <Menu className="w-5 h-5" />
           </button>
@@ -95,7 +82,7 @@ export const Header: React.FC<HeaderProps> = ({
                 />
                 <div className="absolute left-0 mt-2 w-72 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-lg p-1.5 z-20">
                   <div className="px-2.5 py-1.5 text-[11px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider">
-                    {t('nav.selectFarm', 'Select Farm')}
+                    Select Farm
                   </div>
                   {farms.map((f) => (
                     <button
@@ -152,63 +139,17 @@ export const Header: React.FC<HeaderProps> = ({
               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-emerald-800 hover:bg-emerald-900 dark:bg-emerald-700 dark:hover:bg-emerald-600 text-white text-xs font-medium transition-all cursor-pointer shadow-xs hover:shadow-md hover:-translate-y-px active:translate-y-0"
             >
               <Camera className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">{t('nav.diagnoseCrop', 'Diagnose Crop')}</span>
-              <span className="sm:hidden">{t('nav.diagnose.short', 'Diagnose')}</span>
+              <span className="hidden sm:inline">Diagnose Crop</span>
+              <span className="sm:hidden">Diagnose</span>
             </button>
           )}
-
-          {/* Language Switcher */}
-          <div className="relative">
-            <button
-              type="button"
-              onClick={() => setShowLangMenu(!showLangMenu)}
-              className="px-1.5 sm:px-2 py-1 text-xs text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white flex items-center gap-1 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
-              aria-label="Select language"
-              aria-haspopup="menu"
-              aria-expanded={showLangMenu}
-            >
-              <span className="hidden sm:inline">{languages.find((l) => l.code === currentLanguage)?.native}</span>
-              <span className="sm:hidden font-mono uppercase text-[11px] font-semibold">{currentLanguage}</span>
-              <ChevronDown className="w-3 h-3 text-slate-400 dark:text-slate-500 shrink-0" />
-            </button>
-
-            {showLangMenu && (
-              <>
-                <div
-                  className="fixed inset-0 z-10"
-                  onClick={() => setShowLangMenu(false)}
-                />
-                <div className="absolute right-0 mt-1.5 w-40 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-lg p-1 z-20">
-                  {languages.map((l) => (
-                    <button
-                      key={l.code}
-                      type="button"
-                      onClick={() => {
-                        onLanguageChange(l.code);
-                        setShowLangMenu(false);
-                        showToast(`Language set to ${l.native} (${l.label})`, 'info');
-                      }}
-                      className={`w-full text-left px-2.5 py-1.5 rounded-md text-xs flex items-center justify-between transition-colors ${
-                        currentLanguage === l.code
-                          ? 'bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white font-medium'
-                          : 'hover:bg-slate-50 dark:hover:bg-slate-800/60 text-slate-700 dark:text-slate-300'
-                      }`}
-                    >
-                      <span>{l.native}</span>
-                      <span className="text-[10px] text-slate-400 dark:text-slate-500">{l.label}</span>
-                    </button>
-                  ))}
-                </div>
-              </>
-            )}
-          </div>
 
           {/* Notifications Button */}
           <button
             type="button"
             onClick={onOpenNotifications}
             className="relative p-1.5 rounded-md text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 hover:scale-105 active:scale-95 transition-all cursor-pointer"
-            aria-label={t('nav.notifications', 'Notifications')}
+            aria-label="Farm notifications"
           >
             <Bell className="w-4 h-4" />
             {unreadCount > 0 && (

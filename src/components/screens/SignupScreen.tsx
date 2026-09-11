@@ -21,7 +21,6 @@ import { ScreenType } from '../../types';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
 import { useTheme } from '../../context/ThemeContext';
-import { useLanguage } from '../../context/LanguageContext';
 
 interface SignupScreenProps {
   onNavigate: (screen: ScreenType) => void;
@@ -31,7 +30,6 @@ export const SignupScreen: React.FC<SignupScreenProps> = ({ onNavigate }) => {
   const { signup, loginAsDemo } = useAuth();
   const { showToast } = useToast();
   const { theme, toggleTheme } = useTheme();
-  const { t } = useLanguage();
 
   const [formData, setFormData] = useState({
     name: '',
@@ -313,12 +311,13 @@ export const SignupScreen: React.FC<SignupScreenProps> = ({ onNavigate }) => {
 
           {/* Switch to Login */}
           <div className="mt-5 text-center text-xs text-slate-500 dark:text-slate-400">
+            <span>Already have an account? </span>
             <button
               type="button"
               onClick={() => onNavigate('login')}
               className="text-emerald-700 dark:text-emerald-400 hover:underline font-semibold transition-colors cursor-pointer"
             >
-              {t('auth.switchToLogin', 'Already registered? Sign in')}
+              Sign in
             </button>
           </div>
         </div>

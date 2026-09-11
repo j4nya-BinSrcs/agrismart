@@ -8,14 +8,12 @@ import {
   Phone,
   Mail,
 } from 'lucide-react';
-import { AssistantMessage, Language, ScreenType, DiagnosisRecord, WeatherCondition } from '../../types';
+import { AssistantMessage, ScreenType, DiagnosisRecord, WeatherCondition } from '../../types';
 import { assistantService } from '../../services/assistantService';
 
 interface AssistantScreenProps {
   initialQuery?: string;
   onClearInitialQuery?: () => void;
-  currentLanguage: Language;
-  onLanguageChange: (lang: Language) => void;
   onNavigate: (screen: ScreenType) => void;
   activeDiagnosis?: DiagnosisRecord;
   weather?: WeatherCondition;
@@ -24,8 +22,6 @@ interface AssistantScreenProps {
 export const AssistantScreen: React.FC<AssistantScreenProps> = ({
   initialQuery,
   onClearInitialQuery,
-  currentLanguage,
-  onLanguageChange,
   activeDiagnosis,
   weather,
 }) => {
@@ -65,32 +61,14 @@ export const AssistantScreen: React.FC<AssistantScreenProps> = ({
     }
   }, [initialQuery]);
 
-  const suggestedPrompts = {
-    en: [
-      'What should I do about Tomato Early Blight?',
-      'Can I irrigate Field A today?',
-      'Explain this disease in simple terms.',
-      'How serious is this infection?',
-      'What should I check tomorrow morning?',
-      'What bio-fungicide dosage is recommended?',
-    ],
-    hi: [
-      'टमाटर के अर्ली ब्लाइट रोग के लिए मुझे क्या करना चाहिए?',
-      'क्या मैं आज खेत A में सिंचाई कर सकता हूँ?',
-      'इसे आसान भाषा में समझाइए।',
-      'यह रोग कितना गंभीर है?',
-      'मुझे कल सुबह क्या जांचना चाहिए?',
-    ],
-    gu: [
-      'ટામેટાના સુકારા (અર્લી બ્લાઈટ) રોગ માટે મારે શું કરવું?',
-      'શું હું આજે ખેતર A માં પિયત આપી શકું?',
-      'આ રોગ કેટલો ગંભીર છે?',
-      'આ વાત મને સરળ દેશી ભાષામાં સમજાવો.',
-      'આવતીકાલે સવારે મારે શું તપાસવું જોઈએ?',
-    ],
-  };
-
-  const currentPrompts = suggestedPrompts[currentLanguage] || suggestedPrompts.en;
+  const currentPrompts = [
+    'What should I do about Tomato Early Blight?',
+    'Can I irrigate Field A today?',
+    'Explain this disease in simple terms.',
+    'How serious is this infection?',
+    'What should I check tomorrow morning?',
+    'What bio-fungicide dosage is recommended?',
+  ];
 
   const handleUserSubmit = async (queryText: string) => {
     if (!queryText.trim() || isTyping) return;
@@ -100,7 +78,7 @@ export const AssistantScreen: React.FC<AssistantScreenProps> = ({
       sender: 'user',
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       text: queryText,
-      language: currentLanguage,
+      language: 'en',
     };
 
     setMessages((prev) => [...prev, userMsg]);
@@ -108,7 +86,7 @@ export const AssistantScreen: React.FC<AssistantScreenProps> = ({
     setIsTyping(true);
 
     try {
-      const botResponse = await assistantService.sendQuery(queryText, currentLanguage, {
+      const botResponse = await assistantService.sendQuery(queryText, 'en', {
         farmName: 'Patel Farm',
         activeDiagnosis,
         weather,
@@ -122,7 +100,7 @@ export const AssistantScreen: React.FC<AssistantScreenProps> = ({
         sender: 'assistant',
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         text: 'I encountered an issue processing that query. Please try asking again or select one of the suggested topics.',
-        language: currentLanguage,
+        language: 'en',
       };
       setMessages((prev) => [...prev, fallbackMsg]);
     } finally {
@@ -138,66 +116,21 @@ export const AssistantScreen: React.FC<AssistantScreenProps> = ({
       // Simulate voice input capturing
       setTimeout(() => {
         setIsVoiceRecording(false);
-        const voiceQuery =
-          currentLanguage === 'gu'
-            ? 'શું હું આજે ખેતર A માં પિયત આપી શકું?'
-            : currentLanguage === 'hi'
-            ? 'क्या मैं आज खेत A में सिंचाई कर सकता हूँ?'
-            : 'Can I irrigate Field A today?';
-        setInputVal(voiceQuery);
+        setInputVal('Can I irrigate Field A today?');
       }, 2500);
     }
   };
 
   return (
-    <div className="space-y-6 max-w-4xl mx-auto pb-8">
-      {/* Title & Language Bar */}
-      <div className="pb-2 border-b border-slate-200/80 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-        <div>
-          <h1 className="text-lg sm:text-xl font-semibold text-slate-900 dark:text-slate-100 tracking-tight">
-            AgriSmart Advisor
-          </h1>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-            Agronomic advisory grounded in your real-time sensor telemetry and weather forecast.
-          </p>
-        </div>
-
-        {/* Language Tabs */}
-        <div className="flex items-center gap-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-1 rounded-md self-start sm:self-auto shadow-xs">
-          <button
-            type="button"
-            onClick={() => onLanguageChange('en')}
-            className={`px-2.5 py-1 text-xs font-medium rounded transition-colors cursor-pointer ${
-              currentLanguage === 'en'
-                ? 'bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900'
-                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100'
-            }`}
-          >
-            English
-          </button>
-          <button
-            type="button"
-            onClick={() => onLanguageChange('hi')}
-            className={`px-2.5 py-1 text-xs font-medium rounded transition-colors cursor-pointer ${
-              currentLanguage === 'hi'
-                ? 'bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900'
-                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100'
-            }`}
-          >
-            हिन्दी
-          </button>
-          <button
-            type="button"
-            onClick={() => onLanguageChange('gu')}
-            className={`px-2.5 py-1 text-xs font-medium rounded transition-colors cursor-pointer ${
-              currentLanguage === 'gu'
-                ? 'bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900'
-                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100'
-            }`}
-          >
-            ગુજરાતી
-          </button>
-        </div>
+    <div className="space-y-6 pb-8">
+      {/* Title */}
+      <div className="pb-2 border-b border-slate-200/80 dark:border-slate-800">
+        <h1 className="text-lg sm:text-xl font-semibold text-slate-900 dark:text-slate-100 tracking-tight">
+          AgriSmart Advisor
+        </h1>
+        <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+          Agronomic advisory grounded in your real-time sensor telemetry and weather forecast.
+        </p>
       </div>
 
       {/* Suggested Prompt Chips */}
@@ -317,7 +250,7 @@ export const AssistantScreen: React.FC<AssistantScreenProps> = ({
             <div className="mb-2.5 p-2.5 rounded-md bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-800 dark:text-slate-200 flex items-center justify-between text-xs">
               <div className="flex items-center gap-2">
                 <span className="w-2 h-2 rounded-full bg-rose-600 animate-pulse" />
-                <span className="font-medium">Listening in {currentLanguage.toUpperCase()}...</span>
+                <span className="font-medium">Listening...</span>
                 <span className="text-slate-500 dark:text-slate-400">Speak clearly into microphone</span>
               </div>
               <button
@@ -357,13 +290,7 @@ export const AssistantScreen: React.FC<AssistantScreenProps> = ({
               type="text"
               value={inputVal}
               onChange={(e) => setInputVal(e.target.value)}
-              placeholder={
-                currentLanguage === 'gu'
-                  ? 'ખેતી વિશે અહીં પ્રશ્ન પૂછો... (દા.ત. શું આજે પિયત આપી શકાય?)'
-                  : currentLanguage === 'hi'
-                  ? 'खेती से जुड़ा सवाल यहाँ पूछें... (उदा. क्या आज सिंचाई करनी चाहिए?)'
-                  : 'Ask about crops, diseases, irrigation timing, or weather impact...'
-              }
+              placeholder="Ask about crops, diseases, irrigation timing, or weather impact..."
               className="flex-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-md px-3.5 py-2 text-xs sm:text-sm text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:border-slate-400 dark:focus:border-slate-500"
             />
 

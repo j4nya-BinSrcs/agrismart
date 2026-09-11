@@ -1,0 +1,76 @@
+/* Classic dot + trailing ring cursor. Rendered fixed at (0,0) and moved
+   with transform: translate3d(x, y, 0) translate(-50%, -50%) so the
+   element's own center tracks the pointer. mix-blend-mode: difference
+   keeps both legible over any surface — light, dark, imagery, or the
+   emerald CTA buttons — without the component needing to know the
+   current theme. */
+
+.custom-cursor-dot,
+.custom-cursor-ring {
+  position: fixed;
+  top: 0;
+  left: 0;
+  border-radius: 9999px;
+  pointer-events: none;
+  z-index: 2147483647;
+  opacity: 0;
+  mix-blend-mode: difference;
+  transform: translate3d(-9999px, -9999px, 0);
+}
+
+.custom-cursor-dot.is-visible,
+.custom-cursor-ring.is-visible {
+  opacity: 1;
+}
+
+.custom-cursor-dot.is-hidden,
+.custom-cursor-ring.is-hidden {
+  opacity: 0 !important;
+}
+
+.custom-cursor-dot {
+  width: 6px;
+  height: 6px;
+  background: #ffffff;
+  transition: width 200ms cubic-bezier(0.16, 1, 0.3, 1),
+    height 200ms cubic-bezier(0.16, 1, 0.3, 1), opacity 150ms ease-out;
+}
+
+.custom-cursor-ring {
+  width: 32px;
+  height: 32px;
+  border: 1.5px solid #ffffff;
+  background: transparent;
+  /* No transition on transform — the ring's trailing lag is driven by a
+     rAF loop in JS, not CSS, so it stays perfectly smooth every frame. */
+  transition: width 250ms cubic-bezier(0.16, 1, 0.3, 1),
+    height 250ms cubic-bezier(0.16, 1, 0.3, 1),
+    background-color 250ms cubic-bezier(0.16, 1, 0.3, 1), opacity 150ms ease-out;
+}
+
+.custom-cursor-dot.is-hover {
+  width: 0;
+  height: 0;
+  opacity: 0;
+}
+
+.custom-cursor-ring.is-hover {
+  width: 56px;
+  height: 56px;
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.custom-cursor-dot.is-down {
+  width: 4px;
+  height: 4px;
+}
+
+.custom-cursor-ring.is-down {
+  width: 24px;
+  height: 24px;
+}
+
+.custom-cursor-ring.is-hover.is-down {
+  width: 44px;
+  height: 44px;
+}

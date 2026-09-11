@@ -15,7 +15,6 @@ import {
 import { ScreenType } from '../../types';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
-import { useLanguage } from '../../context/LanguageContext';
 
 interface SidebarProps {
   currentScreen: ScreenType;
@@ -36,7 +35,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
 }) => {
   const { user, logout } = useAuth();
   const { showToast } = useToast();
-  const { t } = useLanguage();
   const [showUserMenu, setShowUserMenu] = useState(false);
 
   const displayName = user?.name || 'AgriSmartDemo';
@@ -72,41 +70,41 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const navItems = [
     {
       id: 'dashboard' as ScreenType,
-      label: t('nav.dashboard', 'Dashboard'),
+      label: 'Dashboard',
       icon: LayoutDashboard,
     },
     {
       id: 'diagnose' as ScreenType,
-      label: t('nav.diagnose', 'Crop Diagnosis'),
+      label: 'Crop Diagnosis',
       icon: ScanLine,
     },
     ...(hasActiveDiagnosis
       ? [
           {
             id: 'diagnosis-result' as ScreenType,
-            label: t('nav.diagnosisResult', 'Diagnosis Report'),
+            label: 'Diagnosis Result',
             icon: FileCheck2,
           }
         ]
       : []),
     {
       id: 'weather' as ScreenType,
-      label: t('nav.weather', 'Weather Intelligence'),
+      label: 'Weather Intelligence',
       icon: CloudSun,
     },
     {
       id: 'irrigation' as ScreenType,
-      label: t('nav.irrigation', 'Smart Irrigation'),
+      label: 'Smart Irrigation',
       icon: Droplets,
     },
     {
       id: 'sustainability' as ScreenType,
-      label: t('nav.sustainability', 'Sustainability'),
+      label: 'Sustainability',
       icon: Leaf,
     },
     {
       id: 'assistant' as ScreenType,
-      label: t('nav.assistant', 'Farmer Advisor'),
+      label: 'Farmer Assistant',
       icon: MessageSquareHeart,
     },
   ];
@@ -128,7 +126,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <div className="font-semibold text-sm text-white tracking-tight">
               AGRI SMART
             </div>
-            <div className="text-[10px] text-emerald-300/80">{t('nav.operationsConsole', 'Operations Console')}</div>
+            <div className="text-[10px] text-emerald-300/80">Operations Console</div>
           </div>
         </div>
         {/* Mobile close button */}
@@ -230,7 +228,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     className="w-full text-left px-2 py-1.5 mt-1 rounded-md text-xs text-zinc-300 hover:text-white hover:bg-zinc-800 dark:hover:bg-[#242424] flex items-center gap-2 transition-colors cursor-pointer"
                   >
                     <RotateCcw className="w-3.5 h-3.5 text-zinc-400" />
-                    <span>{t('nav.resetDemo', 'Reset Demo')}</span>
+                    <span>Reset Demo Data</span>
                   </button>
                 )}
                 <button
@@ -239,7 +237,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   className="w-full text-left px-2 py-1.5 mt-0.5 rounded-md text-xs text-rose-400 hover:text-rose-300 hover:bg-rose-950/40 flex items-center gap-2 transition-colors cursor-pointer"
                 >
                   <LogOut className="w-3.5 h-3.5 text-rose-400" />
-                  <span>{t('nav.signOut', 'Sign Out')}</span>
+                  <span>Log Out</span>
                 </button>
               </div>
             </>

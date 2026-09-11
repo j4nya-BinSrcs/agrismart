@@ -7,7 +7,6 @@ import { Compass, MapPin, ArrowLeft, Home, LogIn, ScanLine, CloudSun, Droplets, 
 import { ScreenType } from '../../types';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
-import { useLanguage } from '../../context/LanguageContext';
 import Aurora from '../common/Aurora';
 
 interface NotFoundScreenProps {
@@ -19,15 +18,14 @@ interface NotFoundScreenProps {
 export const NotFoundScreen: React.FC<NotFoundScreenProps> = ({ onNavigate, requestedPath }) => {
   const { isAuthenticated } = useAuth();
   const { theme } = useTheme();
-  const { t } = useLanguage();
 
   const path = requestedPath || (typeof window !== 'undefined' ? window.location.pathname : '/');
 
   const quickLinks: { screen: ScreenType; label: string; icon: typeof ScanLine }[] = [
-    { screen: 'diagnose', label: t('notFound.scanner', 'Scanner'), icon: ScanLine },
-    { screen: 'weather', label: t('notFound.weather', 'Weather'), icon: CloudSun },
-    { screen: 'irrigation', label: t('notFound.irrigation', 'Irrigation'), icon: Droplets },
-    { screen: 'assistant', label: t('notFound.advisor', 'Advisor'), icon: MessageSquareHeart },
+    { screen: 'diagnose', label: 'Scanner', icon: ScanLine },
+    { screen: 'weather', label: 'Weather', icon: CloudSun },
+    { screen: 'irrigation', label: 'Irrigation', icon: Droplets },
+    { screen: 'assistant', label: 'Advisor', icon: MessageSquareHeart },
   ];
 
   const handleGoBack = () => {
@@ -62,17 +60,14 @@ export const NotFoundScreen: React.FC<NotFoundScreenProps> = ({ onNavigate, requ
         </div>
 
         <span className="inline-block px-2.5 py-1 rounded-full text-[10px] font-semibold bg-emerald-50 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-400 uppercase tracking-wider mb-3">
-          {t('notFound.badge', '404 · Route Not Found')}
+          404 · Route Not Found
         </span>
 
         <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-slate-100 mb-2 tracking-tight">
-          {t('notFound.title', 'Page Not Found')}
+          Page Not Found
         </h1>
         <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 max-w-sm mx-auto mb-4 leading-relaxed break-words">
-          {t(
-            'notFound.description',
-            'The requested coordinate or operations route does not exist in your farm workspace. Use the actions below to get back on track.'
-          )}
+          The requested coordinate or operations route does not exist in your farm workspace. Use the actions below to get back on track.
         </p>
 
         {/* Requested path indicator */}
@@ -93,7 +88,7 @@ export const NotFoundScreen: React.FC<NotFoundScreenProps> = ({ onNavigate, requ
               className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-md bg-emerald-800 hover:bg-emerald-900 dark:bg-emerald-700 dark:hover:bg-emerald-600 text-white text-xs font-medium transition-all cursor-pointer shadow-xs hover:shadow-md hover:-translate-y-px active:translate-y-0"
             >
               <ArrowLeft className="w-4 h-4" />
-              <span>{t('notFound.returnDashboard', 'Return to Farm Dashboard')}</span>
+              <span>Return to Farm Dashboard</span>
             </button>
           ) : (
             <button
@@ -102,7 +97,7 @@ export const NotFoundScreen: React.FC<NotFoundScreenProps> = ({ onNavigate, requ
               className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-md bg-emerald-800 hover:bg-emerald-900 dark:bg-emerald-700 dark:hover:bg-emerald-600 text-white text-xs font-medium transition-all cursor-pointer shadow-xs hover:shadow-md hover:-translate-y-px active:translate-y-0"
             >
               <Home className="w-4 h-4" />
-              <span>{t('notFound.returnHome', 'Return to Home')}</span>
+              <span>Return to Home</span>
             </button>
           )}
 
@@ -112,7 +107,7 @@ export const NotFoundScreen: React.FC<NotFoundScreenProps> = ({ onNavigate, requ
             className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-md border border-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 hover:border-slate-400 dark:hover:border-slate-600 text-slate-800 dark:text-slate-200 text-xs font-medium transition-all cursor-pointer active:scale-[0.98]"
           >
             <ArrowLeft className="w-4 h-4" />
-            <span>{t('notFound.goBack', 'Go Back')}</span>
+            <span>Go Back</span>
           </button>
 
           {!isAuthenticated && (
@@ -122,7 +117,7 @@ export const NotFoundScreen: React.FC<NotFoundScreenProps> = ({ onNavigate, requ
               className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-md border border-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 hover:border-slate-400 dark:hover:border-slate-600 text-slate-800 dark:text-slate-200 text-xs font-medium transition-all cursor-pointer active:scale-[0.98]"
             >
               <LogIn className="w-4 h-4" />
-              <span>{t('notFound.signIn', 'Operator Sign In')}</span>
+              <span>Operator Sign In</span>
             </button>
           )}
         </div>
@@ -131,7 +126,7 @@ export const NotFoundScreen: React.FC<NotFoundScreenProps> = ({ onNavigate, requ
             state; unauthenticated visitors land on login and continue there. */}
         <div className="pt-4 border-t border-slate-100 dark:border-slate-800">
           <div className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-2.5">
-            {t('notFound.quickLinks', 'Quick Links')}
+            Quick Links
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
             {quickLinks.map((link) => {

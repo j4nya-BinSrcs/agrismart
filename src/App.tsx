@@ -6,7 +6,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   ScreenType,
-  Language,
   DiagnosisRecord,
   ActionItem,
   AppNotification,
@@ -41,8 +40,7 @@ import { LoadingState } from './components/common/LoadingState';
 import { ErrorBoundary } from './components/common/ErrorBoundary';
 import { useToast } from './context/ToastContext';
 import { useAuth } from './context/AuthContext';
-import { useLanguage } from './context/LanguageContext';
-import { getStoredItem } from './utils/storage';
+import { getStoredItem, setStoredItem } from './utils/storage';
 
 // Mobile bottom navigation icons
 import {
@@ -187,7 +185,6 @@ const PROTECTED_SCREENS: ScreenType[] = [
 export default function App() {
   const { showToast } = useToast();
   const { isAuthenticated } = useAuth();
-  const { currentLanguage, setLanguage, t } = useLanguage();
 
   // App navigation and view state
   const [currentScreen, setCurrentScreen] = useState<ScreenType>(() => {
@@ -366,12 +363,6 @@ export default function App() {
     };
   }, []);
 
-  // Handle language change and persist (delegated to LanguageContext, which
-  // persists to localStorage and updates document.documentElement.lang)
-  const handleLanguageChange = (lang: Language) => {
-    setLanguage(lang);
-  };
-
   // Toggle action completion through service
   const handleToggleAction = async (id: string) => {
     try {
@@ -436,7 +427,6 @@ export default function App() {
       }
       setActions(actList);
       setNotifications(notifList);
-      setLanguage('en');
       setAssistantQuery('');
       handleNavigate('dashboard');
       showToast('Demo data restored to initial Patel Farm state.', 'success');
@@ -503,8 +493,6 @@ export default function App() {
         <Header
           currentScreen={currentScreen}
           onNavigate={handleNavigate}
-          currentLanguage={currentLanguage}
-          onLanguageChange={handleLanguageChange}
           onToggleMobileSidebar={() => setIsMobileSidebarOpen(true)}
           onOpenNotifications={() => setIsNotificationDrawerOpen(true)}
           unreadCount={unreadNotificationsCount}
@@ -512,7 +500,7 @@ export default function App() {
         />
 
         {/* Scrollable Screen Viewport with Error Boundary */}
-        <main className="flex-1 overflow-y-auto px-4 sm:px-6 lg:px-8 py-6 pb-20 sm:pb-8 bg-[#F8F9FA] dark:bg-[#080808] transition-colors">
+        <main className="flex-1 overflow-y-auto px-4 sm:px-6 lg:px-8 xl:px-10 2xl:px-12 py-6 sm:py-7 xl:py-8 pb-20 sm:pb-8 bg-[#F8F9FA] dark:bg-[#080808] transition-colors">
           <ErrorBoundary>
           {/* Keyed by screen so navigating between routes (sidebar, header,
               bottom nav, CTAs, or browser Back/Forward) replays a subtle
@@ -580,8 +568,6 @@ export default function App() {
               <AssistantScreen
                 initialQuery={assistantQuery}
                 onClearInitialQuery={() => setAssistantQuery('')}
-                currentLanguage={currentLanguage}
-                onLanguageChange={handleLanguageChange}
                 onNavigate={handleNavigate}
                 activeDiagnosis={currentDiagnosis || undefined}
                 weather={weather || undefined}
@@ -618,7 +604,7 @@ export default function App() {
           aria-current={currentScreen === 'dashboard' ? 'page' : undefined}
         >
           <LayoutDashboard className="w-4 h-4 mb-0.5" />
-          <span>{t('nav.home', 'Home')}</span>
+          <span>Home</span>
         </button>
 
         <button
@@ -633,7 +619,7 @@ export default function App() {
           aria-current={currentScreen === 'diagnose' ? 'page' : undefined}
         >
           <ScanLine className="w-4 h-4 mb-0.5" />
-          <span>{t('nav.diagnose.short', 'Diagnose')}</span>
+          <span>Diagnose</span>
         </button>
 
         <button
@@ -646,7 +632,7 @@ export default function App() {
           aria-current={currentScreen === 'weather' ? 'page' : undefined}
         >
           <CloudSun className="w-4 h-4 mb-0.5" />
-          <span>{t('nav.weather', 'Weather')}</span>
+          <span>Weather</span>
         </button>
 
         <button
@@ -659,7 +645,7 @@ export default function App() {
           aria-current={currentScreen === 'irrigation' ? 'page' : undefined}
         >
           <Droplets className="w-4 h-4 mb-0.5" />
-          <span>{t('nav.irrigation', 'Irrigation')}</span>
+          <span>Irrigation</span>
         </button>
 
         <button
@@ -672,7 +658,7 @@ export default function App() {
           aria-current={currentScreen === 'assistant' ? 'page' : undefined}
         >
           <MessageSquareHeart className="w-4 h-4 mb-0.5" />
-          <span>{t('notFound.advisor', 'Advisor')}</span>
+          <span>Advisor</span>
         </button>
       </div>
     </div>

@@ -85,6 +85,15 @@
   background: #404040;
 }
 
+/* Custom dot+ring cursor (see CustomCursor.tsx) hides the native cursor
+   only while it's actually mounted and the device has a fine/hover
+   pointer — the component adds/removes this class itself, so touch
+   devices and screens without the cursor mounted are never affected. */
+body.agrismart-custom-cursor-active,
+body.agrismart-custom-cursor-active * {
+  cursor: none !important;
+}
+
 /* ==========================================================
    GLOBAL MOTION & INTERACTION SYSTEM
    ========================================================== */
@@ -153,6 +162,22 @@ textarea {
   to {
     opacity: 1;
     transform: translateX(0);
+  }
+}
+
+/* Toast notification entrance — bottom-right stack, mounts fresh per toast
+   (each is a new array item), so the keyframe replays on every new toast. */
+.toast-enter {
+  animation: toast-enter var(--motion-page) var(--ease-out-standard) both;
+}
+@keyframes toast-enter {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
 

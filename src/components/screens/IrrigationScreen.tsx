@@ -15,7 +15,6 @@ import {
 import { IrrigationZone, ScreenType } from '../../types';
 import { StatusBadge } from '../common/StatusBadge';
 import { useToast } from '../../context/ToastContext';
-import { useLanguage } from '../../context/LanguageContext';
 import { BackButton } from '../common/BackButton';
 
 interface IrrigationScreenProps {
@@ -32,7 +31,6 @@ export const IrrigationScreen: React.FC<IrrigationScreenProps> = ({
   onNavigate,
 }) => {
   const { showToast } = useToast();
-  const { t } = useLanguage();
   const [selectedZoneId, setSelectedZoneId] = useState<string>(zones && zones.length > 0 ? zones[0].id : '');
   const [manualOverrideActive, setManualOverrideActive] = useState<Record<string, boolean>>({});
   const [showReasoningModal, setShowReasoningModal] = useState<boolean>(false);
@@ -53,7 +51,7 @@ export const IrrigationScreen: React.FC<IrrigationScreenProps> = ({
           onClick={() => onNavigate('dashboard')}
           className="px-3.5 py-1.5 rounded-md bg-emerald-800 hover:bg-emerald-900 text-white text-xs font-medium cursor-pointer transition-all shadow-xs hover:shadow-md hover:-translate-y-px active:translate-y-0"
         >
-          {t('irrigation.backToDashboard', 'Back to Dashboard')}
+          Return to Dashboard
         </button>
       </div>
     );
@@ -115,7 +113,7 @@ export const IrrigationScreen: React.FC<IrrigationScreenProps> = ({
   const dynamicMoisture = Math.round(selectedZone.soilMoistureCurrent * currentScen.moistureMultiplier);
 
   return (
-    <div className="space-y-5 max-w-5xl mx-auto pb-12">
+    <div className="space-y-5 pb-12">
       {/* "Why Delay Irrigation?" Agronomic Reasoning Modal */}
       {showReasoningModal && (
         <div
@@ -200,9 +198,9 @@ export const IrrigationScreen: React.FC<IrrigationScreenProps> = ({
       {/* Screen Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-200 dark:border-slate-800">
         <div className="space-y-1">
-          <BackButton label={t('irrigation.backToDashboard', 'Back to Dashboard')} onClick={() => onNavigate('dashboard')} />
+          <BackButton label="Back to Dashboard" onClick={() => onNavigate('dashboard')} />
           <h1 className="text-xl font-semibold text-slate-900 dark:text-slate-100 tracking-tight">
-            {t('irrigation.title', 'Smart Irrigation Management')}
+            Smart Irrigation Management
           </h1>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
             Soil sensor telemetry correlated with local precipitation forecast
@@ -215,14 +213,14 @@ export const IrrigationScreen: React.FC<IrrigationScreenProps> = ({
             onClick={() => onNavigate('weather')}
             className="px-3 py-1.5 text-xs font-medium rounded-md bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-750 transition-colors cursor-pointer shadow-xs"
           >
-            {t('irrigation.weatherForecast', 'Weather Forecast')}
+            Weather Forecast
           </button>
           <button
             type="button"
             onClick={() => onNavigate('sustainability')}
             className="px-3 py-1.5 text-xs font-medium rounded-md bg-emerald-800 hover:bg-emerald-900 dark:bg-emerald-700 dark:hover:bg-emerald-600 text-white transition-colors cursor-pointer shadow-xs"
           >
-            {t('irrigation.waterSavings', 'Water Savings')}
+            Water Savings
           </button>
         </div>
       </div>
@@ -274,7 +272,7 @@ export const IrrigationScreen: React.FC<IrrigationScreenProps> = ({
                 className="ml-1 inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium text-emerald-800 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-800 rounded hover:bg-emerald-100 dark:hover:bg-emerald-900/60 transition-colors cursor-pointer"
               >
                 <HelpCircle className="w-3 h-3" />
-                <span>{t('irrigation.viewReasoning', 'View reasoning')}</span>
+                <span>View reasoning</span>
               </button>
             </div>
 
@@ -302,7 +300,7 @@ export const IrrigationScreen: React.FC<IrrigationScreenProps> = ({
           <div className="w-full lg:w-80 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-md p-3.5 space-y-2 text-xs">
             <div className="flex items-center justify-between">
               <span className="font-semibold text-slate-900 dark:text-slate-100">
-                {t('irrigation.recommendation', 'Recommendation')}
+                Recommendation
               </span>
               <span className="text-[11px] text-slate-500 dark:text-slate-400 font-mono">
                 {currentScen.waterSavedToday} Saved
@@ -325,7 +323,7 @@ export const IrrigationScreen: React.FC<IrrigationScreenProps> = ({
       <div className="space-y-3">
         <div className="flex items-center justify-between">
           <h2 className="text-xs font-semibold text-slate-900 dark:text-slate-100">
-            {t('irrigation.zones', 'Field Zones')}
+            Field Zones
           </h2>
           <span className="text-[11px] text-slate-400 dark:text-slate-500">
             Select a zone to inspect depth telemetry
@@ -406,7 +404,7 @@ export const IrrigationScreen: React.FC<IrrigationScreenProps> = ({
                         : 'bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700'
                     }`}
                   >
-                    {isManuallyOn ? t('irrigation.stopCycle', 'Stop Pump') : t('irrigation.startCycle', 'Manual Run')}
+                    {isManuallyOn ? 'Stop Pump' : 'Manual Run'}
                   </button>
                 </div>
               </div>

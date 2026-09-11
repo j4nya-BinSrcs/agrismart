@@ -22,7 +22,6 @@ import {
 } from '../../types';
 import { ActionCard } from '../common/ActionCard';
 import { StatusBadge } from '../common/StatusBadge';
-import { useLanguage } from '../../context/LanguageContext';
 
 interface DashboardScreenProps {
   onNavigate: (screen: ScreenType) => void;
@@ -41,7 +40,6 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
   onSelectDiagnosis,
   weather,
 }) => {
-  const { t } = useLanguage();
   const [actionFilter, setActionFilter] = useState<'all' | 'urgent' | 'pending' | 'completed'>('all');
   const [showWhyModal, setShowWhyModal] = useState<boolean>(false);
 
@@ -57,7 +55,7 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
   });
 
   return (
-    <div className="space-y-6 pb-8">
+    <div className="space-y-7 xl:space-y-8 pb-8">
       {/* 'Why This Decision?' Agronomic Interplay Modal */}
       {showWhyModal && (
         <div
@@ -70,7 +68,7 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
           >
             <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
               <div>
-                <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">{t('dashboard.whyThisDecision', 'Why this decision?')}</h3>
+                <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">Why this recommendation?</h3>
                 <p className="text-xs text-slate-500 dark:text-slate-400">Cross-system weather and crop synchronization</p>
               </div>
               <button
@@ -120,7 +118,7 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
                 onClick={() => setShowWhyModal(false)}
                 className="px-3.5 py-1.5 rounded-md bg-emerald-800 hover:bg-emerald-900 dark:bg-emerald-700 dark:hover:bg-emerald-600 text-white font-medium text-xs transition-colors cursor-pointer shadow-xs"
               >
-                {t('dashboard.close', 'Close')}
+                Close
               </button>
             </div>
           </div>
@@ -131,7 +129,7 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-2 border-b border-slate-200/80 dark:border-slate-800">
         <div>
           <h1 className="text-lg sm:text-xl font-semibold text-slate-900 dark:text-slate-100 tracking-tight">
-            {t('dashboard.farmOperations', 'Patel Farm Operations')}
+            Patel Farm Operations
           </h1>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
             Anand, Gujarat · Thursday, September 10 · 88% overall health
@@ -144,16 +142,16 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
           className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-emerald-800 hover:bg-emerald-900 dark:bg-emerald-700 dark:hover:bg-emerald-600 text-white font-medium text-xs transition-all cursor-pointer self-start sm:self-auto shadow-xs hover:shadow-md hover:-translate-y-px active:translate-y-0"
         >
           <Camera className="w-3.5 h-3.5" />
-          <span>{t('nav.diagnoseCrop', 'Diagnose Crop')}</span>
+          <span>Diagnose Crop</span>
         </button>
       </div>
 
       {/* 2. Today's Core Decision (Focused, calm, not a panic banner) */}
-      <div className="rounded-lg border border-amber-200/80 dark:border-amber-900/50 bg-amber-50/50 dark:bg-amber-950/20 p-4 flex flex-col md:flex-row md:items-center justify-between gap-4 transition-colors">
+      <div className="rounded-lg border border-amber-200/80 dark:border-amber-900/50 bg-amber-50/50 dark:bg-amber-950/20 p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 transition-colors">
         <div className="space-y-1">
           <div className="flex items-center gap-2">
             <span className="text-[11px] font-medium uppercase tracking-wider text-amber-900 dark:text-amber-400">
-              {t('dashboard.todaysDecision', "Today's Decision")}
+              Today's Decision
             </span>
             <span className="text-slate-300 dark:text-slate-600">•</span>
             <StatusBadge status="warning" label="Rain in 4h" size="sm" />
@@ -173,14 +171,14 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
             className="text-xs font-medium text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 flex items-center gap-1 transition-colors cursor-pointer"
           >
             <HelpCircle className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500" />
-            <span>{t('dashboard.whyThisDecision', 'Why this decision?')}</span>
+            <span>Why this decision?</span>
           </button>
           <button
             type="button"
             onClick={() => onNavigate('irrigation')}
             className="px-3 py-1.5 rounded-md bg-emerald-800 hover:bg-emerald-900 dark:bg-emerald-700 dark:hover:bg-emerald-600 text-white text-xs font-medium transition-colors cursor-pointer shadow-xs"
           >
-            {t('dashboard.viewIrrigationPlan', 'View Irrigation Plan')}
+            View Irrigation Plan
           </button>
         </div>
       </div>
@@ -190,7 +188,7 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
         <div className="flex items-center justify-between px-0.5">
           <div className="flex items-center gap-2">
             <h2 className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-              {t('dashboard.farmOverview', 'Farm Overview')}
+              Farm Overview
             </h2>
             <span className="hidden sm:inline text-[11px] text-slate-400 dark:text-slate-500">
               • Real-time crop telemetry & field metrics
@@ -201,12 +199,12 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
           </span>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 xl:gap-5">
           {/* Card 1: Farm Health */}
           <div
             id="overview-card-health"
             onClick={() => onNavigate('diagnose')}
-            className="p-4 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 hover:shadow-md hover:-translate-y-0.5 transition-all shadow-xs cursor-pointer group flex flex-col justify-between"
+            className="p-5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 hover:shadow-md hover:-translate-y-0.5 transition-all shadow-xs cursor-pointer group flex flex-col justify-between"
           >
             <div>
               <div className="flex items-center justify-between gap-2 mb-2">
@@ -243,7 +241,7 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
           <div
             id="overview-card-moisture"
             onClick={() => onNavigate('irrigation')}
-            className="p-4 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 hover:shadow-md hover:-translate-y-0.5 transition-all shadow-xs cursor-pointer group flex flex-col justify-between"
+            className="p-5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 hover:shadow-md hover:-translate-y-0.5 transition-all shadow-xs cursor-pointer group flex flex-col justify-between"
           >
             <div>
               <div className="flex items-center justify-between gap-2 mb-2">
@@ -280,7 +278,7 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
           <div
             id="overview-card-weather"
             onClick={() => onNavigate('weather')}
-            className="p-4 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 hover:shadow-md hover:-translate-y-0.5 transition-all shadow-xs cursor-pointer group flex flex-col justify-between"
+            className="p-5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 hover:shadow-md hover:-translate-y-0.5 transition-all shadow-xs cursor-pointer group flex flex-col justify-between"
           >
             <div>
               <div className="flex items-center justify-between gap-2 mb-2">
@@ -317,7 +315,7 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
           <div
             id="overview-card-sustainability"
             onClick={() => onNavigate('sustainability')}
-            className="p-4 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 hover:shadow-md hover:-translate-y-0.5 transition-all shadow-xs cursor-pointer group flex flex-col justify-between"
+            className="p-5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 hover:shadow-md hover:-translate-y-0.5 transition-all shadow-xs cursor-pointer group flex flex-col justify-between"
           >
             <div>
               <div className="flex items-center justify-between gap-2 mb-2">
@@ -354,12 +352,12 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
       </div>
 
       {/* 4. Two-Column Layout: Actions + Crop Health/Weather */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 xl:gap-7">
         {/* Left: Today's Actions (7 cols) */}
         <div className="lg:col-span-7 space-y-3">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
             <div>
-              <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">{t('dashboard.actionItems', 'Recommended Actions')}</h3>
+              <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">Recommended Actions</h3>
               <p className="text-xs text-slate-500 dark:text-slate-400">Prioritized operations for today</p>
             </div>
 
@@ -374,7 +372,7 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
                     : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
                 }`}
               >
-                {t('dashboard.all', 'All')} ({actions.length})
+                All ({actions.length})
               </button>
               <button
                 type="button"
@@ -385,7 +383,7 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
                     : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
                 }`}
               >
-                {t('dashboard.urgent', 'Critical')} ({urgentCount})
+                Critical ({urgentCount})
               </button>
               <button
                 type="button"
@@ -396,7 +394,7 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
                     : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
                 }`}
               >
-                {t('dashboard.pending', 'Pending')} ({pendingActions.length})
+                Pending ({pendingActions.length})
               </button>
               <button
                 type="button"
@@ -407,7 +405,7 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
                     : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
                 }`}
               >
-                {t('dashboard.completed', 'Done')} ({completedCount})
+                Done ({completedCount})
               </button>
             </div>
           </div>
@@ -442,9 +440,9 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
         {/* Right: Crop Health Overview + Weather Advisory (5 cols) */}
         <div className="lg:col-span-5 space-y-4">
           {/* Crop Health Overview */}
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-4">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-5">
             <div className="flex items-center justify-between mb-3">
-              <h3 className="text-xs font-semibold text-slate-900 dark:text-slate-100">{t('dashboard.cropHealthOverview', 'Crop Health Overview')}</h3>
+              <h3 className="text-xs font-semibold text-slate-900 dark:text-slate-100">Crop Health Overview</h3>
               <span className="text-[11px] text-slate-500 dark:text-slate-400">3 Plots · 18.5 Ac</span>
             </div>
 
@@ -497,15 +495,15 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
           </div>
 
           {/* Weather Impact Advisory */}
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-4">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-5">
             <div className="flex items-center justify-between mb-2">
-              <h3 className="text-xs font-semibold text-slate-900 dark:text-slate-100">{t('dashboard.weatherImpact', 'Weather Impact')}</h3>
+              <h3 className="text-xs font-semibold text-slate-900 dark:text-slate-100">Weather Impact</h3>
               <button
                 type="button"
                 onClick={() => onNavigate('weather')}
                 className="text-xs text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 cursor-pointer transition-colors"
               >
-                {t('dashboard.forecast', 'Forecast')} →
+                Forecast →
               </button>
             </div>
 
@@ -527,10 +525,10 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
       </div>
 
       {/* 5. Recent Crop Diagnoses Section */}
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-4">
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-5">
         <div className="flex items-center justify-between mb-3">
           <div>
-            <h3 className="text-xs font-semibold text-slate-900 dark:text-slate-100">{t('dashboard.recentReports', 'Recent Crop Diagnoses')}</h3>
+            <h3 className="text-xs font-semibold text-slate-900 dark:text-slate-100">Recent Crop Diagnoses</h3>
             <p className="text-[11px] text-slate-500 dark:text-slate-400">Leaf inspections with confidence and action plans</p>
           </div>
           <button
@@ -538,7 +536,7 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
             onClick={() => onNavigate('diagnose')}
             className="text-xs text-emerald-800 dark:text-emerald-400 hover:text-emerald-950 dark:hover:text-emerald-300 font-medium cursor-pointer flex items-center gap-1"
           >
-            <span>{t('dashboard.scanNew', 'Scan New')}</span>
+            <span>Scan New</span>
             <ArrowRight className="w-3 h-3" />
           </button>
         </div>
