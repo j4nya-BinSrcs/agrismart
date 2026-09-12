@@ -1,0 +1,241 @@
+{
+  "_schema_version": "1.0.0",
+  "_description": "AgriSmart AI Agronomic Knowledge Base Schema for Crop Disease Diagnosis",
+  "Tomato___Early_blight": {
+    "disease_name": "Tomato Early Blight",
+    "pathogen_name": "Alternaria solani",
+    "is_healthy": false,
+    "symptoms": [
+      "Concentric dark brown circular lesions with target-board appearance on older leaves",
+      "Narrow chlorotic yellow halo surrounding necrotic margins",
+      "Progressive lower-to-upper canopy progression via rain splash transmission"
+    ],
+    "treatment": {
+      "organic": "Foliar application of Copper Hydroxide (2g/L) or Trichoderma viride biological bio-fungicide.",
+      "conventional": "Mancozeb 75% WP (2.5g/L) or Azoxystrobin 23% SC (1ml/L) foliar spray.",
+      "dosage": "500 liters spray volume per acre with hollow cone nozzle at 2.5 bar.",
+      "timing": "Early morning or late afternoon during clear, dry weather when leaves are dry."
+    },
+    "precautions": [
+      "Avoid overhead sprinkler irrigation; surface leaf moisture promotes fungal spore germination.",
+      "Prune and destroy infected lower foliage to reduce splash dispersal from soil.",
+      "Practice 3-year crop rotation with non-solanaceous crops."
+    ],
+    "sources": [
+      "ICAR-Indian Institute of Vegetable Research (IIVR) Tomato Disease Advisory",
+      "FAO Integrated Pest Management Guidelines for Solanaceous Crops"
+    ]
+  },
+  "Tomato___Late_blight": {
+    "disease_name": "Tomato Late Blight",
+    "pathogen_name": "Phytophthora infestans",
+    "is_healthy": false,
+    "symptoms": [
+      "Irregular dark water-soaked lesions on leaves rapidly turning purplish-brown",
+      "White fungal downy sporulation on lower leaf surface under humid conditions",
+      "Dark brown necrotic lesions on petioles and stems leading to rapid collapse"
+    ],
+    "treatment": {
+      "organic": "Preventative Copper oxychloride 50 WP (2.5g/L) spray prior to high-humidity cool spells.",
+      "conventional": "Systemic fungicide: Metalaxyl-M + Mancozeb (2.5g/L) or Cymoxanil + Mancozeb.",
+      "dosage": "500-600 liters spray volume per acre ensuring complete canopy coverage.",
+      "timing": "Immediately upon first symptom detection or forecast of cool, humid overcast days."
+    },
+    "precautions": [
+      "Ensure wide row spacing to maximize canopy ventilation and rapid foliage drying.",
+      "Immediately rogue and bury heavily infected plants away from water sources.",
+      "Destroy volunteer tomato and potato cull piles in surrounding fields."
+    ],
+    "sources": [
+      "ICAR Central Potato & Tomato Research Protocols",
+      "University Extension Plant Pathology Compendium"
+    ]
+  },
+  "Tomato___healthy": {
+    "disease_name": "Tomato Foliage — Healthy",
+    "pathogen_name": "None",
+    "is_healthy": true,
+    "symptoms": [
+      "Uniform deep green leaf pigmentation without chlorosis or necrosis",
+      "Smooth, intact foliage margins with active photosynthetic turgor",
+      "Absence of fungal sporulation, viral mottling, or insect puncture marks"
+    ],
+    "treatment": {
+      "organic": "Maintain balanced organic soil nutrition, compost tea, and beneficial rhizosphere biology.",
+      "conventional": "Standard balanced NPK fertigation schedule based on soil test calibration.",
+      "dosage": "As per standard agronomic schedule for current crop growth stage.",
+      "timing": "Regular scheduled irrigation and fertigation cycles."
+    },
+    "precautions": [
+      "Continue regular diagonal field scouting twice a week.",
+      "Maintain drip irrigation lines to avoid wetting foliage."
+    ],
+    "sources": [
+      "Standard Good Agricultural Practices (GAP) Guidelines"
+    ]
+  },
+  "Potato___Early_blight": {
+    "disease_name": "Potato Early Blight",
+    "pathogen_name": "Alternaria solani",
+    "is_healthy": false,
+    "symptoms": [
+      "Small dark brown to black spots on lower leaves with concentric rings",
+      "Senescence and premature dropping of heavily infected foliage",
+      "Stunting of vegetative growth when canopy defoliation occurs"
+    ],
+    "treatment": {
+      "organic": "Neem oil emulsion (5ml/L) or Copper-based bio-fungicide foliar application.",
+      "conventional": "Mancozeb 75% WP (2.5g/L) or Propineb 70% WP (2g/L) foliar spray.",
+      "dosage": "500 liters spray solution per acre.",
+      "timing": "Apply at first appearance of lesions; repeat at 10-14 day intervals if weather remains favorable."
+    },
+    "precautions": [
+      "Maintain adequate plant nitrogen levels to reduce stress-induced susceptibility.",
+      "Avoid overhead irrigation in late afternoon to minimize night leaf wetness."
+    ],
+    "sources": [
+      "ICAR-Central Potato Research Institute (CPRI) Disease Guide"
+    ]
+  },
+  "Potato___Late_blight": {
+    "disease_name": "Potato Late Blight",
+    "pathogen_name": "Phytophthora infestans",
+    "is_healthy": false,
+    "symptoms": [
+      "Water-soaked grayish-green spots rapidly expanding into large brown lesions",
+      "Whitish mildew ring around margins on lower leaf surface in humid conditions",
+      "Rapid foliar blight and stem rot with distinctive foul odor"
+    ],
+    "treatment": {
+      "organic": "Bordeaux mixture (1%) or Copper Oxychloride 50 WP (2.5g/L) preventative sprays.",
+      "conventional": "Dimethomorph 50% WP (1g/L) or Metalaxyl + Mancozeb (2.5g/L).",
+      "dosage": "500 liters per acre with high-pressure mist sprayer.",
+      "timing": "Spray immediately when temperature ranges between 10-20°C with relative humidity >80%."
+    },
+    "precautions": [
+      "Plant certified disease-free seed tubers.",
+      "Kill potato haulms 10-14 days before harvest to prevent tuber infection."
+    ],
+    "sources": [
+      "ICAR-CPRI Late Blight Management Bulletins"
+    ]
+  },
+  "Potato___healthy": {
+    "disease_name": "Potato Foliage — Healthy",
+    "pathogen_name": "None",
+    "is_healthy": true,
+    "symptoms": [
+      "Vigorous dark green compound leaves with firm cellular turgor",
+      "No water-soaked spots, concentric lesions, or viral mottling",
+      "Healthy root and stolon development without tuber rot"
+    ],
+    "treatment": {
+      "organic": "Maintain healthy soil organic matter and beneficial mycorrhizal inoculation.",
+      "conventional": "Balanced potassium and phosphorus fertilization according to soil health card.",
+      "dosage": "Standard crop stage dosage.",
+      "timing": "Routine management."
+    },
+    "precautions": [
+      "Monitor weather forecasts for sudden high-humidity or continuous rain periods.",
+      "Scout lower leaves along field borders and shaded rows regularly."
+    ],
+    "sources": [
+      "Good Agricultural Practices (GAP) for Tuber Crops"
+    ]
+  },
+  "Cotton___Bacterial_blight": {
+    "disease_name": "Cotton Bacterial Blight (Angular Leaf Spot)",
+    "pathogen_name": "Xanthomonas citri pv. malvacearum",
+    "is_healthy": false,
+    "symptoms": [
+      "Angular water-soaked lesions strictly delimited by small leaf veinlets",
+      "Lesions turning reddish-brown to dark brown on upper leaf surface",
+      "Bacterial ooze droplets visible on underside of young lesions in morning dew"
+    ],
+    "treatment": {
+      "organic": "Copper Oxychloride 50 WP (2.5g/L) + Pseudomonas fluorescens bio-agent.",
+      "conventional": "Streptocycline (1g in 10L water) combined with Copper Oxychloride 50 WP (25g in 10L water).",
+      "dosage": "400-500 liters spray volume per acre.",
+      "timing": "Apply at early squaring stage upon detecting angular foliar spots."
+    },
+    "precautions": [
+      "Use acid-delinted and certified pathogen-free seeds.",
+      "Avoid excess nitrogenous fertilization which promotes succulent susceptible tissue.",
+      "Do not cultivate or walk through wet fields to prevent bacterial dispersal."
+    ],
+    "sources": [
+      "ICAR-Central Institute for Cotton Research (CICR) Disease Compendium"
+    ]
+  },
+  "Corn___Common_rust": {
+    "disease_name": "Corn Common Rust",
+    "pathogen_name": "Puccinia sorghi",
+    "is_healthy": false,
+    "symptoms": [
+      "Small, powdery cinnamon-brown pustules (uredinia) scattered on both leaf surfaces",
+      "Pustules rupturing leaf epidermis and releasing rust-colored spores",
+      "Chlorosis and premature leaf death in severe late-stage infections"
+    ],
+    "treatment": {
+      "organic": "Foliar application of wettable sulfur (2g/L) at early pustule emergence.",
+      "conventional": "Azoxystrobin 18.2% + Difenoconazole 11.4% SC (1ml/L) or Mancozeb 75% WP (2.5g/L).",
+      "dosage": "400 liters per acre with fine droplet hollow cone nozzle.",
+      "timing": "Apply at first sign of pustules prior to tasseling stage."
+    },
+    "precautions": [
+      "Select rust-resistant or tolerant corn hybrids.",
+      "Plant early in the season to avoid late-season spore showers.",
+      "Ensure balanced soil potassium levels to improve fungal resistance."
+    ],
+    "sources": [
+      "ICAR-Indian Institute of Maize Research (IIMR) Protection Guidelines"
+    ]
+  },
+  "Wheat___Yellow_rust": {
+    "disease_name": "Wheat Yellow (Stripe) Rust",
+    "pathogen_name": "Puccinia striiformis f. sp. tritici",
+    "is_healthy": false,
+    "symptoms": [
+      "Bright yellow to orange-yellow pustules arranged in narrow parallel linear stripes along leaf blade",
+      "Powdery yellow spores rubbing off onto fingers when touched",
+      "Severe drying and yellowing of flag leaves compromising grain filling"
+    ],
+    "treatment": {
+      "organic": "Prophylactic bio-fungicide spray of Bacillus subtilis or neem seed kernel extract.",
+      "conventional": "Propiconazole 25% EC (1ml/L) or Tebuconazole 25.9% EC (1ml/L) foliar spray.",
+      "dosage": "500 liters spray volume per acre.",
+      "timing": "Spray immediately at first detection of yellow stripes; critical to protect the flag leaf."
+    },
+    "precautions": [
+      "Plant recommended yellow rust-resistant wheat varieties (e.g., HD-3086, DBW-187).",
+      "Scout fields weekly during cool, moist winter conditions (December to February).",
+      "Avoid late sowing which exposes crop to peak rust spore loads."
+    ],
+    "sources": [
+      "ICAR-Indian Institute of Wheat and Barley Research (IIWBR) Rust Advisory"
+    ]
+  },
+  "Wheat___healthy": {
+    "disease_name": "Wheat Foliage — Healthy",
+    "pathogen_name": "None",
+    "is_healthy": true,
+    "symptoms": [
+      "Uniform green linear blades with clean parallel venation",
+      "Absence of yellow stripes, brown pustules, or powdery mildew patches",
+      "Erect leaf posture and strong tiller development"
+    ],
+    "treatment": {
+      "organic": "Apply organic vermicompost tea during crown root initiation.",
+      "conventional": "Top dress urea/nitrogen as per recommended package of practices.",
+      "dosage": "Standard fertilizer dosage based on soil test.",
+      "timing": "Apply at first irrigation (CRI stage) and second irrigation (tillering)."
+    },
+    "precautions": [
+      "Continue periodic field monitoring throughout the tillering and heading stages.",
+      "Maintain proper irrigation intervals without waterlogging."
+    ],
+    "sources": [
+      "ICAR-IIWBR Wheat Package of Practices"
+    ]
+  }
+}
