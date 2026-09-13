@@ -19,6 +19,7 @@ import { BackButton } from '../common/BackButton';
 
 interface IrrigationScreenProps {
   zones: IrrigationZone[];
+  plan?: import('../../types').IrrigationPlan;
   totalSavedLitres: number;
   onNavigate: (screen: ScreenType) => void;
 }
@@ -27,6 +28,7 @@ type IrrigationScenario = 'rain_imminent' | 'dry_spell' | 'post_rain';
 
 export const IrrigationScreen: React.FC<IrrigationScreenProps> = ({
   zones,
+  plan,
   totalSavedLitres,
   onNavigate,
 }) => {
@@ -58,6 +60,7 @@ export const IrrigationScreen: React.FC<IrrigationScreenProps> = ({
   }
 
   const selectedZone = zones.find((z) => z.id === selectedZoneId) || zones[0];
+  const calcDetails = selectedZone.calculationDetails;
 
   const handleTogglePump = (zoneId: string) => {
     const isOverridden = manualOverrideActive[zoneId];
@@ -72,16 +75,16 @@ export const IrrigationScreen: React.FC<IrrigationScreenProps> = ({
 
   const scenarioConfig = {
     rain_imminent: {
-      label: 'Current: Rain Imminent (82%)',
-      status: 'IRRIGATION NOT REQUIRED',
-      statusBadge: 'delay',
-      badgeLabel: 'Delay Advised',
+      label: 'Current: Live Weather Assessment',
+      status: selectedZone.status === 'delay_recommended' ? 'IRRIGATION NOT REQUIRED (DELAY ADVISED)' : 'IRRIGATION SCHEDULE EVALUATED',
+      statusBadge: selectedZone.status === 'delay_recommended' ? 'delay' : 'optimal',
+      badgeLabel: selectedZone.status === 'delay_recommended' ? 'Delay Advised' : 'Optimal',
       moistureMultiplier: 1.0,
-      rainProb: 82,
-      rainfallMm: 14.5,
-      recommendation: 'Delay pump cycles until tomorrow. Rainfall will replenish moisture naturally to 48%, preventing waterlogging and saving pump power.',
-      waterSavedToday: '1,850 L',
-      reasonSummary: 'Rainfall will recharge soil without artificial pumping.',
+      rainProb: selectedZone.rainProbability || plan?.rainProbability || 80,
+      rainfallMm: selectedZone.calculationDetails?.forecastRainMm ?? plan?.forecastedRainMm ?? 0,
+      recommendation: selectedZone.recommendation || 'Delay pump cycles. Imminent rainfall will replenish root zone naturally.',
+      waterSavedToday: `${(selectedZone.estimatedAvoidedIrrigationLitres || selectedZone.waterSavedLitres || plan?.totalEstimatedAvoidedIrrigationLitres || 0).toLocaleString()} L (Estimated Avoided)`,
+      reasonSummary: plan?.decisionReason || 'Rainfall will recharge soil without artificial pumping.',
     },
     dry_spell: {
       label: 'Simulation: Dry Spell (0% Rain)',
@@ -91,9 +94,9 @@ export const IrrigationScreen: React.FC<IrrigationScreenProps> = ({
       moistureMultiplier: 0.72,
       rainProb: 0,
       rainfallMm: 0.0,
-      recommendation: 'Run Drip Line Zone A for 45 minutes at 06:00 AM. Evaporation deficit requires replenishment to sustain flowering.',
+      recommendation: `Run Drip Line for 45 minutes at 06:00 AM. Evaporation deficit requires replenishment to sustain active growth.`,
       waterSavedToday: '0 L (Irrigating)',
-      reasonSummary: 'Soil moisture depleted below threshold (22%). Rain probability is 0%.',
+      reasonSummary: 'Soil moisture depleted below threshold. Rain probability is 0%.',
     },
     post_rain: {
       label: 'Simulation: Post-Rain (+24 hrs)',
@@ -103,9 +106,9 @@ export const IrrigationScreen: React.FC<IrrigationScreenProps> = ({
       moistureMultiplier: 1.55,
       rainProb: 15,
       rainfallMm: 0.0,
-      recommendation: 'Keep all pumps suspended. Allow natural gravitational drainage and root aeration. Next sensor evaluation Saturday 07:00.',
-      waterSavedToday: '2,400 L',
-      reasonSummary: 'Soil moisture is optimal at 48% following rainfall event.',
+      recommendation: 'Keep all pumps suspended. Allow natural gravitational drainage and root aeration.',
+      waterSavedToday: `${(selectedZone.estimatedAvoidedIrrigationLitres ? Math.round(selectedZone.estimatedAvoidedIrrigationLitres * 1.3) : 2400).toLocaleString()} L (Estimated Avoided)`,
+      reasonSummary: 'Soil moisture is optimal following rainfall event.',
     },
   };
 
@@ -127,7 +130,7 @@ export const IrrigationScreen: React.FC<IrrigationScreenProps> = ({
             <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
               <div>
                 <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">Why Delay Irrigation?</h3>
-                <p className="text-xs text-slate-500 dark:text-slate-400">Telemetry inputs & agronomic decision calculation</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400">Explainable FAO-56 telemetry & soil deficit calculations</p>
               </div>
               <button
                 type="button"
@@ -144,31 +147,44 @@ export const IrrigationScreen: React.FC<IrrigationScreenProps> = ({
                 <div>
                   <span className="text-[10px] uppercase font-medium text-slate-500 dark:text-slate-400 block">Current Soil Moisture</span>
                   <span className="text-base font-semibold text-slate-900 dark:text-slate-100">{dynamicMoisture}%</span>
-                  <span className="text-[10px] text-slate-500 dark:text-slate-400 block">Field A Tomato root zone</span>
+                  <span className="text-[10px] text-slate-500 dark:text-slate-400 block">{selectedZone.name}</span>
                 </div>
                 <div>
                   <span className="text-[10px] uppercase font-medium text-slate-500 dark:text-slate-400 block">Precipitation Forecast</span>
                   <span className="text-base font-semibold text-slate-900 dark:text-slate-100">{currentScen.rainProb}%</span>
-                  <span className="text-[10px] text-slate-500 dark:text-slate-400 block">~{currentScen.rainfallMm} mm expected today</span>
+                  <span className="text-[10px] text-slate-500 dark:text-slate-400 block">~{currentScen.rainfallMm} mm expected</span>
                 </div>
               </div>
+
+              {/* Agronomic calculation breakdowns */}
+              {calcDetails && (
+                <div className="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-lg border border-slate-200 dark:border-slate-700 space-y-1.5 font-mono text-[11px]">
+                  <span className="text-[10px] uppercase font-sans font-medium text-slate-500 dark:text-slate-400 block">Calculation Parameters</span>
+                  <div className="grid grid-cols-2 gap-x-2 gap-y-1 text-slate-700 dark:text-slate-300">
+                    <div>Reference ET₀: <strong className="text-slate-900 dark:text-slate-100">{calcDetails.referenceEt0Mm ?? plan?.et0MmDay ?? 4.8} mm/day</strong></div>
+                    <div>Crop Demand ETc: <strong className="text-slate-900 dark:text-slate-100">{calcDetails.dailyWaterDemandEtcMm ?? 5.5} mm/day</strong></div>
+                    <div>Crop Coeff (Kc): <strong className="text-slate-900 dark:text-slate-100">{calcDetails.cropCoefficientKc ?? 1.15}</strong></div>
+                    <div>Effective Rain: <strong className="text-slate-900 dark:text-slate-100">{calcDetails.effectiveRainHeuristicMm ?? 8.1} mm</strong></div>
+                  </div>
+                </div>
+              )}
 
               <div className="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-lg border border-slate-200 dark:border-slate-700 space-y-1.5">
                 <span className="text-[10px] uppercase font-medium text-slate-500 dark:text-slate-400 block">Agronomic Evaluation</span>
                 <p className="text-slate-700 dark:text-slate-300 leading-relaxed">
-                  Field A current soil moisture is <strong>{dynamicMoisture}%</strong>, which is safely above the permanent wilting point (18%) and within acceptable vegetative range.
+                  {selectedZone.crop} current soil moisture is <strong>{dynamicMoisture}%</strong>, which is safely above the permanent wilting point and buffered within the root zone.
                 </p>
                 <p className="text-slate-700 dark:text-slate-300 leading-relaxed">
-                  The forecasted <strong>{currentScen.rainfallMm} mm</strong> rainfall will naturally infiltrate and raise root-zone moisture to approximately <strong>48%</strong> without electrical pump consumption.
+                  The forecasted <strong>{currentScen.rainfallMm} mm</strong> rainfall will naturally infiltrate and satisfy daily crop evapotranspiration without supplemental pumping.
                 </p>
                 <p className="text-emerald-900 dark:text-emerald-300 font-medium pt-1">
-                  <strong>Conclusion:</strong> Irrigation can be delayed today. Running pumps now would saturate soil, starve fine roots of oxygen, and cause nitrogen fertilizer leaching.
+                  <strong>Conclusion:</strong> Irrigation delayed. Postponing pump cycles prevents soil saturation, preserves root aeration, and prevents nitrogen leaching.
                 </p>
               </div>
 
               <div className="p-2.5 rounded bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 flex items-center justify-between text-[11px] text-emerald-900 dark:text-emerald-300">
-                <span>Calculated resource conservation:</span>
-                <span className="font-semibold">{currentScen.waterSavedToday} saved</span>
+                <span>Estimated avoided irrigation volume:</span>
+                <span className="font-semibold">{currentScen.waterSavedToday}</span>
               </div>
             </div>
 
@@ -194,7 +210,6 @@ export const IrrigationScreen: React.FC<IrrigationScreenProps> = ({
           </div>
         </div>
       )}
-
       {/* Screen Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-200 dark:border-slate-800">
         <div className="space-y-1">

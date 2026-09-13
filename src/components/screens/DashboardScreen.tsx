@@ -30,6 +30,7 @@ interface DashboardScreenProps {
   diagnoses: DiagnosisRecord[];
   onSelectDiagnosis: (record: DiagnosisRecord) => void;
   weather: WeatherCondition;
+  irrigationPlan?: import('../../types').IrrigationPlan;
 }
 
 export const DashboardScreen: React.FC<DashboardScreenProps> = ({
@@ -39,6 +40,7 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
   diagnoses,
   onSelectDiagnosis,
   weather,
+  irrigationPlan,
 }) => {
   const [actionFilter, setActionFilter] = useState<'all' | 'urgent' | 'pending' | 'completed'>('all');
   const [showWhyModal, setShowWhyModal] = useState<boolean>(false);
@@ -84,10 +86,10 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
               <div className="p-3 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/60 space-y-1">
                 <div className="font-semibold text-slate-900 dark:text-slate-100 flex items-center gap-1.5">
                   <CloudRain className="w-3.5 h-3.5 text-slate-700 dark:text-slate-300" />
-                  <span>1. Rain Forecast (14.5mm at 2:00 PM)</span>
+                  <span>1. Rain Forecast ({weather.rainfallExpectedMm !== undefined ? `${weather.rainfallExpectedMm} mm` : '3.2 mm'} Expected, {weather.rainProbability}%)</span>
                 </div>
                 <p className="text-slate-600 dark:text-slate-400">
-                  Field A current root-zone moisture is 31% (target 45%). Running drip pumps today would saturate the root zone just before 14.5mm of rain arrives, risking soil waterlogging and wasted pump energy.
+                  Field A current root-zone moisture is {irrigationPlan?.zones?.[0]?.soilMoistureCurrent ?? 31}% (target {irrigationPlan?.zones?.[0]?.soilMoistureTarget ?? 45}%). Running drip pumps today would saturate the root zone before {weather.rainfallExpectedMm !== undefined ? `${weather.rainfallExpectedMm} mm` : '3.2 mm'} of forecasted rain arrives, risking soil waterlogging and wasted pump energy.
                 </p>
               </div>
 
@@ -132,7 +134,7 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
             Patel Farm Operations
           </h1>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-            Anand, Gujarat · Thursday, September 10 · 88% overall health
+            Anand, Gujarat · {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })} · 88% overall health
           </p>
         </div>
 
@@ -154,13 +156,13 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
               Today's Decision
             </span>
             <span className="text-slate-300 dark:text-slate-600">•</span>
-            <StatusBadge status="warning" label="Rain in 4h" size="sm" />
+            <StatusBadge status="warning" label={`Rain: ${weather.rainProbability}%`} size="sm" />
           </div>
           <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
-            Rain expected this afternoon (82% probability, 14.5mm). Delay irrigation.
+            {irrigationPlan?.overallRecommendation || `Rain expected this afternoon (${weather.rainProbability}% probability, ${weather.rainfallExpectedMm ?? 3.2}mm). Delay irrigation.`}
           </h2>
           <p className="text-xs text-slate-600 dark:text-slate-300 max-w-2xl">
-            Prune affected leaves on Tomato Plot 2 before rainfall to prevent spore wash-off into upper foliage.
+            {irrigationPlan?.decisionReason || 'Prune affected leaves on Tomato Plot 2 before rainfall to prevent spore wash-off into upper foliage.'}
           </p>
         </div>
 
@@ -251,20 +253,60 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
                   </div>
                   <span className="text-xs font-medium text-slate-600 dark:text-slate-400">Root Moisture</span>
                 </div>
-                <StatusBadge status="delay" label="Delay Pump" size="sm" />
+                <StatusBadge
+                  status={
+                    irrigationPlan?.overallRecommendation?.toLowerCase().includes('irrigation recommended') ||
+                    (irrigationPlan?.zones && irrigationPlan.zones.some((z) => z.status === 'needs_irrigation'))
+                      ? 'warning'
+                      : irrigationPlan?.overallRecommendation?.toLowerCase().includes('optimal')
+                        ? 'healthy'
+                        : 'delay'
+                  }
+                  label={
+                    irrigationPlan?.overallRecommendation?.toLowerCase().includes('irrigation recommended') ||
+                    (irrigationPlan?.zones && irrigationPlan.zones.some((z) => z.status === 'needs_irrigation'))
+                      ? 'Irrigate'
+                      : irrigationPlan?.overallRecommendation?.toLowerCase().includes('optimal')
+                        ? 'Optimal'
+                        : 'Delay Pump'
+                  }
+                  size="sm"
+                />
               </div>
 
               <div className="flex items-baseline gap-2 mb-1.5">
-                <span className="text-2xl font-bold font-sans text-slate-900 dark:text-slate-100">31%</span>
-                <span className="text-[11px] text-slate-500 dark:text-slate-400">Target: 45%</span>
+                <span className="text-2xl font-bold font-sans text-slate-900 dark:text-slate-100">
+                  {irrigationPlan?.zones?.[0]?.soilMoistureCurrent !== undefined
+                    ? `${irrigationPlan.zones[0].soilMoistureCurrent}%`
+                    : '31%'}
+                </span>
+                <span className="text-[11px] text-slate-500 dark:text-slate-400">
+                  Target: {irrigationPlan?.zones?.[0]?.soilMoistureTarget !== undefined
+                    ? `${irrigationPlan.zones[0].soilMoistureTarget}%`
+                    : '45%'}
+                </span>
               </div>
 
               <div className="w-full bg-slate-100 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden mb-2">
-                <div className="bg-sky-600 dark:bg-sky-500 h-full rounded-full" style={{ width: '68%' }} />
+                <div
+                  className="bg-sky-600 dark:bg-sky-500 h-full rounded-full"
+                  style={{
+                    width: `${Math.min(
+                      100,
+                      Math.round(
+                        ((irrigationPlan?.zones?.[0]?.soilMoistureCurrent ?? 31) /
+                          (irrigationPlan?.zones?.[0]?.soilMoistureTarget ?? 45)) *
+                          100
+                      )
+                    )}%`,
+                  }}
+                />
               </div>
 
               <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
-                Rain will naturally recharge root zone without pump power.
+                {irrigationPlan?.overallRecommendation?.toLowerCase().includes('irrigation recommended')
+                  ? 'Scheduled irrigation recommended for active root zone.'
+                  : 'Rain will naturally recharge root zone without pump power.'}
               </p>
             </div>
 
@@ -286,14 +328,18 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
                   <div className="w-7 h-7 rounded-md bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200/60 dark:border-indigo-900/50 text-indigo-700 dark:text-indigo-400 flex items-center justify-center shrink-0">
                     <CloudRain className="w-4 h-4" />
                   </div>
-                  <span className="text-xs font-medium text-slate-600 dark:text-slate-400">Rain in 4h</span>
+                  <span className="text-xs font-medium text-slate-600 dark:text-slate-400">Rain Forecast</span>
                 </div>
                 <StatusBadge status="urgent" label={`${weather.rainProbability}% Prob`} size="sm" />
               </div>
 
               <div className="flex items-baseline gap-2 mb-1.5">
-                <span className="text-2xl font-bold font-sans text-slate-900 dark:text-slate-100">14.5 mm</span>
-                <span className="text-[11px] text-slate-500 dark:text-slate-400">~2:00 PM onset</span>
+                <span className="text-2xl font-bold font-sans text-slate-900 dark:text-slate-100">
+                  {weather.rainfallExpectedMm !== undefined ? `${weather.rainfallExpectedMm} mm` : '3.2 mm'}
+                </span>
+                <span className="text-[11px] text-slate-500 dark:text-slate-400">
+                  {weather.rainProbability >= 50 ? 'Precipitation expected' : 'Low rain chance'}
+                </span>
               </div>
 
               <div className="w-full bg-slate-100 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden mb-2">
@@ -301,7 +347,9 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
               </div>
 
               <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
-                Showers starting ~2:00 PM. Complete leaf pruning beforehand.
+                {weather.rainProbability >= 50
+                  ? `Showers expected (${weather.rainfallExpectedMm !== undefined ? `${weather.rainfallExpectedMm} mm` : '3.2 mm'}). Complete leaf pruning beforehand.`
+                  : `Clear window with ${weather.temperature !== undefined ? `${weather.temperature}°C` : '30°C'} air temperature.`}
               </p>
             </div>
 
@@ -413,14 +461,26 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
           {/* Action List */}
           {filteredActions.length > 0 ? (
             <div className="space-y-2.5">
-              {filteredActions.map((act) => (
-                <ActionCard
-                  key={act.id}
-                  action={act}
-                  onToggleComplete={onToggleAction}
-                  onNavigate={onNavigate}
-                />
-              ))}
+              {filteredActions.map((act) => {
+                const dynamicAct = act.id === 'act-1'
+                  ? {
+                      ...act,
+                      actionText: `Postpone scheduled irrigation cycle. ${weather.rainProbability}% rain probability with ${weather.rainfallExpectedMm !== undefined ? `${weather.rainfallExpectedMm} mm` : 'forecasted'} precipitation expected within 24h.`,
+                      reason: irrigationPlan?.totalEstimatedAvoidedIrrigationLitres
+                        ? `Running pumps today would over-saturate roots and waste an estimated ${irrigationPlan.totalEstimatedAvoidedIrrigationLitres.toLocaleString()} liters of water.`
+                        : act.reason,
+                    }
+                  : act;
+
+                return (
+                  <ActionCard
+                    key={act.id}
+                    action={dynamicAct}
+                    onToggleComplete={onToggleAction}
+                    onNavigate={onNavigate}
+                  />
+                );
+              })}
             </div>
           ) : (
             <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-6 text-center">
@@ -510,14 +570,21 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
             <div className="space-y-2 text-xs">
               <div className="flex items-center justify-between text-slate-600 dark:text-slate-400">
                 <span>Temperature / Humidity</span>
-                <span className="font-medium text-slate-900 dark:text-slate-100">28°C / 68%</span>
+                <span className="font-medium text-slate-900 dark:text-slate-100">
+                  {weather.temperature !== undefined ? `${weather.temperature}°C` : '30°C'} / {weather.humidity !== undefined ? `${weather.humidity}%` : '68%'}
+                </span>
               </div>
               <div className="flex items-center justify-between text-slate-600 dark:text-slate-400">
                 <span>Expected Rain</span>
-                <span className="font-medium text-slate-900 dark:text-slate-100">14.5 mm (~2:00 PM)</span>
+                <span className="font-medium text-slate-900 dark:text-slate-100">
+                  {weather.rainfallExpectedMm !== undefined ? `${weather.rainfallExpectedMm} mm` : '3.2 mm'} ({weather.rainProbability}% prob)
+                </span>
               </div>
               <div className="pt-2 border-t border-slate-100 dark:border-slate-800 text-slate-600 dark:text-slate-400 leading-relaxed text-[11px]">
-                <strong className="font-medium text-slate-800 dark:text-slate-200">Operational Meaning:</strong> High wash-off risk. Postpone all chemical spray applications until dry spell Friday morning.
+                <strong className="font-medium text-slate-800 dark:text-slate-200">Operational Meaning:</strong>{' '}
+                {weather.rainProbability >= 50
+                  ? `High wash-off risk due to ${weather.rainProbability}% rain forecast. Postpone foliar spraying until dry window.`
+                  : 'Favorable spraying conditions with adequate dry window.'}
               </div>
             </div>
           </div>

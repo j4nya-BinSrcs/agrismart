@@ -9,7 +9,7 @@ import {
   Sun,
   Moon,
 } from 'lucide-react';
-import { ScreenType } from '../../types';
+import { ScreenType, WeatherCondition, IrrigationPlan } from '../../types';
 import { useToast } from '../../context/ToastContext';
 import { useTheme } from '../../context/ThemeContext';
 
@@ -20,6 +20,8 @@ interface HeaderProps {
   onOpenNotifications: () => void;
   unreadCount: number;
   onResetDemo?: () => void;
+  weather?: WeatherCondition;
+  irrigationPlan?: IrrigationPlan;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -28,6 +30,8 @@ export const Header: React.FC<HeaderProps> = ({
   onToggleMobileSidebar,
   onOpenNotifications,
   unreadCount,
+  weather,
+  irrigationPlan,
 }) => {
   const { showToast } = useToast();
   const { theme, toggleTheme } = useTheme();
@@ -128,11 +132,36 @@ export const Header: React.FC<HeaderProps> = ({
             aria-hidden="true"
             className="absolute inset-0 -z-10 rounded-full blur-xl opacity-70 bg-gradient-to-r from-emerald-200/60 via-amber-100/40 to-emerald-200/60 dark:from-emerald-500/20 dark:via-amber-500/10 dark:to-emerald-500/20"
           />
-          <span className="font-medium text-slate-900 dark:text-slate-200">28°C</span>
+          <span className="font-medium text-slate-900 dark:text-slate-200">
+            {weather?.temperature !== undefined ? `${weather.temperature}°C` : '30°C'}
+          </span>
           <span className="text-slate-300 dark:text-slate-600">·</span>
-          <span>82% Rain expected</span>
+          <span>
+            {weather?.rainProbability !== undefined
+              ? `${weather.rainProbability}% Rain expected`
+              : '80% Rain expected'}
+          </span>
           <span className="text-slate-300 dark:text-slate-600">·</span>
-          <span className="text-amber-700 dark:text-amber-400 font-medium">Irrigation delayed</span>
+          <span className="text-amber-700 dark:text-amber-400 font-medium">
+            {(() => {
+              const rec = (irrigationPlan?.overallRecommendation || '').toLowerCase();
+              if (
+                rec.includes('irrigation recommended') ||
+                (irrigationPlan?.zones && irrigationPlan.zones.some((z) => z.status === 'needs_irrigation'))
+              ) {
+                return 'Irrigation scheduled';
+              }
+              if (
+                rec.includes('optimal') ||
+                (irrigationPlan?.zones &&
+                  irrigationPlan.zones.length > 0 &&
+                  irrigationPlan.zones.every((z) => z.status === 'optimal'))
+              ) {
+                return 'Moisture optimal';
+              }
+              return 'Irrigation delayed';
+            })()}
+          </span>
         </div>
 
         {/* Right: Language, Notifications, Theme Toggle, Primary Action, User */}

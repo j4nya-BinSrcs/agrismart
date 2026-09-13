@@ -4,3 +4,5 @@ export * from './weatherService';
 export * from './irrigationService';
 export * from './sustainabilityService';
 export * from './assistantService';
+export * from './apiClient';
+

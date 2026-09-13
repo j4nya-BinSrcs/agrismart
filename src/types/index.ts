@@ -122,6 +122,9 @@ export interface DiagnosisRecord {
   precautions: string[];
   recommendedActions: RecommendedActionStep[];
   relatedInsights: RelatedInsights;
+  source?: 'ml_service' | 'ml_unavailable' | 'expert_rules' | string;
+  isMlPrediction?: boolean;
+  rawModelOutput?: unknown;
 }
 
 export interface DiagnosisAnalysisRequest {
@@ -143,15 +146,30 @@ export interface WeatherCondition {
   windSpeedKmH: number;
   uvIndex: number;
   forecastSummary: string;
-  agriculturalAdvice: string;
+  agriculturalAdvice?: string;
   rainfallExpectedMm: number;
+  precipitationMm?: number;
+  weatherCode?: number;
+  location?: {
+    latitude: number;
+    longitude: number;
+    timezone: string;
+    elevationMeters?: number | null;
+  };
+  provider?: string;
+  updatedAt?: string;
 }
 
 export interface HourlyForecast {
   time: string;
+  isoTime?: string;
   temp: number;
   rainProbability: number;
+  precipitationMm?: number;
+  humidity?: number | null;
+  windSpeedKmH?: number | null;
   condition: string;
+  weatherCode?: number;
   spraySuitability: 'optimal' | 'caution' | 'unfavorable';
   sprayNote: string;
 }
@@ -159,12 +177,36 @@ export interface HourlyForecast {
 export interface DailyForecast {
   day: string;
   date: string;
+  isoDate?: string;
   maxTemp: number;
   minTemp: number;
   condition: string;
+  weatherCode?: number;
   rainProbability: number;
   rainfallMm: number;
+  uvIndexMax?: number | null;
   farmAdvisory: string;
+}
+
+export interface IrrigationCalculationDetails {
+  cropCoefficientKc?: number;
+  kcSource?: string;
+  stageCategory?: string;
+  dailyWaterDemandEtcMm?: number;
+  referenceEt0Mm?: number;
+  rootDepthMm?: number;
+  soilMoistureDeficitPct?: number;
+  soilDeficitDepthMm?: number;
+  effectiveRainHeuristicMm?: number;
+  forecastRainMm?: number;
+  rainProbability?: number;
+  recommendedGrossDepthMm?: number;
+  recommendedGrossVolumeLitres?: number;
+  rainDelayHours?: number;
+  estimatedAvoidedIrrigationLitres?: number;
+  irrigationEfficiency?: number;
+  managementAllowedDepletionAssumptionP?: number;
+  factors?: string[];
 }
 
 export interface IrrigationZone {
@@ -181,14 +223,33 @@ export interface IrrigationZone {
   lastIrrigated: string;
   recommendation: string;
   waterSavedLitres: number;
+  recommendedWaterMm?: number;
+  recommendedIrrigationLitres?: number;
+  estimatedAvoidedIrrigationLitres?: number;
+  calculationDetails?: IrrigationCalculationDetails;
 }
 
 export interface IrrigationPlan {
   zones: IrrigationZone[];
   overallRecommendation: string;
   totalSavedLitres: number;
+  totalRecommendedIrrigationLitres?: number;
+  totalEstimatedAvoidedIrrigationLitres?: number;
   forecastedRainMm: number;
+  rainProbability?: number;
   decisionReason: string;
+  et0MmDay?: number;
+  weatherContext?: unknown;
+  isDemoDefault?: boolean;
+  modelMetadata?: {
+    evapotranspirationMethod?: string;
+    cropCoefficientsSource?: string;
+    effectiveRainfallMethod?: string;
+    managementAllowedDepletionAssumptionP?: number;
+    isEstimate?: boolean;
+    disclaimer?: string;
+    avoidedWaterBaselineAssumption?: string;
+  };
 }
 
 export interface SustainabilityImprovement {
@@ -235,7 +296,9 @@ export interface AssistantMessage {
 export interface AssistantContext {
   farmName?: string;
   crop?: string;
+  growthStage?: string;
   activeDiagnosis?: DiagnosisRecord;
   weather?: WeatherCondition;
+  irrigation?: IrrigationPlan;
   soilMoisture?: number;
 }

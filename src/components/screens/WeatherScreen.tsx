@@ -57,100 +57,108 @@ export const WeatherScreen: React.FC<WeatherScreenProps> = ({
     );
   }
 
+  const todayDaily = daily[0];
+  const tomorrowDaily = daily[1];
+  const next3Daily = daily[2];
+
   const horizonData = {
     today: {
-      label: 'Today (Thu, Sep 11)',
-      temp: 28,
-      feelsLike: 31,
-      rainProb: 82,
-      rainfallMm: 14.5,
-      humidity: 68,
-      windSpeed: 14,
-      uvIndex: 4,
-      sprayStatus: 'Unfavorable',
-      sprayDotColor: 'bg-rose-600',
-      headline: 'Heavy precipitation event expected this afternoon (~14.5 mm, 82% probability).',
-      irrigationTag: 'Irrigation Delayed',
-      irrigationCta: 'Irrigation delayed → View Irrigation Plan',
+      label: todayDaily ? `Today (${todayDaily.day}, ${todayDaily.date})` : 'Today',
+      temp: weather.temperature,
+      feelsLike: weather.feelsLike,
+      rainProb: weather.rainProbability,
+      rainfallMm: todayDaily?.rainfallMm ?? weather.rainfallExpectedMm,
+      humidity: weather.humidity,
+      windSpeed: weather.windSpeedKmH,
+      uvIndex: weather.uvIndex,
+      sprayStatus: weather.rainProbability >= 60 ? 'Unfavorable' : weather.rainProbability >= 30 ? 'Caution' : 'Optimal',
+      sprayDotColor: weather.rainProbability >= 60 ? 'bg-rose-600' : weather.rainProbability >= 30 ? 'bg-amber-600' : 'bg-emerald-600',
+      headline: todayDaily?.farmAdvisory || weather.forecastSummary,
+      irrigationTag: weather.rainProbability >= 60 ? 'Irrigation Delayed' : 'Irrigation Evaluated',
+      irrigationCta: weather.rainProbability >= 60 ? 'Irrigation delayed → View Irrigation Plan' : 'View Irrigation Plan',
       pillars: [
         {
           num: '1. Irrigation',
-          title: 'Hold scheduled irrigation cycles',
-          desc: 'Rain will naturally replenish root zones to 48%, preventing root hypoxia and saving 1,850 L.',
+          title: weather.rainProbability >= 60 ? 'Hold scheduled irrigation cycles' : 'Maintain calibrated drip schedule',
+          desc: weather.rainProbability >= 60
+            ? `Rain (~${todayDaily?.rainfallMm ?? weather.rainfallExpectedMm} mm) will naturally replenish root zones, preventing root hypoxia.`
+            : 'Evaporation deficit is steady. Deliver target moisture.',
         },
         {
           num: '2. Spray Operations',
-          title: 'Postpone chemical spray',
-          desc: 'Rainfall arriving ~2:00 PM will wash away foliar fungicides. Hold until Friday morning.',
+          title: weather.rainProbability >= 60 ? 'Postpone chemical spray' : 'Foliar spray window open',
+          desc: weather.rainProbability >= 60
+            ? 'Rainfall will wash away foliar fungicides and cause pesticide runoff.'
+            : `Favorable winds (<${weather.windSpeedKmH} km/h) and low rain risk.`,
         },
         {
           num: '3. Disease Prevention',
-          title: 'Prune infected leaves before rain',
-          desc: 'Removes Alternaria spore source before raindrop impact splashes pathogens upward.',
+          title: 'Scout foliage for moisture stress',
+          desc: 'High relative humidity encourages spore germination. Inspect lower canopy.',
         },
       ],
     },
     tomorrow: {
-      label: 'Tomorrow (Fri, Sep 12)',
-      temp: 30,
-      feelsLike: 33,
-      rainProb: 35,
-      rainfallMm: 1.2,
+      label: tomorrowDaily ? `Tomorrow (${tomorrowDaily.day}, ${tomorrowDaily.date})` : 'Tomorrow',
+      temp: tomorrowDaily?.maxTemp ?? 30,
+      feelsLike: (tomorrowDaily?.maxTemp ?? 30) + 2,
+      rainProb: tomorrowDaily?.rainProbability ?? 35,
+      rainfallMm: tomorrowDaily?.rainfallMm ?? 1.2,
       humidity: 62,
       windSpeed: 11,
-      uvIndex: 6,
-      sprayStatus: 'Optimal Window (7–11:30 AM)',
-      sprayDotColor: 'bg-emerald-600',
-      headline: 'Post-rain clearing conditions. Favorable 4-hour morning application window.',
-      irrigationTag: 'Irrigation Paused',
+      uvIndex: tomorrowDaily?.uvIndexMax ?? 6,
+      sprayStatus: (tomorrowDaily?.rainProbability ?? 0) >= 50 ? 'Caution' : 'Optimal Window',
+      sprayDotColor: (tomorrowDaily?.rainProbability ?? 0) >= 50 ? 'bg-amber-600' : 'bg-emerald-600',
+      headline: tomorrowDaily?.farmAdvisory || 'Forecast clearing conditions with moderate morning winds.',
+      irrigationTag: 'Soil Monitored',
       irrigationCta: 'Soil moisture adequate → Check Sensors',
       pillars: [
         {
           num: '1. Irrigation',
-          title: 'Keep pumps idle',
-          desc: 'Soil moisture remains above 42% after yesterday’s rainfall. No supplemental water required.',
+          title: 'Monitor root moisture',
+          desc: 'Check sensor telemetry before initiating secondary pump cycle.',
         },
         {
           num: '2. Spray Operations',
-          title: 'Foliar spray window open',
-          desc: 'Calm morning winds (<11 km/h) and dry foliage make 7:00–11:30 AM ideal for protective spray.',
+          title: 'Morning spray application',
+          desc: 'Optimal early morning window before midday heat.',
         },
         {
-          num: '3. Disease Prevention',
-          title: 'Scout Field A for secondary spots',
-          desc: 'Check newly expanded tomato leaves for any initial pinhead chlorotic spots.',
+          num: '3. Field Operations',
+          title: 'Scout active crop plots',
+          desc: 'Check newly expanded leaves for any initial disease symptoms.',
         },
       ],
     },
     next3days: {
-      label: 'Next 3 Days (Sat–Mon, Sep 13–15)',
-      temp: 32,
-      feelsLike: 35,
-      rainProb: 10,
-      rainfallMm: 0.0,
+      label: next3Daily ? `Upcoming (${next3Daily.day}, ${next3Daily.date})` : 'Next 3 Days',
+      temp: next3Daily?.maxTemp ?? 32,
+      feelsLike: (next3Daily?.maxTemp ?? 32) + 3,
+      rainProb: next3Daily?.rainProbability ?? 10,
+      rainfallMm: next3Daily?.rainfallMm ?? 0.0,
       humidity: 52,
       windSpeed: 9,
-      uvIndex: 7,
+      uvIndex: next3Daily?.uvIndexMax ?? 7,
       sprayStatus: 'Optimal Conditions',
       sprayDotColor: 'bg-emerald-600',
-      headline: 'Sustained sunshine and dry weather. Evapotranspiration will steadily deplete root zones.',
-      irrigationTag: 'Scheduled for Sunday',
-      irrigationCta: 'Sunday cycle scheduled → View Schedule',
+      headline: next3Daily?.farmAdvisory || 'Sustained sunshine and dry weather across Anand cluster.',
+      irrigationTag: 'Scheduled Drip',
+      irrigationCta: 'Scheduled cycle → View Schedule',
       pillars: [
         {
           num: '1. Irrigation',
-          title: 'Schedule Sunday morning cycle',
-          desc: 'Evaporation rate of ~4.8 mm/day will bring Field A moisture down to 26% by Sunday morning.',
+          title: 'Standard drip cycle',
+          desc: 'Evapotranspiration will steadily deplete root zones.',
         },
         {
           num: '2. Spray Operations',
           title: 'Full operational flexibility',
-          desc: 'Zero rain risk. Excellent conditions for bio-fungicide or nutrient foliar feeding.',
+          desc: 'Dry weather allows protective or curative foliar applications.',
         },
         {
           num: '3. Field Work',
-          title: 'Safe for tractor cultivation',
-          desc: 'Topsoil will dry past plastic limit by Saturday afternoon, preventing subsoil compaction.',
+          title: 'Safe for tractor transit',
+          desc: 'Dry topsoil prevents subsoil compaction.',
         },
       ],
     },
@@ -164,7 +172,7 @@ export const WeatherScreen: React.FC<WeatherScreenProps> = ({
       title: 'High Fungal Spore Spread Risk',
       severity: 'high',
       crops: 'Tomato (Field A) & Potato (Field D)',
-      explanation: 'Warm temperatures (28°C) combined with impending heavy rain (14.5mm) and high ambient humidity (68%) create peak germination conditions for Alternaria solani and Phytophthora spores.',
+      explanation: `Warm temperatures (${Math.round(weather.temperature)}°C) combined with impending rain (${weather.rainfallExpectedMm !== undefined ? `${weather.rainfallExpectedMm} mm` : 'forecasted'} at ${weather.rainProbability}%) and high ambient humidity (${weather.humidity}%) create peak germination conditions for Alternaria solani and Phytophthora spores.`,
       actionableAdvice: 'Prune infected lower foliage immediately before rain begins. Do not spray chemicals before rain to avoid wash-off into irrigation channels.'
     },
     {
@@ -172,16 +180,16 @@ export const WeatherScreen: React.FC<WeatherScreenProps> = ({
       title: 'Foliar Spray Chemical Wash-off Window',
       severity: 'urgent',
       crops: 'All active plots',
-      explanation: 'Fungicides or foliar micronutrients require a minimum 4-hour dry rainfast window. Rainfall starting around 2:00 PM will wash away any active compounds applied today.',
-      actionableAdvice: 'Close all spray operations until the dry window opens Friday morning (Sep 12, 7:00 AM).'
+      explanation: `Fungicides or foliar micronutrients require a minimum 4-hour dry rainfast window. Impending precipitation (${weather.rainProbability}% rain forecast) will wash away active compounds applied today.`,
+      actionableAdvice: 'Close all spray operations until the next dry window opens with clear weather.'
     },
     {
       id: 'risk-3',
       title: 'Tractor Soil Compaction Advisory',
       severity: 'moderate',
       crops: 'Field B (Cotton Clay Loam)',
-      explanation: 'Clay loam in Field B will reach plastic limit with 14mm rain, causing heavy subsoil compaction if heavy machinery traverses rows.',
-      actionableAdvice: 'Restrict tractor transit and heavy wheel sprayers on Field B until Saturday.'
+      explanation: `Clay loam in Field B will reach plastic limit with ${weather.rainfallExpectedMm !== undefined ? `${weather.rainfallExpectedMm} mm` : 'forecasted'} rain, causing heavy subsoil compaction if heavy machinery traverses rows.`,
+      actionableAdvice: 'Restrict tractor transit and heavy wheel sprayers on Field B until topsoil dries.'
     }
   ];
 

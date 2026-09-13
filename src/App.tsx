@@ -213,6 +213,7 @@ export default function App() {
   const [hourlyForecast, setHourlyForecast] = useState<HourlyForecast[]>([]);
   const [dailyForecast, setDailyForecast] = useState<DailyForecast[]>([]);
   const [irrigationZones, setIrrigationZones] = useState<IrrigationZone[]>([]);
+  const [irrigationPlan, setIrrigationPlan] = useState<import('./types').IrrigationPlan | null>(null);
   const [sustainability, setSustainability] = useState<SustainabilityMetric | null>(null);
 
   // URL synchronization
@@ -341,19 +342,15 @@ export default function App() {
           diagList,
           actList,
           notifList,
-          currentW,
-          hourlyW,
-          dailyW,
-          zones,
+          weatherBundle,
+          irrigPlan,
           sust,
         ] = await Promise.all([
           diagnosisService.getDiagnosisHistory(),
           farmService.getTodayActions(),
           farmService.getNotifications(),
-          weatherService.getCurrentWeather(),
-          weatherService.getHourlyForecast(),
-          weatherService.getDailyForecast(),
-          irrigationService.getIrrigationZones(),
+          weatherService.getFullForecast(),
+          irrigationService.getIrrigationPlan(),
           sustainabilityService.getSustainabilityMetrics(),
         ]);
 
@@ -364,10 +361,11 @@ export default function App() {
           }
           setActions(actList);
           setNotifications(notifList);
-          setWeather(currentW);
-          setHourlyForecast(hourlyW);
-          setDailyForecast(dailyW);
-          setIrrigationZones(zones);
+          setWeather(weatherBundle.current);
+          setHourlyForecast(weatherBundle.hourly);
+          setDailyForecast(weatherBundle.daily);
+          setIrrigationPlan(irrigPlan);
+          setIrrigationZones(irrigPlan.zones || []);
           setSustainability(sust);
         }
       } catch (err) {
@@ -503,6 +501,8 @@ export default function App() {
         onCloseMobile={() => setIsMobileSidebarOpen(false)}
         hasActiveDiagnosis={Boolean(currentDiagnosis)}
         onResetDemo={handleResetDemoData}
+        weather={weather || undefined}
+        irrigationPlan={irrigationPlan || undefined}
       />
 
       {/* 2. Main Work Area */}
@@ -515,6 +515,8 @@ export default function App() {
           onOpenNotifications={() => setIsNotificationDrawerOpen(true)}
           unreadCount={unreadNotificationsCount}
           onResetDemo={handleResetDemoData}
+          weather={weather || undefined}
+          irrigationPlan={irrigationPlan || undefined}
         />
 
         {/* Scrollable Screen Viewport with Error Boundary */}
@@ -540,6 +542,7 @@ export default function App() {
                     handleNavigate('diagnosis-result');
                   }}
                   weather={weather}
+                  irrigationPlan={irrigationPlan || undefined}
                 />
               ) : (
                 <LoadingState message="Loading farm operations console..." />
@@ -573,7 +576,8 @@ export default function App() {
             {currentScreen === 'irrigation' && sustainability && (
               <IrrigationScreen
                 zones={irrigationZones}
-                totalSavedLitres={sustainability.waterSavedMonthLitres}
+                plan={irrigationPlan || undefined}
+                totalSavedLitres={irrigationPlan?.totalEstimatedAvoidedIrrigationLitres ?? sustainability.waterSavedMonthLitres}
                 onNavigate={handleNavigate}
               />
             )}
@@ -592,6 +596,7 @@ export default function App() {
                 onNavigate={handleNavigate}
                 activeDiagnosis={currentDiagnosis || undefined}
                 weather={weather || undefined}
+                irrigation={irrigationPlan || undefined}
               />
             )}
 

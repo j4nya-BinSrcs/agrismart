@@ -61,7 +61,7 @@ export const DiagnosisResultScreen: React.FC<DiagnosisResultScreenProps> = ({
 
   const handleAskAssistant = () => {
     onAskAssistantWithContext(
-      `I need guidance on treating ${diagnosis.diseaseName} in my ${diagnosis.crop} (${diagnosis.fieldLocation}). What is the exact spray schedule considering the 82% rain forecast?`
+      `I need guidance on treating ${diagnosis.diseaseName} in my ${diagnosis.crop} (${diagnosis.fieldLocation}). What is the exact spray schedule considering the impending rain forecast?`
     );
     onNavigate('assistant');
   };
@@ -159,7 +159,22 @@ export const DiagnosisResultScreen: React.FC<DiagnosisResultScreenProps> = ({
       </div>
 
       {/* Primary Diagnosis Header Card */}
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-5">
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-5 space-y-4">
+        {/* ML Offline / Baseline Guidance Banner */}
+        {diagnosis.isMlPrediction === false && (
+          <div className="p-3.5 rounded-md border border-amber-200 dark:border-amber-800/80 bg-amber-50/70 dark:bg-amber-950/30 flex items-start gap-2.5 text-xs text-amber-900 dark:text-amber-200">
+            <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" />
+            <div className="space-y-0.5">
+              <div className="font-semibold text-amber-950 dark:text-amber-100">
+                Baseline Agronomic Mode (ML Classifier Offline / In Training)
+              </div>
+              <p className="text-[11px] text-amber-800 dark:text-amber-300 leading-relaxed">
+                The machine learning model is not currently configured or trained. The recommendations below represent baseline agronomic scouting guidance and must not be interpreted as an automated disease prediction.
+              </p>
+            </div>
+          </div>
+        )}
+
         <div className="flex flex-col md:flex-row md:items-start justify-between gap-6">
           <div className="flex-1 min-w-0">
             <div className="flex flex-wrap items-center gap-2 mb-1.5 text-xs text-slate-500 dark:text-slate-400">
@@ -186,12 +201,18 @@ export const DiagnosisResultScreen: React.FC<DiagnosisResultScreenProps> = ({
 
             <div className="flex flex-wrap items-center gap-3 mt-3 text-xs">
               <StatusBadge
-                status={diagnosis.isHealthy ? 'healthy' : 'warning'}
-                label={diagnosis.isHealthy ? 'Healthy' : `${diagnosis.confidence}% Confidence`}
+                status={diagnosis.isMlPrediction === false ? 'delay' : diagnosis.isHealthy ? 'healthy' : 'warning'}
+                label={
+                  diagnosis.isMlPrediction === false
+                    ? 'Baseline Guidance (No ML)'
+                    : diagnosis.isHealthy
+                    ? 'Healthy'
+                    : `${diagnosis.confidence}% Confidence`
+                }
                 size="md"
               />
 
-              {!diagnosis.isHealthy && (
+              {!diagnosis.isHealthy && diagnosis.isMlPrediction !== false && (
                 <button
                   type="button"
                   onClick={() => setShowWhyModal(true)}
@@ -259,7 +280,7 @@ export const DiagnosisResultScreen: React.FC<DiagnosisResultScreenProps> = ({
               </div>
               <div className="absolute bottom-1.5 left-1.5 right-1.5 bg-slate-900/80 text-white text-[10px] px-1.5 py-0.5 rounded flex items-center justify-between font-mono">
                 <span>{diagnosis.crop}</span>
-                <span>{diagnosis.confidence}%</span>
+                <span>{diagnosis.isMlPrediction === false ? 'Baseline Guidance' : `${diagnosis.confidence}%`}</span>
               </div>
             </div>
           </div>

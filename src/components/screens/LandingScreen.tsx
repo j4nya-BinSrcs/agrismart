@@ -397,8 +397,8 @@ export const LandingScreen: React.FC<LandingScreenProps> = ({ onNavigate }) => {
                   <span>WEATHER FORECAST</span>
                   <CloudSun className="w-4 h-4 text-amber-500" />
                 </div>
-                <div className="text-2xl font-bold text-slate-900 dark:text-slate-100">28°C</div>
-                <div className="text-[11px] text-amber-700 dark:text-amber-400 mt-1">82% Rain chance · Evening</div>
+                <div className="text-2xl font-bold text-slate-900 dark:text-slate-100">30°C</div>
+                <div className="text-[11px] text-amber-700 dark:text-amber-400 mt-1">80% Rain chance · Afternoon</div>
               </div>
 
               {/* Telemetry 3: Irrigation Status */}

@@ -365,19 +365,19 @@ export const SignupScreen: React.FC<SignupScreenProps> = ({ onNavigate }) => {
                 <span>WEATHER FORECAST</span>
                 <CloudSun className="w-4 h-4 text-amber-500" />
               </div>
-              <div className="text-2xl font-bold text-slate-900 dark:text-slate-100">28°C</div>
-              <div className="text-[11px] text-amber-700 dark:text-amber-400 mt-1">82% Rain Expected · Evening</div>
+              <div className="text-2xl font-bold text-slate-900 dark:text-slate-100">30°C</div>
+              <div className="text-[11px] text-amber-700 dark:text-amber-400 mt-1">80% Rain Expected · Afternoon</div>
             </div>
 
             <div className="p-4 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
               <div className="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 mb-1">
                 <span>IRRIGATION ADVISORY</span>
                 <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-800">
-                  DELAYED
+                  Delay Active
                 </span>
               </div>
-              <div className="text-2xl font-bold text-slate-900 dark:text-slate-100">4,200 L</div>
-              <div className="text-[11px] text-emerald-700 dark:text-emerald-400 mt-1">Water saved this week</div>
+              <div className="text-2xl font-bold text-slate-900 dark:text-slate-100">Held 24h</div>
+              <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">Root moisture at 31%</div>
             </div>
 
             <div className="p-4 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
@@ -427,7 +427,7 @@ export const SignupScreen: React.FC<SignupScreenProps> = ({ onNavigate }) => {
             <div className="flex items-center gap-2.5 text-xs text-slate-700 dark:text-slate-300">
               <ShieldCheck className="w-4 h-4 text-emerald-700 dark:text-emerald-400 shrink-0" />
               <span>
-                Cross-system sync: Soil moisture telemetry delayed Zone 2 irrigation due to incoming 14.5mm rain forecast.
+                Cross-system sync: Soil moisture telemetry delayed Zone 2 irrigation due to incoming rainfall forecast.
               </span>
             </div>
             <div className="flex items-center gap-1.5 text-xs font-semibold text-emerald-700 dark:text-emerald-400 shrink-0">

@@ -12,7 +12,7 @@ import {
   LogOut,
   RotateCcw,
 } from 'lucide-react';
-import { ScreenType } from '../../types';
+import { ScreenType, WeatherCondition, IrrigationPlan } from '../../types';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
 
@@ -23,6 +23,8 @@ interface SidebarProps {
   onCloseMobile: () => void;
   hasActiveDiagnosis: boolean;
   onResetDemo?: () => void;
+  weather?: WeatherCondition;
+  irrigationPlan?: IrrigationPlan;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -32,6 +34,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onCloseMobile,
   hasActiveDiagnosis,
   onResetDemo,
+  weather,
+  irrigationPlan,
 }) => {
   const { user, logout } = useAuth();
   const { showToast } = useToast();
@@ -190,16 +194,43 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
             <div className="flex items-center justify-between text-zinc-300 text-[11px]">
               <span>Soil moisture</span>
-              <span className="font-mono text-white font-medium">31%</span>
+              <span className="font-mono text-white font-medium">
+                {irrigationPlan?.zones?.[0]?.soilMoistureCurrent !== undefined
+                  ? `${irrigationPlan.zones[0].soilMoistureCurrent}%`
+                  : '31%'}
+              </span>
             </div>
 
             <div className="flex items-center justify-between text-zinc-300 text-[11px]">
               <span>Rain probability</span>
-              <span className="font-mono text-white font-medium">82%</span>
+              <span className="font-mono text-white font-medium">
+                {weather?.rainProbability !== undefined
+                  ? `${weather.rainProbability}%`
+                  : '80%'}
+              </span>
             </div>
 
             <div className="pt-1.5 border-t border-zinc-700/60 dark:border-[#262626] text-[10px] text-emerald-300 font-medium flex items-center justify-between">
-              <span>Irrigation delayed</span>
+              <span>
+                {(() => {
+                  const rec = (irrigationPlan?.overallRecommendation || '').toLowerCase();
+                  if (
+                    rec.includes('irrigation recommended') ||
+                    (irrigationPlan?.zones && irrigationPlan.zones.some((z) => z.status === 'needs_irrigation'))
+                  ) {
+                    return 'Irrigation scheduled';
+                  }
+                  if (
+                    rec.includes('optimal') ||
+                    (irrigationPlan?.zones &&
+                      irrigationPlan.zones.length > 0 &&
+                      irrigationPlan.zones.every((z) => z.status === 'optimal'))
+                  ) {
+                    return 'Moisture optimal';
+                  }
+                  return 'Irrigation delayed';
+                })()}
+              </span>
             </div>
           </div>
         </div>

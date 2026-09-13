@@ -199,7 +199,7 @@ export const SustainabilityScreen: React.FC<SustainabilityScreenProps> = ({
               </span>
             </div>
             <p className="text-xs text-slate-600 dark:text-slate-300 mt-0.5">
-              Correlating 82% rain forecast with root-zone soil sensors prevented 6 unnecessary pumping cycles.
+              Correlating live precipitation forecasts with root-zone soil sensors prevented unnecessary pumping cycles.
             </p>
           </div>
         </div>
@@ -434,7 +434,7 @@ export const SustainabilityScreen: React.FC<SustainabilityScreenProps> = ({
               <div className="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-lg border border-slate-200 dark:border-slate-700 space-y-2">
                 <div className="flex items-center gap-2 text-slate-900 dark:text-slate-100 font-semibold">
                   <CloudRain className="w-4 h-4 text-emerald-800 dark:text-emerald-400" />
-                  <span>1. Weather Forecast Detection (82% Rain)</span>
+                  <span>1. Weather Forecast Detection</span>
                 </div>
                 <p className="text-[11px] text-slate-600 dark:text-slate-400 pl-6">
                   When the Anand district radar signals ≥70% rainfall probability with ≥10 mm expected accumulation, AgriSmart AI flags pending irrigation tasks.

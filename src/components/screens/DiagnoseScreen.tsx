@@ -51,7 +51,7 @@ export const DiagnoseScreen: React.FC<DiagnoseScreenProps> = ({
       variety: 'Abhinav Hybrid',
       growthStage: 'Fruiting (Week 9)',
       image: SAMPLE_LEAF_IMAGES.tomatoEarlyBlight,
-      expected: 'Early Blight (91% Confidence)',
+      expected: 'Early Blight Sample',
       field: 'Field A (Plot 2)'
     },
     {
@@ -60,7 +60,7 @@ export const DiagnoseScreen: React.FC<DiagnoseScreenProps> = ({
       variety: 'GW-496',
       growthStage: 'Tillering Stage',
       image: SAMPLE_LEAF_IMAGES.healthyWheat,
-      expected: 'Healthy Foliage (97% Confidence)',
+      expected: 'Healthy Wheat Sample',
       field: 'Field C (East)'
     },
     {
@@ -69,7 +69,7 @@ export const DiagnoseScreen: React.FC<DiagnoseScreenProps> = ({
       variety: 'Bt Cotton Hybrid',
       growthStage: 'Squaring Stage',
       image: SAMPLE_LEAF_IMAGES.cottonBlight,
-      expected: 'Bacterial Blight (86% Confidence)',
+      expected: 'Cotton Blight Sample',
       field: 'Field B (Block 1)'
     },
     {
@@ -78,7 +78,7 @@ export const DiagnoseScreen: React.FC<DiagnoseScreenProps> = ({
       variety: 'Kufri Jyoti',
       growthStage: 'Tuber Initiation',
       image: SAMPLE_LEAF_IMAGES.potatoLateBlight,
-      expected: 'Late Blight (93% Confidence)',
+      expected: 'Late Blight Sample',
       field: 'Field D (Trial)'
     },
   ];
@@ -174,7 +174,8 @@ export const DiagnoseScreen: React.FC<DiagnoseScreenProps> = ({
     } catch (err) {
       console.error('Diagnosis failed:', err);
       setIsAnalyzing(false);
-      showToast('Unable to complete diagnostic inference. Please try again.', 'error');
+      const errorMessage = err instanceof Error ? err.message : 'Unable to complete diagnostic inference. Please try again.';
+      showToast(errorMessage, 'error');
     }
   };
 

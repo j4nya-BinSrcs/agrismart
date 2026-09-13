@@ -177,7 +177,7 @@ export const INITIAL_DIAGNOSES: DiagnosisRecord[] = [
       }
     ],
     relatedInsights: {
-      weatherRisk: 'Rain forecasted (82%) will splash spores if leaves remain untrimmed. Delay foliar spray until rain clears.',
+      weatherRisk: 'Forecasted rainfall will splash spores if leaves remain untrimmed. Delay foliar spray until rain clears.',
       irrigationAdvice: 'Soil moisture is 31%. Delay scheduled irrigation for 24h to avoid creating humid microclimate.',
       sustainabilityImpact: 'Precision spot-pruning prevents blanket chemical spraying, saving approximately 45L of fungicide runoff.'
     }
@@ -299,8 +299,8 @@ export const TODAY_ACTIONS: ActionItem[] = [
     title: 'Delay Irrigation on Field A & Field C',
     category: 'irrigation',
     priority: 'urgent',
-    actionText: 'Postpone scheduled irrigation cycle. 82% rain probability with 14mm precipitation expected within 24h.',
-    reason: 'Running pumps today would over-saturate roots and waste an estimated 1,850 liters of water.',
+    actionText: 'Postpone scheduled irrigation cycle. High rain probability with expected precipitation within 24h.',
+    reason: 'Running pumps today would over-saturate roots and waste water.',
     cropAffected: 'Tomato & Wheat',
     completed: false,
     timeframe: 'Action by 10:00 AM',
@@ -320,7 +320,7 @@ export const TODAY_ACTIONS: ActionItem[] = [
   },
   {
     id: 'act-3',
-    title: 'Hold Chemical Sprays until Thursday Morning',
+    title: 'Hold Chemical Sprays until Dry Window Opens',
     category: 'weather',
     priority: 'recommended',
     actionText: 'Weather forecast indicates poor spray adhesion window today due to impending rainfall.',
@@ -345,37 +345,37 @@ export const TODAY_ACTIONS: ActionItem[] = [
 ];
 
 export const CURRENT_WEATHER: WeatherCondition = {
-  temperature: 28,
-  feelsLike: 30,
-  condition: 'Humid & Overcast (Rain Approaching)',
-  rainProbability: 82,
-  humidity: 68,
-  windSpeedKmH: 14,
-  uvIndex: 4,
-  rainfallExpectedMm: 14.5,
-  forecastSummary: 'Rain likely within the next 24 hours across Anand agricultural zone.',
+  temperature: 30,
+  feelsLike: 34,
+  condition: 'Overcast (Precipitation Expected)',
+  rainProbability: 80,
+  humidity: 67,
+  windSpeedKmH: 13,
+  uvIndex: 6,
+  rainfallExpectedMm: 10.7,
+  forecastSummary: 'Precipitation expected within the next 24 hours across Anand agricultural zone.',
   agriculturalAdvice: 'Rain likely within 24 hours. Delay irrigation today. Avoid foliar chemical sprays until rain passes.'
 };
 
 export const HOURLY_FORECASTS: HourlyForecast[] = [
-  { time: '08:00 AM', temp: 27, rainProbability: 25, condition: 'Cloudy', spraySuitability: 'caution', sprayNote: 'High humidity, rain approaching within 5 hrs' },
-  { time: '11:00 AM', temp: 29, rainProbability: 45, condition: 'Overcast', spraySuitability: 'caution', sprayNote: 'Cloud buildup; 45% shower chance' },
-  { time: '02:00 PM', temp: 28, rainProbability: 82, condition: 'Thunderstorm / Rain', spraySuitability: 'unfavorable', sprayNote: 'Do not spray. High rain wash risk.' },
-  { time: '05:00 PM', temp: 26, rainProbability: 75, condition: 'Moderate Showers', spraySuitability: 'unfavorable', sprayNote: 'Rain active; saturated foliage' },
-  { time: '08:00 PM', temp: 24, rainProbability: 60, condition: 'Light Rain', spraySuitability: 'unfavorable', sprayNote: 'Night runoff; pumps should stay off' },
-  { time: '11:00 PM', temp: 23, rainProbability: 35, condition: 'Scattered Showers', spraySuitability: 'caution', sprayNote: 'Cool night; slow drying' },
-  { time: '06:00 AM', temp: 22, rainProbability: 15, condition: 'Clearing skies', spraySuitability: 'optimal', sprayNote: 'Calm morning; prime spray window' }
+  { time: '08:00 AM', temp: 28, rainProbability: 80, condition: 'Overcast', spraySuitability: 'unfavorable', sprayNote: 'High humidity, precipitation approaching' },
+  { time: '11:00 AM', temp: 30, rainProbability: 61, condition: 'Overcast', spraySuitability: 'caution', sprayNote: 'Cloud buildup; shower chance' },
+  { time: '02:00 PM', temp: 33, rainProbability: 20, condition: 'Overcast', spraySuitability: 'caution', sprayNote: 'Monitor cloud cover' },
+  { time: '05:00 PM', temp: 30, rainProbability: 25, condition: 'Moderate Drizzle', spraySuitability: 'unfavorable', sprayNote: 'Drizzle active' },
+  { time: '08:00 PM', temp: 26, rainProbability: 59, condition: 'Light Drizzle', spraySuitability: 'unfavorable', sprayNote: 'Night runoff; pumps should stay off' },
+  { time: '11:00 PM', temp: 25, rainProbability: 69, condition: 'Light Rain Showers', spraySuitability: 'unfavorable', sprayNote: 'Showers active' },
+  { time: '06:00 AM', temp: 28, rainProbability: 41, condition: 'Clearing skies', spraySuitability: 'caution', sprayNote: 'High morning moisture' }
 ];
 
 export const DAILY_FORECASTS: DailyForecast[] = [
   {
     day: 'Today',
-    date: 'Sep 10',
-    maxTemp: 30,
-    minTemp: 23,
-    condition: 'Heavy Showers Likely',
-    rainProbability: 82,
-    rainfallMm: 14.5,
+    date: 'Sep 12',
+    maxTemp: 33,
+    minTemp: 25,
+    condition: 'Thunderstorm / Showers',
+    rainProbability: 80,
+    rainfallMm: 10.7,
     farmAdvisory: 'Delay irrigation. Prune infected leaves early. Keep tractors off wet clay rows.'
   },
   {
@@ -429,11 +429,11 @@ export const IRRIGATION_ZONES: IrrigationZone[] = [
     soilMoistureCurrent: 31,
     soilMoistureTarget: 45,
     status: 'delay_recommended',
-    rainProbability: 82,
+    rainProbability: 80,
     soilType: 'Sandy Loam',
     rootDepth: '45 cm',
     lastIrrigated: '3 days ago',
-    recommendation: 'Delay irrigation today. 14mm rain is forecasted. Running drip today causes waterlogging and fungal spread.',
+    recommendation: 'Delay irrigation today. Natural rainfall is forecasted. Running drip today causes waterlogging and fungal spread.',
     waterSavedLitres: 1850
   },
   {
@@ -444,12 +444,12 @@ export const IRRIGATION_ZONES: IrrigationZone[] = [
     soilMoistureCurrent: 48,
     soilMoistureTarget: 50,
     status: 'optimal',
-    rainProbability: 82,
+    rainProbability: 80,
     soilType: 'Clay Loam',
     rootDepth: '60 cm',
     lastIrrigated: 'Yesterday',
-    recommendation: 'Moisture is in optimal range (48%). Natural retention in clay loam is sufficient through weekend.',
-    waterSavedLitres: 920
+    recommendation: 'Optimal soil moisture. Maintain current sensor monitoring.',
+    waterSavedLitres: 0
   },
   {
     id: 'zone-3',
@@ -459,12 +459,12 @@ export const IRRIGATION_ZONES: IrrigationZone[] = [
     soilMoistureCurrent: 26,
     soilMoistureTarget: 40,
     status: 'delay_recommended',
-    rainProbability: 82,
+    rainProbability: 80,
     soilType: 'Loam',
     rootDepth: '30 cm',
     lastIrrigated: '5 days ago',
-    recommendation: 'Soil is moderately dry (26%), but imminent rain will naturally recharge the root zone. Wait 24 hours.',
-    waterSavedLitres: 2100
+    recommendation: 'Delay irrigation today. Impending showers will recharge root zone.',
+    waterSavedLitres: 1200
   }
 ];
 
@@ -501,12 +501,14 @@ export const SUSTAINABILITY_DATA: SustainabilityMetric = {
   ]
 };
 
+export const SUSTAINABILITY_METRICS = SUSTAINABILITY_DATA;
+
 export const INITIAL_CHAT_MESSAGES: AssistantMessage[] = [
   {
     id: 'msg-1',
     sender: 'assistant',
     timestamp: '8:30 AM',
-    text: 'Good morning, Patel Farm. I have reviewed your current farm conditions: Field A has a Moderate Early Blight detection, and there is an 82% rain forecast within 24 hours. How can I assist your field operations today?',
+    text: 'Good morning, Patel Farm. I have reviewed your current farm conditions: Field A has a Moderate Early Blight detection, and there is a high rain forecast within 24 hours. How can I assist your field operations today?',
     contextTag: 'Patel Farm • Anand, Gujarat',
     actionSuggestions: [
       'What should I do about Tomato Early Blight?',
@@ -531,8 +533,8 @@ export const INITIAL_NOTIFICATIONS: AppNotification[] = [
   },
   {
     id: 'notif-2',
-    title: 'Rain probability increased to 82%',
-    desc: '14.5 mm precipitation expected in Anand district starting ~2:00 PM. High spray wash-off risk.',
+    title: 'Precipitation Alert for Anand',
+    desc: 'Precipitation expected in Anand district. High spray wash-off risk.',
     time: '1 hour ago',
     status: 'warning',
     statusLabel: 'Weather Alert',

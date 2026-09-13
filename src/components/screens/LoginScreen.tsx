@@ -299,8 +299,8 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onNavigate }) => {
                 <span>WEATHER FORECAST</span>
                 <CloudSun className="w-4 h-4 text-amber-500" />
               </div>
-              <div className="text-2xl font-bold text-slate-900 dark:text-slate-100">28°C</div>
-              <div className="text-[11px] text-amber-700 dark:text-amber-400 mt-1">82% Rain Expected · Evening</div>
+              <div className="text-2xl font-bold text-slate-900 dark:text-slate-100">30°C</div>
+              <div className="text-[11px] text-amber-700 dark:text-amber-400 mt-1">80% Rain Expected · Afternoon</div>
             </div>
 
             <div className="p-4 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
@@ -361,7 +361,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onNavigate }) => {
             <div className="flex items-center gap-2.5 text-xs text-slate-700 dark:text-slate-300">
               <ShieldCheck className="w-4 h-4 text-emerald-700 dark:text-emerald-400 shrink-0" />
               <span>
-                Cross-system sync: Soil moisture telemetry delayed Zone 2 irrigation due to incoming 14.5mm rain forecast.
+                Cross-system sync: Soil moisture telemetry delayed Zone 2 irrigation due to incoming rainfall forecast.
               </span>
             </div>
             <div className="flex items-center gap-1.5 text-xs font-semibold text-emerald-700 dark:text-emerald-400 shrink-0">
