@@ -1,6 +1,6 @@
 import { HydratedDocument, Model, Schema, model } from 'mongoose';
 
-export type UserRole = 'farmer' | 'admin';
+export type UserRole = 'owner' | 'farmer' | 'manager' | 'agronomist' | 'admin';
 
 export interface IUser {
   name: string;
@@ -52,8 +52,8 @@ const UserSchema = new Schema<IUser, Model<IUser>, IUserMethods>(
     role: {
       type: String,
       enum: {
-        values: ['farmer', 'admin'],
-        message: 'Role must be either farmer or admin',
+        values: ['owner', 'farmer', 'manager', 'agronomist', 'admin'],
+        message: 'Invalid user role',
       },
       default: 'farmer',
     },

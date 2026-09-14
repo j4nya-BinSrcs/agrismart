@@ -6,23 +6,39 @@ export interface FarmLocation {
   address: string;
 }
 
+export interface FarmMember {
+  user: Types.ObjectId;
+  role: 'owner' | 'farmer' | 'manager' | 'agronomist';
+  addedAt: Date;
+}
+
+export interface FarmMemberView {
+  user: string;
+  role: 'owner' | 'farmer' | 'manager' | 'agronomist';
+  addedAt: Date;
+}
+
 export interface IFarm {
-  owner: Types.ObjectId;
   name: string;
   location: FarmLocation;
+  state?: string;
+  district?: string;
   totalAreaAcres: number;
   description: string;
+  members: FarmMember[];
   createdAt: Date;
   updatedAt: Date;
 }
 
 export interface IFarmView {
   id: string;
-  owner: string;
   name: string;
   location: FarmLocation;
+  state?: string;
+  district?: string;
   totalAreaAcres: number;
   description: string;
+  members: FarmMemberView[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -48,14 +64,28 @@ const LocationSchema = new Schema<FarmLocation>(
   { _id: false }
 );
 
-const FarmSchema = new Schema<IFarm>(
+const MemberSchema = new Schema<FarmMember>(
   {
-    owner: {
+    user: {
       type: Schema.Types.ObjectId,
       ref: 'User',
-      required: [true, 'Farm owner is required'],
-      index: true,
+      required: true,
     },
+    role: {
+      type: String,
+      enum: ['owner', 'farmer', 'manager', 'agronomist'],
+      default: 'farmer',
+    },
+    addedAt: {
+      type: Date,
+      default: Date.now,
+    },
+  },
+  { _id: false }
+);
+
+const FarmSchema = new Schema<IFarm>(
+  {
     name: {
       type: String,
       required: [true, 'Farm name is required'],
@@ -64,6 +94,14 @@ const FarmSchema = new Schema<IFarm>(
     location: {
       type: LocationSchema,
       default: () => ({}),
+    },
+    state: {
+      type: String,
+      trim: true,
+    },
+    district: {
+      type: String,
+      trim: true,
     },
     totalAreaAcres: {
       type: Number,
@@ -75,15 +113,23 @@ const FarmSchema = new Schema<IFarm>(
       trim: true,
       default: '',
     },
+    members: {
+      type: [MemberSchema],
+      default: [],
+      validate: {
+        validator: function(members: FarmMember[]) {
+          const owners = members.filter(m => m.role === 'owner');
+          return owners.length >= 1;
+        },
+        message: 'A farm must have at least one owner',
+      },
+    },
   },
   {
     timestamps: true,
     toJSON: {
       transform(_doc, ret: Record<string, any>) {
         ret.id = ret._id ? ret._id.toString() : ret.id;
-        if (ret.owner && ret.owner.toString) {
-          ret.owner = ret.owner.toString();
-        }
         delete ret._id;
         delete ret.__v;
         return ret;
@@ -92,9 +138,6 @@ const FarmSchema = new Schema<IFarm>(
     toObject: {
       transform(_doc, ret: Record<string, any>) {
         ret.id = ret._id ? ret._id.toString() : ret.id;
-        if (ret.owner && ret.owner.toString) {
-          ret.owner = ret.owner.toString();
-        }
         delete ret._id;
         delete ret.__v;
         return ret;
@@ -103,7 +146,7 @@ const FarmSchema = new Schema<IFarm>(
   }
 );
 
-FarmSchema.index({ owner: 1, createdAt: -1 });
+FarmSchema.index({ 'members.user': 1, createdAt: -1 });
 
 export const Farm: Model<IFarm> = model<IFarm>('Farm', FarmSchema);
 

@@ -1,5 +1,5 @@
 import mongoose from 'mongoose';
-import Field, { IField, IFieldView } from '../models/Field.js';
+import Field, { IField, IFieldView, SupportedCrop } from '../models/Field.js';
 import Farm from '../models/Farm.js';
 import Zone from '../models/Zone.js';
 import ApiError from '../utils/ApiError.js';
@@ -28,10 +28,13 @@ export const fieldService = {
     validateObjectId(userId, 'User ID');
     validateObjectId(farmId, 'Farm ID');
 
-    // Verify parent farm ownership
-    const farm = await Farm.findOne({ _id: farmId, owner: userId });
+    // Verify parent farm ownership - check if user is a member of the farm
+    const farm = await Farm.findOne({ 
+      _id: farmId, 
+      'members.user': userId 
+    });
     if (!farm) {
-      throw ApiError.notFound('Farm not found.');
+      throw ApiError.notFound('Farm not found or access denied.');
     }
 
     const { name, areaAcres, crop, variety, growthStage, soilType, irrigationMethod, soilMoisture } = data;
@@ -42,6 +45,15 @@ export const fieldService = {
 
     if (areaAcres === undefined || areaAcres === null || isNaN(Number(areaAcres)) || Number(areaAcres) < 0) {
       throw ApiError.badRequest('Field area in acres is required and must be greater than or equal to 0.');
+    }
+
+    if (!crop || typeof crop !== 'string' || !crop.trim()) {
+      throw ApiError.badRequest('Crop type is required (pepper_bell, potato, tomato).');
+    }
+
+    const validCrops: SupportedCrop[] = ['pepper_bell', 'potato', 'tomato'];
+    if (!validCrops.includes(crop as SupportedCrop)) {
+      throw ApiError.badRequest('Invalid crop type. Supported crops: pepper_bell, potato, tomato');
     }
 
     if (soilMoisture !== undefined && soilMoisture !== null && soilMoisture !== '') {
@@ -56,7 +68,7 @@ export const fieldService = {
       owner: new mongoose.Types.ObjectId(userId),
       name: name.trim(),
       areaAcres: Number(areaAcres),
-      crop: typeof crop === 'string' ? crop.trim() : '',
+      crop: crop as SupportedCrop,
       variety: typeof variety === 'string' ? variety.trim() : '',
       growthStage: typeof growthStage === 'string' ? growthStage.trim() : '',
       soilType: typeof soilType === 'string' ? soilType.trim() : '',
@@ -73,30 +85,35 @@ export const fieldService = {
   },
 
   /**
-   * Retrieves all fields for a specific farm owned by the user
+   * Retrieves all fields for a specific farm where user is a member
    */
   async getFieldsByFarm(userId: string, farmId: string): Promise<IFieldView[]> {
     validateObjectId(userId, 'User ID');
     validateObjectId(farmId, 'Farm ID');
 
-    const farm = await Farm.findOne({ _id: farmId, owner: userId });
+    const farm = await Farm.findOne({ _id: farmId, 'members.user': userId });
     if (!farm) {
-      throw ApiError.notFound('Farm not found.');
+      throw ApiError.notFound('Farm not found or access denied.');
     }
 
-    const fields = await Field.find({ farm: farmId, owner: userId }).sort({ createdAt: 1 });
+    const fields = await Field.find({ farm: farmId }).sort({ createdAt: 1 });
     return fields.map((f) => toFieldView(f));
   },
 
   /**
-   * Retrieves a specific field by ID ensuring ownership chain
+   * Retrieves a specific field by ID ensuring farm membership
    */
   async getFieldById(userId: string, farmId: string, fieldId: string): Promise<IFieldView> {
     validateObjectId(userId, 'User ID');
     validateObjectId(farmId, 'Farm ID');
     validateObjectId(fieldId, 'Field ID');
 
-    const field = await Field.findOne({ _id: fieldId, farm: farmId, owner: userId });
+    const farm = await Farm.findOne({ _id: farmId, 'members.user': userId });
+    if (!farm) {
+      throw ApiError.notFound('Farm not found or access denied.');
+    }
+
+    const field = await Field.findOne({ _id: fieldId, farm: farmId });
     if (!field) {
       throw ApiError.notFound('Field not found.');
     }
@@ -112,7 +129,12 @@ export const fieldService = {
     validateObjectId(farmId, 'Farm ID');
     validateObjectId(fieldId, 'Field ID');
 
-    const field = await Field.findOne({ _id: fieldId, farm: farmId, owner: userId });
+    const farm = await Farm.findOne({ _id: farmId, 'members.user': userId });
+    if (!farm) {
+      throw ApiError.notFound('Farm not found or access denied.');
+    }
+
+    const field = await Field.findOne({ _id: fieldId, farm: farmId });
     if (!field) {
       throw ApiError.notFound('Field not found.');
     }
@@ -133,7 +155,11 @@ export const fieldService = {
     }
 
     if (updateData.crop !== undefined) {
-      field.crop = typeof updateData.crop === 'string' ? updateData.crop.trim() : '';
+      const validCrops: SupportedCrop[] = ['pepper_bell', 'potato', 'tomato'];
+      if (!validCrops.includes(updateData.crop as SupportedCrop)) {
+        throw ApiError.badRequest('Invalid crop type. Supported crops: pepper_bell, potato, tomato');
+      }
+      field.crop = updateData.crop as SupportedCrop;
     }
 
     if (updateData.variety !== undefined) {
@@ -177,14 +203,19 @@ export const fieldService = {
     validateObjectId(farmId, 'Farm ID');
     validateObjectId(fieldId, 'Field ID');
 
-    const field = await Field.findOne({ _id: fieldId, farm: farmId, owner: userId });
+    const farm = await Farm.findOne({ _id: farmId, 'members.user': userId });
+    if (!farm) {
+      throw ApiError.notFound('Farm not found or access denied.');
+    }
+
+    const field = await Field.findOne({ _id: fieldId, farm: farmId });
     if (!field) {
       throw ApiError.notFound('Field not found.');
     }
 
     // Cascade deletion: Delete child Zones
-    const zonesDeleteResult = await Zone.deleteMany({ field: fieldId, owner: userId });
-    await Field.deleteOne({ _id: fieldId, farm: farmId, owner: userId });
+    const zonesDeleteResult = await Zone.deleteMany({ field: fieldId });
+    await Field.deleteOne({ _id: fieldId, farm: farmId });
 
     logger.info(
       `Field deleted: ${fieldId} under Farm ${farmId} by User ${userId} (Cascaded: ${zonesDeleteResult.deletedCount} zones removed)`

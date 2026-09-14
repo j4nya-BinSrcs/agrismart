@@ -3,6 +3,7 @@ export type ScreenType =
   | 'login'
   | 'signup'
   | 'dashboard'
+  | 'management'
   | 'diagnose'
   | 'diagnosis'
   | 'diagnosis-result'
@@ -12,20 +13,31 @@ export type ScreenType =
   | 'assistant'
   | 'not-found';
 
+export type UserRole = 'owner' | 'farmer' | 'manager' | 'agronomist' | 'admin';
+
+export type SupportedCrop = 'pepper_bell' | 'potato' | 'tomato';
+
+export const SUPPORTED_CROPS: { value: SupportedCrop; label: string }[] = [
+  { value: 'pepper_bell', label: 'Pepper Bell' },
+  { value: 'potato', label: 'Potato' },
+  { value: 'tomato', label: 'Tomato' },
+];
+
 export interface User {
   id: string;
   name: string;
   username?: string;
   email: string;
-  role: string;
-  farmName: string;
-  location: string;
+  role: UserRole;
+  createdAt?: Date;
+  updatedAt?: Date;
 }
 
 export interface AuthContextType {
   isAuthenticated: boolean;
   user: User | null;
   token: string | null;
+  isDemo?: boolean;
   login: (usernameOrEmail: string, password: string) => Promise<{ success: boolean; error?: string }>;
   loginAsDemo: () => void;
   signup: (data: {
@@ -33,10 +45,24 @@ export interface AuthContextType {
     username?: string;
     email: string;
     password: string;
+    confirmPassword?: string;
+    role?: UserRole;
+    state?: string;
+    district?: string;
     farmName: string;
-    location: string;
+    location?: string;
   }) => Promise<{ success: boolean; error?: string }>;
   logout: () => void;
+  updateUser?: (updated: Partial<User>) => void;
+  consumePendingFarm?: () => {
+    name: string;
+    state: string;
+    district: string;
+    location: string;
+    latitude: number;
+    longitude: number;
+    totalAreaAcres?: number;
+  } | null;
 }
 
 export type Language = 'en' | 'hi' | 'gu';
@@ -48,7 +74,7 @@ export type ActionCategory = 'irrigation' | 'crop_protection' | 'weather' | 'fie
 export interface FarmPlot {
   id: string;
   name: string;
-  crop: string;
+  crop: SupportedCrop;
   variety: string;
   acres: number;
   growthStage: string;
@@ -59,13 +85,21 @@ export interface FarmPlot {
   targetMoisture: number;
 }
 
+export interface FarmMember {
+  user: string;
+  role: UserRole;
+  addedAt?: string;
+}
+
 export interface Farm {
   id: string;
   name: string;
-  owner: string;
+  members: FarmMember[];
   location: string;
+  state?: string;
+  district?: string;
   totalAcres: number;
-  primaryCrops: string[];
+  primaryCrops: SupportedCrop[];
   plots: FarmPlot[];
 }
 
@@ -104,7 +138,7 @@ export interface RelatedInsights {
 
 export interface DiagnosisRecord {
   id: string;
-  crop: string;
+  crop: SupportedCrop;
   variety?: string;
   growthStage: string;
   diseaseName: string;
@@ -130,7 +164,7 @@ export interface DiagnosisRecord {
 export interface DiagnosisAnalysisRequest {
   imageUrl: string;
   imageName?: string;
-  crop: string;
+  crop: SupportedCrop;
   variety?: string;
   growthStage?: string;
   fieldLocation?: string;
@@ -212,7 +246,7 @@ export interface IrrigationCalculationDetails {
 export interface IrrigationZone {
   id: string;
   name: string;
-  crop: string;
+  crop: SupportedCrop;
   growthStage: string;
   soilMoistureCurrent: number;
   soilMoistureTarget: number;
@@ -295,7 +329,7 @@ export interface AssistantMessage {
 
 export interface AssistantContext {
   farmName?: string;
-  crop?: string;
+  crop?: SupportedCrop;
   growthStage?: string;
   activeDiagnosis?: DiagnosisRecord;
   weather?: WeatherCondition;

@@ -8,8 +8,8 @@ import type { AsyncHandler } from '../types/handlers.js';
  */
 export const register: AsyncHandler = async (req, res, next) => {
   try {
-    const { name, email, password, role } = req.body || {};
-    const result = await authService.registerUser({ name, email, password, role });
+    const { name, email, password, role, confirmPassword } = req.body || {};
+    const result = await authService.registerUser({ name, email, password, role, confirmPassword });
     return ApiResponse.created(res, 'User registered successfully', result);
   } catch (error) {
     return next(error);

@@ -219,17 +219,62 @@ const formatDailyData = (daily: OpenMeteoDaily | undefined) => {
   return result;
 };
 
+const INDIAN_DISTRICT_COORDS: Record<string, { lat: number; lon: number }> = {
+  anand: { lat: 22.5645, lon: 72.9289 },
+  ahmedabad: { lat: 23.0225, lon: 72.5714 },
+  amreli: { lat: 21.6032, lon: 71.2221 },
+  banaskantha: { lat: 24.1724, lon: 72.4346 },
+  bharuch: { lat: 21.7051, lon: 72.9959 },
+  bhavnagar: { lat: 21.7645, lon: 72.1519 },
+  gandhinagar: { lat: 23.2156, lon: 72.6369 },
+  jamnagar: { lat: 22.4707, lon: 70.0577 },
+  junagadh: { lat: 21.5222, lon: 70.4579 },
+  kheda: { lat: 22.6939, lon: 72.8604 },
+  kutch: { lat: 23.242, lon: 69.6669 },
+  mehsana: { lat: 23.588, lon: 72.3693 },
+  navsari: { lat: 20.9467, lon: 72.952 },
+  panchmahal: { lat: 22.7749, lon: 73.6143 },
+  rajkot: { lat: 22.3039, lon: 70.8022 },
+  sabarkantha: { lat: 23.5979, lon: 72.9698 },
+  surat: { lat: 21.1702, lon: 72.8311 },
+  vadodara: { lat: 22.3072, lon: 73.1812 },
+  valsad: { lat: 20.5992, lon: 72.9342 },
+  pune: { lat: 18.5204, lon: 73.8567 },
+  nashik: { lat: 19.9975, lon: 73.7898 },
+  nagpur: { lat: 21.1458, lon: 79.0882 },
+  ludhiana: { lat: 30.901, lon: 75.8573 },
+  amritsar: { lat: 31.634, lon: 74.8723 },
+  agra: { lat: 27.1767, lon: 78.0081 },
+  lucknow: { lat: 26.8467, lon: 80.9462 },
+  jaipur: { lat: 26.9124, lon: 75.7873 },
+  bhopal: { lat: 23.2599, lon: 77.4126 },
+  indore: { lat: 22.7196, lon: 75.8577 },
+  coimbatore: { lat: 11.0168, lon: 76.9558 },
+};
+
 export const weatherService = {
   /**
    * Fetches weather forecast from Open-Meteo
    */
-  async getForecast(latParam: unknown, lonParam: unknown) {
+  async getForecast(latParam?: unknown, lonParam?: unknown, districtParam?: unknown) {
+    let targetLat = latParam;
+    let targetLon = lonParam;
+
+    if ((!targetLat || !targetLon) && districtParam && typeof districtParam === 'string') {
+      const distClean = districtParam.toLowerCase().trim();
+      const matchedKey = Object.keys(INDIAN_DISTRICT_COORDS).find((k) => distClean.includes(k) || k.includes(distClean));
+      if (matchedKey) {
+        targetLat = INDIAN_DISTRICT_COORDS[matchedKey].lat;
+        targetLon = INDIAN_DISTRICT_COORDS[matchedKey].lon;
+      }
+    }
+
     // 1. Resolve coordinates (defaulting to Anand, Gujarat if omitted)
-    const lat = latParam !== undefined && latParam !== null && latParam !== ''
-      ? latParam
+    const lat = targetLat !== undefined && targetLat !== null && targetLat !== ''
+      ? targetLat
       : config.weather.defaultLatitude;
-    const lon = lonParam !== undefined && lonParam !== null && lonParam !== ''
-      ? lonParam
+    const lon = targetLon !== undefined && targetLon !== null && targetLon !== ''
+      ? targetLon
       : config.weather.defaultLongitude;
 
     const { latitude, longitude } = validateCoordinates(lat, lon);

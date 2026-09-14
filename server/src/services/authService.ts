@@ -15,6 +15,7 @@ export interface RegisterInput {
   email: string;
   password: string;
   role?: string;
+  confirmPassword?: string;
 }
 
 export interface LoginInput {
@@ -60,7 +61,7 @@ export const authService = {
   /**
    * Registers a new user with bcrypt password hashing
    */
-  async registerUser({ name, email, password, role = 'farmer' }: RegisterInput): Promise<AuthResult> {
+  async registerUser({ name, email, password, role = 'farmer', confirmPassword }: RegisterInput): Promise<AuthResult> {
     if (!name || typeof name !== 'string' || !name.trim()) {
       throw ApiError.badRequest('Name is required and cannot be empty.');
     }
@@ -78,7 +79,11 @@ export const authService = {
       throw ApiError.badRequest(`Password must be at least ${MIN_PASSWORD_LENGTH} characters long.`);
     }
 
-    const allowedRoles = ['farmer', 'admin'];
+    if (confirmPassword !== undefined && password !== confirmPassword) {
+      throw ApiError.badRequest('Passwords do not match.');
+    }
+
+    const allowedRoles = ['owner', 'farmer', 'manager', 'agronomist', 'admin'];
     const assignedRole = allowedRoles.includes(role) ? (role as UserRole) : 'farmer';
 
     // Check for duplicate email

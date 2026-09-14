@@ -9,8 +9,9 @@ export const getWeatherForecast: AsyncHandler = async (req, res, next) => {
   try {
     const lat = toSingleString(req.query.lat ?? req.query.latitude);
     const lon = toSingleString(req.query.lon ?? req.query.longitude);
+    const district = toSingleString(req.query.district);
 
-    const data = await weatherService.getForecast(lat, lon);
+    const data = await weatherService.getForecast(lat, lon, district);
     return ApiResponse.success(res, 200, 'Weather forecast data retrieved successfully', data);
   } catch (error) {
     next(error);

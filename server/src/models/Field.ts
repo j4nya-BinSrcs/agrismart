@@ -1,11 +1,21 @@
 import { Model, Schema, Types, model } from 'mongoose';
 
+export type SupportedCrop = 'pepper_bell' | 'potato' | 'tomato';
+
+export const SUPPORTED_CROPS: SupportedCrop[] = ['pepper_bell', 'potato', 'tomato'];
+
+export const CROP_DISPLAY_NAMES: Record<SupportedCrop, string> = {
+  pepper_bell: 'Pepper Bell',
+  potato: 'Potato',
+  tomato: 'Tomato',
+};
+
 export interface IField {
   farm: Types.ObjectId;
   owner: Types.ObjectId;
   name: string;
   areaAcres: number;
-  crop: string;
+  crop: SupportedCrop;
   variety: string;
   growthStage: string;
   soilType: string;
@@ -21,7 +31,7 @@ export interface IFieldView {
   owner: string;
   name: string;
   areaAcres: number;
-  crop: string;
+  crop: SupportedCrop;
   variety: string;
   growthStage: string;
   soilType: string;
@@ -57,8 +67,11 @@ const FieldSchema = new Schema<IField>(
     },
     crop: {
       type: String,
-      trim: true,
-      default: '',
+      enum: {
+        values: SUPPORTED_CROPS,
+        message: 'Crop must be one of: pepper_bell, potato, tomato',
+      },
+      required: [true, 'Crop type is required'],
     },
     variety: {
       type: String,

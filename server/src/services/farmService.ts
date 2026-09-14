@@ -1,5 +1,5 @@
 import mongoose from 'mongoose';
-import Farm, { IFarm, IFarmView } from '../models/Farm.js';
+import Farm, { IFarm, IFarmView, FarmMember } from '../models/Farm.js';
 import Field, { IFieldView } from '../models/Field.js';
 import Zone from '../models/Zone.js';
 import ApiError from '../utils/ApiError.js';
@@ -15,11 +15,18 @@ export interface FarmInput {
   name?: unknown;
   description?: unknown;
   totalAreaAcres?: unknown;
+  state?: unknown;
+  district?: unknown;
   location?: {
     latitude?: unknown;
     longitude?: unknown;
     address?: unknown;
   };
+}
+
+export interface AddMemberInput {
+  userId: string;
+  role: 'owner' | 'farmer' | 'manager' | 'agronomist';
 }
 
 const validateCoordinates = (location?: FarmInput['location']) => {
@@ -45,12 +52,12 @@ const toFarmView = (farm: InstanceType<typeof Farm>): IFarmView =>
 
 export const farmService = {
   /**
-   * Creates a new Farm owned by the authenticated user
+   * Creates a new Farm owned by the authenticated user (as owner)
    */
   async createFarm(userId: string, data: FarmInput = {}): Promise<IFarmView> {
     validateObjectId(userId, 'User ID');
 
-    const { name, location, totalAreaAcres, description } = data;
+    const { name, location, totalAreaAcres, description, state, district } = data;
 
     if (!name || typeof name !== 'string' || !name.trim()) {
       throw ApiError.badRequest('Farm name is required and cannot be empty.');
@@ -62,16 +69,29 @@ export const farmService = {
 
     validateCoordinates(location);
 
+    const stateValue = typeof state === 'string' ? state.trim() : undefined;
+    const districtValue = typeof district === 'string' ? district.trim() : undefined;
+    const addressFallback =
+      typeof location?.address === 'string' && location.address.trim()
+        ? location.address.trim()
+        : [districtValue, stateValue].filter(Boolean).join(', ');
+
     const farmData: IFarm = {
-      owner: new mongoose.Types.ObjectId(userId),
       name: name.trim(),
       totalAreaAcres: Number(totalAreaAcres),
       description: typeof description === 'string' ? description.trim() : '',
+      state: stateValue,
+      district: districtValue,
       location: {
         latitude: location?.latitude !== undefined && location.latitude !== null && location.latitude !== '' ? Number(location.latitude) : undefined,
         longitude: location?.longitude !== undefined && location.longitude !== null && location.longitude !== '' ? Number(location.longitude) : undefined,
-        address: typeof location?.address === 'string' ? location.address.trim() : '',
+        address: addressFallback,
       },
+      members: [{
+        user: new mongoose.Types.ObjectId(userId),
+        role: 'owner',
+        addedAt: new Date(),
+      }],
       createdAt: new Date(),
       updatedAt: new Date(),
     };
@@ -82,39 +102,45 @@ export const farmService = {
   },
 
   /**
-   * Retrieves all farms owned by the user
+   * Retrieves all farms where the user is a member
    */
   async getFarmsByUser(userId: string): Promise<IFarmView[]> {
     validateObjectId(userId, 'User ID');
-    const farms = await Farm.find({ owner: userId }).sort({ createdAt: -1 });
+    const farms = await Farm.find({ 'members.user': userId }).sort({ createdAt: -1 });
     return farms.map((f) => toFarmView(f));
   },
 
   /**
-   * Retrieves a specific farm owned by the user
+   * Retrieves a specific farm where the user is a member
    */
   async getFarmById(userId: string, farmId: string): Promise<IFarmView> {
     validateObjectId(userId, 'User ID');
     validateObjectId(farmId, 'Farm ID');
 
-    const farm = await Farm.findOne({ _id: farmId, owner: userId });
+    const farm = await Farm.findOne({ _id: farmId, 'members.user': userId });
     if (!farm) {
-      throw ApiError.notFound('Farm not found.');
+      throw ApiError.notFound('Farm not found or access denied.');
     }
 
     return toFarmView(farm);
   },
 
   /**
-   * Updates a farm owned by the user
+   * Updates a farm where the user is an owner
    */
   async updateFarm(userId: string, farmId: string, updateData: FarmInput = {}): Promise<IFarmView> {
     validateObjectId(userId, 'User ID');
     validateObjectId(farmId, 'Farm ID');
 
-    const farm = await Farm.findOne({ _id: farmId, owner: userId });
+    const farm = await Farm.findOne({ _id: farmId, 'members.user': userId });
     if (!farm) {
-      throw ApiError.notFound('Farm not found.');
+      throw ApiError.notFound('Farm not found or access denied.');
+    }
+
+    // Check if user is owner
+    const userMember = farm.members.find(m => m.user.toString() === userId);
+    if (!userMember || userMember.role !== 'owner') {
+      throw ApiError.forbidden('Only farm owners can update farm details.');
     }
 
     if (updateData.name !== undefined) {
@@ -149,27 +175,153 @@ export const farmService = {
       farm.description = typeof updateData.description === 'string' ? updateData.description.trim() : '';
     }
 
+    if (updateData.state !== undefined) {
+      farm.state = typeof updateData.state === 'string' ? updateData.state.trim() : undefined;
+    }
+
+    if (updateData.district !== undefined) {
+      farm.district = typeof updateData.district === 'string' ? updateData.district.trim() : undefined;
+    }
+
     await farm.save();
     logger.info(`Farm updated: ${farm._id} by User ${userId}`);
     return toFarmView(farm);
   },
 
   /**
-   * Deletes a farm and cascades deletion to all its child Fields and Zones
+   * Adds a member to a farm (only owners can add members)
+   */
+  async addMember(userId: string, farmId: string, memberData: AddMemberInput): Promise<IFarmView> {
+    validateObjectId(userId, 'User ID');
+    validateObjectId(farmId, 'Farm ID');
+    validateObjectId(memberData.userId, 'Member User ID');
+
+    const farm = await Farm.findOne({ _id: farmId, 'members.user': userId });
+    if (!farm) {
+      throw ApiError.notFound('Farm not found or access denied.');
+    }
+
+    // Check if user is owner
+    const userMember = farm.members.find(m => m.user.toString() === userId);
+    if (!userMember || userMember.role !== 'owner') {
+      throw ApiError.forbidden('Only farm owners can add members.');
+    }
+
+    // Check if user is already a member
+    const existingMember = farm.members.find(m => m.user.toString() === memberData.userId);
+    if (existingMember) {
+      throw ApiError.badRequest('User is already a member of this farm.');
+    }
+
+    farm.members.push({
+      user: new mongoose.Types.ObjectId(memberData.userId),
+      role: memberData.role,
+      addedAt: new Date(),
+    });
+
+    await farm.save();
+    logger.info(`Member ${memberData.userId} added to Farm ${farmId} as ${memberData.role} by User ${userId}`);
+    return toFarmView(farm);
+  },
+
+  /**
+   * Removes a member from a farm (only owners can remove members)
+   */
+  async removeMember(userId: string, farmId: string, memberUserId: string): Promise<IFarmView> {
+    validateObjectId(userId, 'User ID');
+    validateObjectId(farmId, 'Farm ID');
+    validateObjectId(memberUserId, 'Member User ID');
+
+    const farm = await Farm.findOne({ _id: farmId, 'members.user': userId });
+    if (!farm) {
+      throw ApiError.notFound('Farm not found or access denied.');
+    }
+
+    // Check if user is owner
+    const userMember = farm.members.find(m => m.user.toString() === userId);
+    if (!userMember || userMember.role !== 'owner') {
+      throw ApiError.forbidden('Only farm owners can remove members.');
+    }
+
+    // Cannot remove the last owner
+    const memberToRemove = farm.members.find(m => m.user.toString() === memberUserId);
+    if (!memberToRemove) {
+      throw ApiError.notFound('Member not found in this farm.');
+    }
+
+    if (memberToRemove.role === 'owner') {
+      const ownerCount = farm.members.filter(m => m.role === 'owner').length;
+      if (ownerCount <= 1) {
+        throw ApiError.badRequest('Cannot remove the only owner of the farm.');
+      }
+    }
+
+    farm.members = farm.members.filter(m => m.user.toString() !== memberUserId);
+    await farm.save();
+    logger.info(`Member ${memberUserId} removed from Farm ${farmId} by User ${userId}`);
+    return toFarmView(farm);
+  },
+
+  /**
+   * Updates a member's role (only owners can change roles)
+   */
+  async updateMemberRole(userId: string, farmId: string, memberUserId: string, newRole: 'owner' | 'farmer' | 'manager' | 'agronomist'): Promise<IFarmView> {
+    validateObjectId(userId, 'User ID');
+    validateObjectId(farmId, 'Farm ID');
+    validateObjectId(memberUserId, 'Member User ID');
+
+    const farm = await Farm.findOne({ _id: farmId, 'members.user': userId });
+    if (!farm) {
+      throw ApiError.notFound('Farm not found or access denied.');
+    }
+
+    // Check if user is owner
+    const userMember = farm.members.find(m => m.user.toString() === userId);
+    if (!userMember || userMember.role !== 'owner') {
+      throw ApiError.forbidden('Only farm owners can change member roles.');
+    }
+
+    const memberToUpdate = farm.members.find(m => m.user.toString() === memberUserId);
+    if (!memberToUpdate) {
+      throw ApiError.notFound('Member not found in this farm.');
+    }
+
+    // If demoting an owner, ensure there's at least one other owner
+    if (memberToUpdate.role === 'owner' && newRole !== 'owner') {
+      const ownerCount = farm.members.filter(m => m.role === 'owner').length;
+      if (ownerCount <= 1) {
+        throw ApiError.badRequest('Cannot demote the only owner of the farm.');
+      }
+    }
+
+    memberToUpdate.role = newRole;
+    await farm.save();
+    logger.info(`Member ${memberUserId} role updated to ${newRole} in Farm ${farmId} by User ${userId}`);
+    return toFarmView(farm);
+  },
+
+  /**
+   * Deletes a farm and cascades deletion to all its child Fields and Zones (only owners)
    */
   async deleteFarm(userId: string, farmId: string) {
     validateObjectId(userId, 'User ID');
     validateObjectId(farmId, 'Farm ID');
 
-    const farm = await Farm.findOne({ _id: farmId, owner: userId });
+    const farm = await Farm.findOne({ _id: farmId, 'members.user': userId });
     if (!farm) {
-      throw ApiError.notFound('Farm not found.');
+      throw ApiError.notFound('Farm not found or access denied.');
+    }
+
+    // Check if user is owner
+    const userMember = farm.members.find(m => m.user.toString() === userId);
+    if (!userMember || userMember.role !== 'owner') {
+      throw ApiError.forbidden('Only farm owners can delete the farm.');
     }
 
     // Cascade deletion: Delete child Zones, then child Fields, then Farm
-    const zonesDeleteResult = await Zone.deleteMany({ farm: farmId, owner: userId });
-    const fieldsDeleteResult = await Field.deleteMany({ farm: farmId, owner: userId });
-    await Farm.deleteOne({ _id: farmId, owner: userId });
+    const zonesDeleteResult = await Zone.deleteMany({ farm: farmId });
+    const fieldsDeleteResult = await Field.deleteMany({ farm: farmId });
+    await Farm.deleteOne({ _id: farmId });
 
     logger.info(
       `Farm deleted: ${farmId} by User ${userId} (Cascaded: ${fieldsDeleteResult.deletedCount} fields, ${zonesDeleteResult.deletedCount} zones removed)`
@@ -189,13 +341,13 @@ export const farmService = {
     validateObjectId(userId, 'User ID');
     validateObjectId(farmId, 'Farm ID');
 
-    const farm = await Farm.findOne({ _id: farmId, owner: userId });
+    const farm = await Farm.findOne({ _id: farmId, 'members.user': userId });
     if (!farm) {
-      throw ApiError.notFound('Farm not found.');
+      throw ApiError.notFound('Farm not found or access denied.');
     }
 
-    const fields = await Field.find({ farm: farmId, owner: userId }).sort({ createdAt: 1 });
-    const zones = await Zone.find({ farm: farmId, owner: userId }).sort({ createdAt: 1 });
+    const fields = await Field.find({ farm: farmId }).sort({ createdAt: 1 });
+    const zones = await Zone.find({ farm: farmId }).sort({ createdAt: 1 });
 
     const fieldsWithZones = fields.map((fieldDoc) => {
       const field = fieldDoc.toJSON() as unknown as IFieldView;

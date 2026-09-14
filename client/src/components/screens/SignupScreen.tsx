@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   Leaf,
   AlertCircle,
@@ -8,23 +8,34 @@ import {
   User as UserIcon,
   Mail,
   Lock,
-  MapPin,
   Sprout,
   ExternalLink,
-  Droplets,
-  CloudSun,
-  ScanLine,
-  ShieldCheck,
-  CheckCircle2,
+  MapPin,
+  Briefcase,
 } from 'lucide-react';
-import { ScreenType } from '../../types';
+import { ScreenType, UserRole } from '../../types';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
 import { useTheme } from '../../context/ThemeContext';
+import { INDIA_LOCATIONS } from '../../data/indiaLocationData';
+import { ProductShowcase } from '../auth/ProductShowcase';
 
 interface SignupScreenProps {
   onNavigate: (screen: ScreenType) => void;
 }
+
+const ROLE_OPTIONS: { value: UserRole; label: string; hint: string }[] = [
+  { value: 'owner', label: 'Owner', hint: 'Full farm control' },
+  { value: 'farmer', label: 'Farmer', hint: 'Field operations' },
+  { value: 'manager', label: 'Manager', hint: 'Day-to-day oversight' },
+  { value: 'agronomist', label: 'Agronomist', hint: 'Crop advisory' },
+];
+
+const selectClassName =
+  'w-full pl-9 pr-3 py-2 rounded-md bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-slate-100 focus:outline-hidden focus:border-emerald-600 dark:focus:border-emerald-500 transition-colors disabled:opacity-50 appearance-none';
+
+const inputClassName =
+  'w-full pl-9 pr-3 py-2 rounded-md bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-hidden focus:border-emerald-600 dark:focus:border-emerald-500 transition-colors disabled:opacity-50';
 
 export const SignupScreen: React.FC<SignupScreenProps> = ({ onNavigate }) => {
   const { signup, loginAsDemo } = useAuth();
@@ -35,15 +46,28 @@ export const SignupScreen: React.FC<SignupScreenProps> = ({ onNavigate }) => {
     name: '',
     email: '',
     password: '',
+    confirmPassword: '',
+    role: 'owner' as UserRole,
     farmName: '',
-    location: '',
+    state: '',
+    district: '',
   });
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const districts = useMemo(() => {
+    const state = INDIA_LOCATIONS.find((s) => s.state === formData.state);
+    return state?.districts ?? [];
+  }, [formData.state]);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    setFormData((prev) => {
+      if (name === 'state') {
+        return { ...prev, state: value, district: '' };
+      }
+      return { ...prev, [name]: value };
+    });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -62,18 +86,37 @@ export const SignupScreen: React.FC<SignupScreenProps> = ({ onNavigate }) => {
       setErrorMessage('Password must be at least 6 characters.');
       return;
     }
+    if (formData.password !== formData.confirmPassword) {
+      setErrorMessage('Passwords do not match.');
+      return;
+    }
     if (!formData.farmName.trim()) {
       setErrorMessage('Please enter your farm name.');
       return;
     }
-    if (!formData.location.trim()) {
-      setErrorMessage('Please enter your location.');
+    if (!formData.state) {
+      setErrorMessage('Please select your state.');
+      return;
+    }
+    if (!formData.district) {
+      setErrorMessage('Please select your district.');
       return;
     }
 
     setIsLoading(true);
     try {
-      const result = await signup(formData);
+      const location = `${formData.district}, ${formData.state}`;
+      const result = await signup({
+        name: formData.name,
+        email: formData.email,
+        password: formData.password,
+        confirmPassword: formData.confirmPassword,
+        role: formData.role,
+        farmName: formData.farmName,
+        state: formData.state,
+        district: formData.district,
+        location,
+      });
       if (result.success) {
         showToast(`Workspace initialized for ${formData.farmName}.`, 'success');
         onNavigate('dashboard');
@@ -89,15 +132,13 @@ export const SignupScreen: React.FC<SignupScreenProps> = ({ onNavigate }) => {
 
   const handleOpenDemo = () => {
     loginAsDemo();
-    showToast('Loaded AgriSmartDemo workspace (Patel Farm).', 'info');
+    showToast('Opened demo workspace with simulated farm data.', 'info');
     onNavigate('dashboard');
   };
 
   return (
     <div className="w-full min-h-screen bg-[#F8F9FA] dark:bg-[#080808] text-[#1E293B] dark:text-[#EDEDED] flex flex-col lg:flex-row font-sans antialiased transition-colors duration-200">
-      {/* 1. LEFT PANEL: Full-Height Signup Form (100% width on mobile, 480-540px on desktop) */}
       <div className="w-full lg:w-[480px] xl:w-[520px] shrink-0 min-h-screen p-6 sm:p-10 xl:p-12 flex flex-col justify-between bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 transition-colors z-10">
-        {/* Top Header: Brand + Theme Toggle + Landing Page Link */}
         <div className="flex items-center justify-between gap-2 mb-6">
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-md bg-emerald-800 dark:bg-emerald-900/60 border border-emerald-700 text-white flex items-center justify-center shadow-xs">
@@ -139,18 +180,16 @@ export const SignupScreen: React.FC<SignupScreenProps> = ({ onNavigate }) => {
           </div>
         </div>
 
-        {/* Center: Sign up Form */}
         <div className="my-auto py-3">
           <div className="mb-5">
             <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
-              Create your farm workspace
+              Create your account
             </h1>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-              Start making informed decisions for your crops and fields.
+              Set up a farm workspace with your India location for weather and advisories.
             </p>
           </div>
 
-          {/* Validation Banner */}
           {errorMessage && (
             <div className="mb-4 p-3 rounded-lg bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/60 text-rose-700 dark:text-rose-300 text-xs flex items-start gap-2">
               <AlertCircle className="w-4 h-4 text-rose-600 dark:text-rose-400 shrink-0 mt-0.5" />
@@ -158,13 +197,9 @@ export const SignupScreen: React.FC<SignupScreenProps> = ({ onNavigate }) => {
             </div>
           )}
 
-          {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-3">
             <div>
-              <label
-                htmlFor="name"
-                className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1"
-              >
+              <label htmlFor="name" className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
                 Full Name
               </label>
               <div className="relative">
@@ -177,16 +212,13 @@ export const SignupScreen: React.FC<SignupScreenProps> = ({ onNavigate }) => {
                   onChange={handleChange}
                   placeholder="e.g. Ramesh Patel"
                   disabled={isLoading}
-                  className="w-full pl-9 pr-3 py-2 rounded-md bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-hidden focus:border-emerald-600 dark:focus:border-emerald-500 transition-colors disabled:opacity-50"
+                  className={inputClassName}
                 />
               </div>
             </div>
 
             <div>
-              <label
-                htmlFor="email"
-                className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1"
-              >
+              <label htmlFor="email" className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
                 Email
               </label>
               <div className="relative">
@@ -199,75 +231,139 @@ export const SignupScreen: React.FC<SignupScreenProps> = ({ onNavigate }) => {
                   onChange={handleChange}
                   placeholder="name@farm.com"
                   disabled={isLoading}
-                  className="w-full pl-9 pr-3 py-2 rounded-md bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-hidden focus:border-emerald-600 dark:focus:border-emerald-500 transition-colors disabled:opacity-50"
+                  className={inputClassName}
                 />
               </div>
             </div>
 
             <div>
-              <label
-                htmlFor="password"
-                className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1"
-              >
-                Password
+              <label htmlFor="role" className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
+                Role
               </label>
               <div className="relative">
-                <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-2.5 pointer-events-none" />
-                <input
-                  id="password"
-                  name="password"
-                  type="password"
-                  value={formData.password}
+                <Briefcase className="w-4 h-4 text-slate-400 absolute left-3 top-2.5 pointer-events-none" />
+                <select
+                  id="role"
+                  name="role"
+                  value={formData.role}
                   onChange={handleChange}
-                  placeholder="At least 6 characters"
                   disabled={isLoading}
-                  className="w-full pl-9 pr-3 py-2 rounded-md bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-hidden focus:border-emerald-600 dark:focus:border-emerald-500 transition-colors disabled:opacity-50"
+                  className={selectClassName}
+                >
+                  {ROLE_OPTIONS.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label} — {opt.hint}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label htmlFor="password" className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
+                  Password
+                </label>
+                <div className="relative">
+                  <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-2.5 pointer-events-none" />
+                  <input
+                    id="password"
+                    name="password"
+                    type="password"
+                    value={formData.password}
+                    onChange={handleChange}
+                    placeholder="At least 6 characters"
+                    disabled={isLoading}
+                    autoComplete="new-password"
+                    className={inputClassName}
+                  />
+                </div>
+              </div>
+              <div>
+                <label htmlFor="confirmPassword" className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
+                  Confirm Password
+                </label>
+                <div className="relative">
+                  <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-2.5 pointer-events-none" />
+                  <input
+                    id="confirmPassword"
+                    name="confirmPassword"
+                    type="password"
+                    value={formData.confirmPassword}
+                    onChange={handleChange}
+                    placeholder="Repeat password"
+                    disabled={isLoading}
+                    autoComplete="new-password"
+                    className={inputClassName}
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <label htmlFor="farmName" className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
+                Farm Name
+              </label>
+              <div className="relative">
+                <Sprout className="w-4 h-4 text-slate-400 absolute left-3 top-2.5 pointer-events-none" />
+                <input
+                  id="farmName"
+                  name="farmName"
+                  type="text"
+                  value={formData.farmName}
+                  onChange={handleChange}
+                  placeholder="e.g. Patel Farm"
+                  disabled={isLoading}
+                  className={inputClassName}
                 />
               </div>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label
-                  htmlFor="farmName"
-                  className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1"
-                >
-                  Farm Name
-                </label>
-                <div className="relative">
-                  <Sprout className="w-4 h-4 text-slate-400 absolute left-3 top-2.5 pointer-events-none" />
-                  <input
-                    id="farmName"
-                    name="farmName"
-                    type="text"
-                    value={formData.farmName}
-                    onChange={handleChange}
-                    placeholder="e.g. Patel Farm"
-                    disabled={isLoading}
-                    className="w-full pl-9 pr-3 py-2 rounded-md bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-hidden focus:border-emerald-600 dark:focus:border-emerald-500 transition-colors disabled:opacity-50"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label
-                  htmlFor="location"
-                  className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1"
-                >
-                  Location
+                <label htmlFor="state" className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
+                  State
                 </label>
                 <div className="relative">
                   <MapPin className="w-4 h-4 text-slate-400 absolute left-3 top-2.5 pointer-events-none" />
-                  <input
-                    id="location"
-                    name="location"
-                    type="text"
-                    value={formData.location}
+                  <select
+                    id="state"
+                    name="state"
+                    value={formData.state}
                     onChange={handleChange}
-                    placeholder="e.g. Anand, Gujarat"
                     disabled={isLoading}
-                    className="w-full pl-9 pr-3 py-2 rounded-md bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-hidden focus:border-emerald-600 dark:focus:border-emerald-500 transition-colors disabled:opacity-50"
-                  />
+                    className={selectClassName}
+                  >
+                    <option value="">Select state</option>
+                    {INDIA_LOCATIONS.map((s) => (
+                      <option key={s.state} value={s.state}>
+                        {s.state}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <div>
+                <label htmlFor="district" className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
+                  District
+                </label>
+                <div className="relative">
+                  <MapPin className="w-4 h-4 text-slate-400 absolute left-3 top-2.5 pointer-events-none" />
+                  <select
+                    id="district"
+                    name="district"
+                    value={formData.district}
+                    onChange={handleChange}
+                    disabled={isLoading || !formData.state}
+                    className={selectClassName}
+                  >
+                    <option value="">{formData.state ? 'Select district' : 'Select state first'}</option>
+                    {districts.map((d) => (
+                      <option key={d.name} value={d.name}>
+                        {d.name}
+                      </option>
+                    ))}
+                  </select>
                 </div>
               </div>
             </div>
@@ -277,39 +373,31 @@ export const SignupScreen: React.FC<SignupScreenProps> = ({ onNavigate }) => {
               disabled={isLoading}
               className="w-full mt-2 py-2.5 rounded-md bg-emerald-800 hover:bg-emerald-900 dark:bg-emerald-700 dark:hover:bg-emerald-600 text-white text-xs font-medium transition-all cursor-pointer disabled:opacity-60 flex items-center justify-center gap-2 shadow-xs"
             >
-              {isLoading ? (
-                <span>Creating workspace...</span>
-              ) : (
-                <span>Create Account</span>
-              )}
+              {isLoading ? <span>Creating workspace...</span> : <span>Create Account</span>}
             </button>
           </form>
 
-          {/* Divider */}
           <div className="relative my-5">
             <div className="absolute inset-0 flex items-center">
               <div className="w-full border-t border-slate-200 dark:border-slate-800" />
             </div>
             <div className="relative flex justify-center text-[10px] uppercase">
               <span className="bg-white dark:bg-slate-900 px-2 text-slate-400 dark:text-slate-500">
-                Direct Workspace Access
+                Or
               </span>
             </div>
           </div>
 
-          {/* Open Demo Shortcut */}
           <button
             type="button"
             onClick={handleOpenDemo}
             disabled={isLoading}
             className="w-full py-2.5 rounded-md bg-slate-50 hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-750 text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700 text-xs font-medium transition-colors cursor-pointer flex items-center justify-center gap-2 shadow-2xs"
           >
-            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-            <span>Open Demo (AgriSmartDemo)</span>
+            <span>Open Demo</span>
             <ArrowRight className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
           </button>
 
-          {/* Switch to Login */}
           <div className="mt-5 text-center text-xs text-slate-500 dark:text-slate-400">
             <span>Already have an account? </span>
             <button
@@ -322,136 +410,12 @@ export const SignupScreen: React.FC<SignupScreenProps> = ({ onNavigate }) => {
           </div>
         </div>
 
-        {/* Footer */}
-        <div className="text-center lg:text-left text-[11px] text-slate-400 dark:text-slate-500 pt-4 space-y-1">
-          <div>AgriSmart AI · Intelligent Agricultural Decision Support</div>
-          <div>Need registration or setup assistance? Contact <a href="mailto:support@agrismart.ai" className="text-emerald-700 dark:text-emerald-400 hover:underline">support@agrismart.ai</a></div>
+        <div className="text-center lg:text-left text-[11px] text-slate-400 dark:text-slate-500 pt-4">
+          AgriSmart AI · Intelligent Agricultural Decision Support
         </div>
       </div>
 
-      {/* 2. RIGHT PANEL: 100% Screen Width Operations Console Showcase (Desktop) */}
-      <div className="hidden lg:flex flex-1 min-h-screen p-8 xl:p-12 flex-col justify-between bg-[#F8F9FA] dark:bg-[#080808] transition-colors relative overflow-hidden">
-        {/* Right Header */}
-        <div className="flex items-center justify-between pb-6 border-b border-slate-200 dark:border-slate-800">
-          <div>
-            <div className="text-xs font-semibold text-slate-900 dark:text-slate-100">
-              Patel Farm (Anand, Gujarat)
-            </div>
-            <div className="text-[11px] text-slate-500 dark:text-slate-400">
-              18.5 Acres • Tomato, Cotton, Wheat
-            </div>
-          </div>
-          <div className="flex items-center gap-2 text-xs font-medium text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 px-3 py-1 rounded-full">
-            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-            <span>Telemetry Online</span>
-          </div>
-        </div>
-
-        {/* Center: Interactive Live Operations Grid */}
-        <div className="my-auto py-6 space-y-5 max-w-4xl w-full">
-          {/* 4-Stat Metric Row */}
-          <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
-            <div className="p-4 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
-              <div className="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 mb-1">
-                <span>SOIL MOISTURE</span>
-                <Droplets className="w-4 h-4 text-emerald-700 dark:text-emerald-400" />
-              </div>
-              <div className="text-2xl font-bold text-slate-900 dark:text-slate-100">31%</div>
-              <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">Target: 45% · Sandy Loam</div>
-            </div>
-
-            <div className="p-4 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
-              <div className="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 mb-1">
-                <span>WEATHER FORECAST</span>
-                <CloudSun className="w-4 h-4 text-amber-500" />
-              </div>
-              <div className="text-2xl font-bold text-slate-900 dark:text-slate-100">30°C</div>
-              <div className="text-[11px] text-amber-700 dark:text-amber-400 mt-1">80% Rain Expected · Afternoon</div>
-            </div>
-
-            <div className="p-4 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
-              <div className="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 mb-1">
-                <span>IRRIGATION ADVISORY</span>
-                <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-800">
-                  Delay Active
-                </span>
-              </div>
-              <div className="text-2xl font-bold text-slate-900 dark:text-slate-100">Held 24h</div>
-              <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">Root moisture at 31%</div>
-            </div>
-
-            <div className="p-4 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
-              <div className="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 mb-1">
-                <span>SUSTAINABILITY</span>
-                <Leaf className="w-4 h-4 text-emerald-700 dark:text-emerald-400" />
-              </div>
-              <div className="text-2xl font-bold text-slate-900 dark:text-slate-100">88 / 100</div>
-              <div className="text-[11px] text-emerald-700 dark:text-emerald-400 mt-1">Tier 1 · Low Runoff</div>
-            </div>
-          </div>
-
-          {/* Active Diagnosis Card */}
-          <div className="p-5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
-            <div className="flex items-start justify-between gap-4">
-              <div className="flex items-start gap-3">
-                <div className="w-10 h-10 rounded-lg bg-emerald-100 dark:bg-emerald-950/70 border border-emerald-300 dark:border-emerald-800 flex items-center justify-center shrink-0 mt-0.5">
-                  <ScanLine className="w-5 h-5 text-emerald-800 dark:text-emerald-400" />
-                </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-semibold text-slate-900 dark:text-slate-100">
-                      Active Crop Health Alert: Early Blight (Alternaria solani)
-                    </span>
-                    <span className="px-2 py-0.5 rounded text-[10px] bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-800 font-medium">
-                      94% Confidence
-                    </span>
-                  </div>
-                  <p className="text-xs text-slate-600 dark:text-slate-400 mt-1 leading-relaxed">
-                    Target: North Block Tomato (Flowering stage). High spore risk due to evening precipitation. Recommendations: Prune affected lower foliage and postpone foliar spray until rain clears.
-                  </p>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={handleOpenDemo}
-                className="px-3.5 py-1.5 rounded-md text-xs bg-emerald-800 hover:bg-emerald-900 dark:bg-emerald-700 text-white font-medium transition-colors cursor-pointer shrink-0 shadow-2xs flex items-center gap-1"
-              >
-                <span>View Diagnosis</span>
-                <ArrowRight className="w-3.5 h-3.5" />
-              </button>
-            </div>
-          </div>
-
-          {/* Synchronized Intelligence Strip */}
-          <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-850 border border-slate-200 dark:border-slate-800 flex items-center justify-between gap-4">
-            <div className="flex items-center gap-2.5 text-xs text-slate-700 dark:text-slate-300">
-              <ShieldCheck className="w-4 h-4 text-emerald-700 dark:text-emerald-400 shrink-0" />
-              <span>
-                Cross-system sync: Soil moisture telemetry delayed Zone 2 irrigation due to incoming rainfall forecast.
-              </span>
-            </div>
-            <div className="flex items-center gap-1.5 text-xs font-semibold text-emerald-700 dark:text-emerald-400 shrink-0">
-              <CheckCircle2 className="w-4 h-4" />
-              <span>Optimal Action</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Bottom Strip */}
-        <div className="pt-6 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
-          <div>
-            Built for growers, agronomists, and precision farm operators.
-          </div>
-          <button
-            type="button"
-            onClick={handleOpenDemo}
-            className="text-emerald-700 dark:text-emerald-400 hover:underline font-semibold transition-colors flex items-center gap-1 cursor-pointer"
-          >
-            <span>Launch Live Workspace</span>
-            <ArrowRight className="w-3.5 h-3.5" />
-          </button>
-        </div>
-      </div>
+      <ProductShowcase />
     </div>
   );
 };
