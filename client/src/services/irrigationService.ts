@@ -12,6 +12,7 @@ export interface IrrigationPlanRequest {
   soilType?: string;
   areaAcres?: number;
   irrigationMethod?: string;
+  allowDemoDefaults?: boolean;
   zones?: Array<{
     id?: string;
     name?: string;

@@ -1,21 +1,16 @@
 import React, { useState } from 'react';
 import {
   CloudRain,
-  Sun,
-  Wind,
-  Droplets,
-  Thermometer,
   AlertTriangle,
   ArrowRight,
-  ShieldCheck,
   Calendar,
-  CheckCircle2,
 } from 'lucide-react';
 import {
   WeatherCondition,
   HourlyForecast,
   DailyForecast,
   ScreenType,
+  SUPPORTED_CROPS,
 } from '../../types';
 import { BackButton } from '../common/BackButton';
 import { useFarm } from '../../context/FarmContext';
@@ -29,6 +24,16 @@ interface WeatherScreenProps {
 
 type TimeHorizon = 'today' | 'tomorrow' | 'next3days';
 
+function sprayFromRain(rainProb: number): { status: string; dot: string } {
+  if (rainProb >= 60) return { status: 'Unfavorable', dot: 'bg-rose-600' };
+  if (rainProb >= 30) return { status: 'Caution', dot: 'bg-amber-600' };
+  return { status: 'Optimal', dot: 'bg-emerald-600' };
+}
+
+function cropLabel(crop: string): string {
+  return SUPPORTED_CROPS.find((c) => c.value === crop)?.label || crop;
+}
+
 export const WeatherScreen: React.FC<WeatherScreenProps> = ({
   weather,
   hourly,
@@ -38,6 +43,10 @@ export const WeatherScreen: React.FC<WeatherScreenProps> = ({
   const [activeHorizon, setActiveHorizon] = useState<TimeHorizon>('today');
   const { locationLabel, activeFarm } = useFarm();
   const farmLocation = locationLabel || activeFarm?.location || 'Farm location';
+  const fieldSummary =
+    activeFarm?.plots?.length
+      ? activeFarm.plots.map((p) => `${p.name} (${cropLabel(p.crop)})`).join(', ')
+      : 'Your registered fields';
 
   if (!weather || !hourly || !daily) {
     return (
@@ -63,6 +72,40 @@ export const WeatherScreen: React.FC<WeatherScreenProps> = ({
   const todayDaily = daily[0];
   const tomorrowDaily = daily[1];
   const next3Daily = daily[2];
+  const todaySpray = sprayFromRain(weather.rainProbability);
+  const tomorrowRain = tomorrowDaily?.rainProbability ?? 0;
+  const next3Rain = next3Daily?.rainProbability ?? 0;
+  const tomorrowSpray = sprayFromRain(tomorrowRain);
+  const next3Spray = sprayFromRain(next3Rain);
+
+  const buildPillars = (rainProb: number, rainfallMm: number, wind: number) => [
+    {
+      num: '1. Irrigation',
+      title: rainProb >= 60 ? 'Hold scheduled irrigation cycles' : 'Review drip schedule against ET demand',
+      desc:
+        rainProb >= 60
+          ? `Forecast rain (~${rainfallMm} mm, ${rainProb}% probability) can recharge the root zone — confirm with field checks or IoT sensors.`
+          : 'Low rain chance. Use weather-based ET estimates; IoT moisture sensors give exact root-zone readings.',
+    },
+    {
+      num: '2. Spray Operations',
+      title: rainProb >= 60 ? 'Postpone foliar spray' : rainProb >= 30 || wind >= 13 ? 'Spray with caution' : 'Spray window open',
+      desc:
+        rainProb >= 60
+          ? 'Rain within the rainfast period washes off foliar products.'
+          : wind >= 20
+            ? `High wind (${wind} km/h) increases drift risk.`
+            : `Guidance uses rain probability and wind (${wind} km/h). Prefer early morning when foliage is dry.`,
+    },
+    {
+      num: '3. Disease Prevention',
+      title: weather.humidity >= 70 ? 'Scout for foliar disease pressure' : 'Routine canopy scouting',
+      desc:
+        weather.humidity >= 70
+          ? `Elevated humidity (${weather.humidity}% RH) favors fungal spore germination on tomato, potato, and pepper.`
+          : 'Inspect lower canopy after dew nights; humidity and leaf wetness drive disease risk.',
+    },
+  ];
 
   const horizonData = {
     today: {
@@ -70,130 +113,100 @@ export const WeatherScreen: React.FC<WeatherScreenProps> = ({
       temp: weather.temperature,
       feelsLike: weather.feelsLike,
       rainProb: weather.rainProbability,
-      rainfallMm: todayDaily?.rainfallMm ?? weather.rainfallExpectedMm,
+      rainfallMm: todayDaily?.rainfallMm ?? weather.rainfallExpectedMm ?? 0,
       humidity: weather.humidity,
       windSpeed: weather.windSpeedKmH,
       uvIndex: weather.uvIndex,
-      sprayStatus: weather.rainProbability >= 60 ? 'Unfavorable' : weather.rainProbability >= 30 ? 'Caution' : 'Optimal',
-      sprayDotColor: weather.rainProbability >= 60 ? 'bg-rose-600' : weather.rainProbability >= 30 ? 'bg-amber-600' : 'bg-emerald-600',
+      sprayStatus: todaySpray.status,
+      sprayDotColor: todaySpray.dot,
       headline: todayDaily?.farmAdvisory || weather.forecastSummary,
       irrigationTag: weather.rainProbability >= 60 ? 'Irrigation Delayed' : 'Irrigation Evaluated',
-      irrigationCta: weather.rainProbability >= 60 ? 'Irrigation delayed → View Irrigation Plan' : 'View Irrigation Plan',
-      pillars: [
-        {
-          num: '1. Irrigation',
-          title: weather.rainProbability >= 60 ? 'Hold scheduled irrigation cycles' : 'Maintain calibrated drip schedule',
-          desc: weather.rainProbability >= 60
-            ? `Rain (~${todayDaily?.rainfallMm ?? weather.rainfallExpectedMm} mm) will naturally replenish root zones, preventing root hypoxia.`
-            : 'Evaporation deficit is steady. Deliver target moisture.',
-        },
-        {
-          num: '2. Spray Operations',
-          title: weather.rainProbability >= 60 ? 'Postpone chemical spray' : 'Foliar spray window open',
-          desc: weather.rainProbability >= 60
-            ? 'Rainfall will wash away foliar fungicides and cause pesticide runoff.'
-            : `Favorable winds (<${weather.windSpeedKmH} km/h) and low rain risk.`,
-        },
-        {
-          num: '3. Disease Prevention',
-          title: 'Scout foliage for moisture stress',
-          desc: 'High relative humidity encourages spore germination. Inspect lower canopy.',
-        },
-      ],
+      irrigationCta: weather.rainProbability >= 60 ? 'Irrigation delayed → View plan' : 'View Irrigation Plan',
+      pillars: buildPillars(
+        weather.rainProbability,
+        todayDaily?.rainfallMm ?? weather.rainfallExpectedMm ?? 0,
+        weather.windSpeedKmH
+      ),
     },
     tomorrow: {
       label: tomorrowDaily ? `Tomorrow (${tomorrowDaily.day}, ${tomorrowDaily.date})` : 'Tomorrow',
-      temp: tomorrowDaily?.maxTemp ?? 30,
-      feelsLike: (tomorrowDaily?.maxTemp ?? 30) + 2,
-      rainProb: tomorrowDaily?.rainProbability ?? 35,
-      rainfallMm: tomorrowDaily?.rainfallMm ?? 1.2,
-      humidity: 62,
-      windSpeed: 11,
-      uvIndex: tomorrowDaily?.uvIndexMax ?? 6,
-      sprayStatus: (tomorrowDaily?.rainProbability ?? 0) >= 50 ? 'Caution' : 'Optimal Window',
-      sprayDotColor: (tomorrowDaily?.rainProbability ?? 0) >= 50 ? 'bg-amber-600' : 'bg-emerald-600',
-      headline: tomorrowDaily?.farmAdvisory || 'Forecast clearing conditions with moderate morning winds.',
-      irrigationTag: 'Soil Monitored',
-      irrigationCta: 'Soil moisture adequate → Check Sensors',
-      pillars: [
-        {
-          num: '1. Irrigation',
-          title: 'Monitor root moisture',
-          desc: 'Check sensor telemetry before initiating secondary pump cycle.',
-        },
-        {
-          num: '2. Spray Operations',
-          title: 'Morning spray application',
-          desc: 'Optimal early morning window before midday heat.',
-        },
-        {
-          num: '3. Field Operations',
-          title: 'Scout active crop plots',
-          desc: 'Check newly expanded leaves for any initial disease symptoms.',
-        },
-      ],
+      temp: tomorrowDaily?.maxTemp ?? weather.temperature,
+      feelsLike: tomorrowDaily?.maxTemp ?? weather.feelsLike,
+      rainProb: tomorrowRain,
+      rainfallMm: tomorrowDaily?.rainfallMm ?? 0,
+      humidity: weather.humidity,
+      windSpeed: weather.windSpeedKmH,
+      uvIndex: tomorrowDaily?.uvIndexMax ?? weather.uvIndex,
+      sprayStatus: tomorrowSpray.status,
+      sprayDotColor: tomorrowSpray.dot,
+      headline:
+        tomorrowDaily?.farmAdvisory ||
+        `Forecast for ${farmLocation}: ${tomorrowDaily?.condition || weather.condition}.`,
+      irrigationTag: tomorrowRain >= 60 ? 'Likely rain hold' : 'Plan from forecast',
+      irrigationCta: 'View Irrigation Plan',
+      pillars: buildPillars(tomorrowRain, tomorrowDaily?.rainfallMm ?? 0, weather.windSpeedKmH),
     },
     next3days: {
       label: next3Daily ? `Upcoming (${next3Daily.day}, ${next3Daily.date})` : 'Next 3 Days',
-      temp: next3Daily?.maxTemp ?? 32,
-      feelsLike: (next3Daily?.maxTemp ?? 32) + 3,
-      rainProb: next3Daily?.rainProbability ?? 10,
-      rainfallMm: next3Daily?.rainfallMm ?? 0.0,
-      humidity: 52,
-      windSpeed: 9,
-      uvIndex: next3Daily?.uvIndexMax ?? 7,
-      sprayStatus: 'Optimal Conditions',
-      sprayDotColor: 'bg-emerald-600',
-      headline: next3Daily?.farmAdvisory || 'Sustained sunshine and dry weather across Anand cluster.',
-      irrigationTag: 'Scheduled Drip',
-      irrigationCta: 'Scheduled cycle → View Schedule',
-      pillars: [
-        {
-          num: '1. Irrigation',
-          title: 'Standard drip cycle',
-          desc: 'Evapotranspiration will steadily deplete root zones.',
-        },
-        {
-          num: '2. Spray Operations',
-          title: 'Full operational flexibility',
-          desc: 'Dry weather allows protective or curative foliar applications.',
-        },
-        {
-          num: '3. Field Work',
-          title: 'Safe for tractor transit',
-          desc: 'Dry topsoil prevents subsoil compaction.',
-        },
-      ],
+      temp: next3Daily?.maxTemp ?? weather.temperature,
+      feelsLike: next3Daily?.maxTemp ?? weather.feelsLike,
+      rainProb: next3Rain,
+      rainfallMm: next3Daily?.rainfallMm ?? 0,
+      humidity: weather.humidity,
+      windSpeed: weather.windSpeedKmH,
+      uvIndex: next3Daily?.uvIndexMax ?? weather.uvIndex,
+      sprayStatus: next3Spray.status,
+      sprayDotColor: next3Spray.dot,
+      headline:
+        next3Daily?.farmAdvisory ||
+        `Outlook for ${farmLocation}: ${next3Daily?.condition || 'see 5-day forecast below'}.`,
+      irrigationTag: next3Rain >= 60 ? 'Rain in outlook' : 'Schedule from outlook',
+      irrigationCta: 'View Irrigation Plan',
+      pillars: buildPillars(next3Rain, next3Daily?.rainfallMm ?? 0, weather.windSpeedKmH),
     },
   };
 
   const currentH = horizonData[activeHorizon];
 
   const agriculturalRisks = [
-    {
-      id: 'risk-1',
-      title: 'High Fungal Spore Spread Risk',
-      severity: 'high',
-      crops: 'Tomato (Field A) & Potato (Field D)',
-      explanation: `Warm temperatures (${Math.round(weather.temperature)}°C) combined with impending rain (${weather.rainfallExpectedMm !== undefined ? `${weather.rainfallExpectedMm} mm` : 'forecasted'} at ${weather.rainProbability}%) and high ambient humidity (${weather.humidity}%) create peak germination conditions for Alternaria solani and Phytophthora spores.`,
-      actionableAdvice: 'Prune infected lower foliage immediately before rain begins. Do not spray chemicals before rain to avoid wash-off into irrigation channels.'
-    },
-    {
-      id: 'risk-2',
-      title: 'Foliar Spray Chemical Wash-off Window',
-      severity: 'urgent',
-      crops: 'All active plots',
-      explanation: `Fungicides or foliar micronutrients require a minimum 4-hour dry rainfast window. Impending precipitation (${weather.rainProbability}% rain forecast) will wash away active compounds applied today.`,
-      actionableAdvice: 'Close all spray operations until the next dry window opens with clear weather.'
-    },
-    {
-      id: 'risk-3',
-      title: 'Tractor Soil Compaction Advisory',
-      severity: 'moderate',
-      crops: 'Field B (Cotton Clay Loam)',
-      explanation: `Clay loam in Field B will reach plastic limit with ${weather.rainfallExpectedMm !== undefined ? `${weather.rainfallExpectedMm} mm` : 'forecasted'} rain, causing heavy subsoil compaction if heavy machinery traverses rows.`,
-      actionableAdvice: 'Restrict tractor transit and heavy wheel sprayers on Field B until topsoil dries.'
-    }
+    ...(weather.rainProbability >= 40 || weather.humidity >= 70
+      ? [
+          {
+            id: 'risk-1',
+            title: 'Fungal disease pressure window',
+            severity: weather.humidity >= 80 ? 'high' : 'moderate',
+            crops: fieldSummary,
+            explanation: `At ${Math.round(weather.temperature)}°C with ${weather.humidity}% RH and ${weather.rainProbability}% rain probability (~${weather.rainfallExpectedMm ?? 0} mm), leaf wetness favors early blight and late blight on solanaceous crops.`,
+            actionableAdvice:
+              'Scout lower leaves before rain. Delay protective sprays if rain is imminent (wash-off). Prefer dry windows from the hourly spray table.',
+          },
+        ]
+      : []),
+    ...(weather.rainProbability >= 30
+      ? [
+          {
+            id: 'risk-2',
+            title: 'Foliar spray wash-off risk',
+            severity: weather.rainProbability >= 60 ? 'urgent' : 'moderate',
+            crops: fieldSummary,
+            explanation: `Products need a dry rainfast period. Current forecast shows ${weather.rainProbability}% rain probability for ${farmLocation}.`,
+            actionableAdvice:
+              'Use the hourly spray suitability row (rain + wind). Avoid application when suitability is unfavorable.',
+          },
+        ]
+      : []),
+    ...(weather.rainfallExpectedMm !== undefined && weather.rainfallExpectedMm >= 5
+      ? [
+          {
+            id: 'risk-3',
+            title: 'Field traffic after heavy rain',
+            severity: 'moderate',
+            crops: fieldSummary,
+            explanation: `~${weather.rainfallExpectedMm} mm rain expected near ${farmLocation}. Wet soils compact easily under tractor weight.`,
+            actionableAdvice: 'Postpone heavy machinery until surface soil firms. Prefer light scouting on foot first.',
+          },
+        ]
+      : []),
   ];
 
   return (
@@ -206,7 +219,7 @@ export const WeatherScreen: React.FC<WeatherScreenProps> = ({
             Weather Intelligence
           </h1>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-            Regional Anand district meteorological data with agronomic advisory implications
+            Live Open-Meteo forecast for {farmLocation} with spray and irrigation advisories
           </p>
         </div>
 
@@ -335,7 +348,7 @@ export const WeatherScreen: React.FC<WeatherScreenProps> = ({
         <div className="p-3.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
           <div className="text-[10px] font-medium text-slate-500 dark:text-slate-400 uppercase mb-0.5">Wind Speed</div>
           <div className="text-xl font-semibold text-slate-900 dark:text-slate-100">{currentH.windSpeed} km/h</div>
-          <div className="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5">Breeze from SW</div>
+          <div className="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5">From live forecast</div>
         </div>
 
         <div className="p-3.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
@@ -477,26 +490,33 @@ export const WeatherScreen: React.FC<WeatherScreenProps> = ({
         </div>
 
         <div className="space-y-2.5">
-          {agriculturalRisks.map((risk) => (
-            <div
-              key={risk.id}
-              className="p-3 rounded-md border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/60 space-y-1.5"
-            >
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-slate-900 dark:text-slate-100">{risk.title}</span>
-                <span className="text-[11px] text-slate-600 dark:text-slate-300 font-medium bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 px-2 py-0.5 rounded">
-                  {risk.crops}
-                </span>
+          {agriculturalRisks.length === 0 ? (
+            <p className="text-xs text-slate-500 dark:text-slate-400 py-2">
+              No elevated weather-driven risks for {farmLocation} right now based on rain probability and humidity.
+              Keep using the hourly spray windows for day-to-day decisions.
+            </p>
+          ) : (
+            agriculturalRisks.map((risk) => (
+              <div
+                key={risk.id}
+                className="p-3 rounded-md border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/60 space-y-1.5"
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-xs font-semibold text-slate-900 dark:text-slate-100">{risk.title}</span>
+                  <span className="text-[11px] text-slate-600 dark:text-slate-300 font-medium bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 px-2 py-0.5 rounded truncate max-w-[50%]">
+                    {risk.crops}
+                  </span>
+                </div>
+                <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                  {risk.explanation}
+                </p>
+                <div className="text-xs text-slate-800 dark:text-slate-200 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 p-2 rounded">
+                  <span className="font-semibold text-slate-900 dark:text-slate-100">Recommended Action: </span>
+                  {risk.actionableAdvice}
+                </div>
               </div>
-              <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
-                {risk.explanation}
-              </p>
-              <div className="text-xs text-slate-800 dark:text-slate-200 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 p-2 rounded">
-                <span className="font-semibold text-slate-900 dark:text-slate-100">Recommended Action: </span>
-                {risk.actionableAdvice}
-              </div>
-            </div>
-          ))}
+            ))
+          )}
         </div>
       </div>
     </div>

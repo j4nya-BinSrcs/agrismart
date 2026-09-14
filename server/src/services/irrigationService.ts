@@ -49,6 +49,8 @@ export interface IrrigationPlanPayload {
   irrigationMethod?: unknown;
   zones?: IrrigationZoneInput[];
   weatherData?: IrrigationWeatherContext;
+  /** When true and no zones/crop provided, use Patel Farm demo defaults. */
+  allowDemoDefaults?: boolean;
 }
 
 /**
@@ -95,6 +97,14 @@ export const CROP_COEFFICIENTS = Object.freeze({
     dev_interpolated: 0.75, // FAO-56 Chapter 6 linear stage interpolation
     mid: 1.15,              // FAO-56 Table 12 direct: Potato tuber formation mid-season
     end: 0.75,              // FAO-56 Table 12 direct: Potato late-season ripening
+    default: 0.90,
+  },
+  pepper: {
+    // Bell pepper / sweet pepper — FAO-56 Table 12 "Peppers (bell)" / chili family
+    initial: 0.60,
+    dev_interpolated: 0.85,
+    mid: 1.05,
+    end: 0.90,
     default: 0.90,
   },
   default: {
@@ -198,6 +208,7 @@ export const resolveCropCoefficient = (cropName = '', growthStage = ''): { kc: n
   else if (cropKey.includes('cotton')) cropTable = CROP_COEFFICIENTS.cotton;
   else if (cropKey.includes('wheat')) cropTable = CROP_COEFFICIENTS.wheat;
   else if (cropKey.includes('potato')) cropTable = CROP_COEFFICIENTS.potato;
+  else if (cropKey.includes('pepper') || cropKey.includes('bell')) cropTable = CROP_COEFFICIENTS.pepper;
 
   // Mid-season peak (fruiting / boll formation / flowering) -> FAO-56 Table 12 direct
   if (stageLower.includes('fruit') || stageLower.includes('boll') || stageLower.includes('grain') || stageLower.includes('flower')) {
@@ -549,6 +560,7 @@ export const irrigationService = {
       areaAcres,
       irrigationMethod,
       zones,
+      allowDemoDefaults = false,
     } = payload;
 
     // 1. Fetch live weather context through backend weather service (or use supplied context for scenario simulations/tests)
@@ -584,8 +596,8 @@ export const irrigationService = {
           irrigationMethod: String(irrigationMethod || 'drip'),
         },
       ];
-    } else {
-      // Default Benchmark Demo Farm (Patel Farm, Anand) for evaluation demonstration
+    } else if (allowDemoDefaults) {
+      // Demo workspace only — Patel Farm benchmark zones
       isDemoDefault = true;
       zonesToProcess = [
         {
@@ -603,9 +615,9 @@ export const irrigationService = {
         },
         {
           id: 'zone-2',
-          name: 'Field B (Block 1) — Cotton',
-          crop: 'Bt Cotton Hybrid',
-          growthStage: 'Squaring (Vegetative)',
+          name: 'Field B (Block 1) — Potato',
+          crop: 'Potato',
+          growthStage: 'Tuber bulking',
           soilMoistureCurrent: 48,
           soilMoistureTarget: 50,
           soilType: 'Clay Loam',
@@ -616,9 +628,9 @@ export const irrigationService = {
         },
         {
           id: 'zone-3',
-          name: 'Field C (East) — Wheat',
-          crop: 'Wheat (GW-496)',
-          growthStage: 'Tillering Stage',
+          name: 'Field C (East) — Pepper Bell',
+          crop: 'Pepper Bell',
+          growthStage: 'Fruit set',
           soilMoistureCurrent: 26,
           soilMoistureTarget: 40,
           soilType: 'Loam',
@@ -628,6 +640,9 @@ export const irrigationService = {
           lastIrrigated: '5 days ago',
         },
       ];
+    } else {
+      // Real accounts with no fields: return weather context only, no fabricated zones
+      zonesToProcess = [];
     }
 
     // 4. Evaluate each zone
@@ -651,7 +666,10 @@ export const irrigationService = {
     let overallRecommendation = '';
     let decisionReason = '';
 
-    if (delayZones.length > 0) {
+    if (zonesToProcess.length === 0) {
+      overallRecommendation = 'Add fields in Farm Management to generate zone irrigation plans.';
+      decisionReason = `Weather is available (rain ${rainProb}%, ~${rainMm} mm). Irrigation volumes require your field crop and area data.`;
+    } else if (delayZones.length > 0) {
       const zoneNames = delayZones.map((z) => z.name.split('—')[0].trim()).join(' & ');
       overallRecommendation = `Delay scheduled irrigation across ${zoneNames}.`;
       decisionReason = `Forecasted rainfall (${rainProb}% probability, ${rainMm} mm) will naturally replenish the root zone. Postponing pump cycles avoids waterlogging and excess pumping costs.`;

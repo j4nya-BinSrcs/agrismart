@@ -372,11 +372,14 @@ export default function App() {
           farmService.getTodayActions(),
           farmService.getNotifications(),
           weatherService.getFullForecast(coords),
-          irrigationService.getIrrigationPlan({
-            latitude: coords.latitude,
-            longitude: coords.longitude,
-            zones: fieldZones.length > 0 ? fieldZones : undefined,
-          }),
+          fieldZones.length > 0 || isDemo
+            ? irrigationService.getIrrigationPlan({
+                latitude: coords.latitude,
+                longitude: coords.longitude,
+                zones: fieldZones.length > 0 ? fieldZones : undefined,
+                allowDemoDefaults: isDemo,
+              })
+            : Promise.resolve(null),
           sustainabilityService.getSustainabilityMetrics(token),
         ]);
 
@@ -397,8 +400,13 @@ export default function App() {
           setWeather(weatherBundle.current);
           setHourlyForecast(weatherBundle.hourly);
           setDailyForecast(weatherBundle.daily);
-          setIrrigationPlan(irrigPlan);
-          setIrrigationZones(irrigPlan.zones || []);
+          if (irrigPlan && !(!isDemo && irrigPlan.isDemoDefault)) {
+            setIrrigationPlan(irrigPlan);
+            setIrrigationZones(irrigPlan.zones || []);
+          } else {
+            setIrrigationPlan(null);
+            setIrrigationZones([]);
+          }
           setSustainability(sust);
         }
       } catch (err) {
@@ -587,10 +595,10 @@ export default function App() {
               />
             )}
 
-            {currentScreen === 'irrigation' && irrigationPlan && (
+            {currentScreen === 'irrigation' && (
               <IrrigationScreen
                 zones={irrigationZones}
-                plan={irrigationPlan}
+                plan={irrigationPlan || undefined}
                 onNavigate={handleNavigate}
               />
             )}

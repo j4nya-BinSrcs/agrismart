@@ -15,6 +15,7 @@ import {
 import { IrrigationZone, ScreenType } from '../../types';
 import { StatusBadge } from '../common/StatusBadge';
 import { useToast } from '../../context/ToastContext';
+import { useAuth } from '../../context/AuthContext';
 import { BackButton } from '../common/BackButton';
 
 interface IrrigationScreenProps {
@@ -31,6 +32,7 @@ export const IrrigationScreen: React.FC<IrrigationScreenProps> = ({
   onNavigate,
 }) => {
   const { showToast } = useToast();
+  const { isDemo } = useAuth();
   const [selectedZoneId, setSelectedZoneId] = useState<string>(zones && zones.length > 0 ? zones[0].id : '');
   const [manualOverrideActive, setManualOverrideActive] = useState<Record<string, boolean>>({});
   const [showReasoningModal, setShowReasoningModal] = useState<boolean>(false);
@@ -247,14 +249,18 @@ export const IrrigationScreen: React.FC<IrrigationScreenProps> = ({
         </div>
       </div>
 
-      {/* Scenario Simulator Selector */}
+      {/* Scenario context — what-if simulations only in demo workspace */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-2.5 rounded-lg flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
         <div className="flex items-center gap-1.5 text-xs font-medium text-slate-600 dark:text-slate-400">
           <Droplets className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500" />
-          <span>Decision Context & Scenario:</span>
+          <span>{isDemo ? 'Decision Context & Scenario:' : 'Decision context (live weather):'}</span>
         </div>
         <div className="flex flex-wrap items-center gap-1.5">
-          {(['rain_imminent', 'dry_spell', 'post_rain'] as IrrigationScenario[]).map((scenKey) => {
+          {(
+            (isDemo
+              ? (['rain_imminent', 'dry_spell', 'post_rain'] as IrrigationScenario[])
+              : (['rain_imminent'] as IrrigationScenario[]))
+          ).map((scenKey) => {
             const isSelected = scenario === scenKey;
             return (
               <button
