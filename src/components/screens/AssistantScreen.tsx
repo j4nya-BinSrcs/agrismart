@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { AssistantMessage, ScreenType, DiagnosisRecord, WeatherCondition, IrrigationPlan, Language } from '../../types';
 import { assistantService } from '../../services/assistantService';
+import { useAuth } from '../../context/AuthContext';
 
 interface AssistantScreenProps {
   initialQuery?: string;
@@ -146,6 +147,7 @@ export const AssistantScreen: React.FC<AssistantScreenProps> = ({
   weather,
   irrigation,
 }) => {
+  const { user } = useAuth();
   const [selectedLanguage, setSelectedLanguage] = useState<Language>('en');
   const [lastFailedQuery, setLastFailedQuery] = useState<string | null>(null);
 
@@ -234,7 +236,7 @@ export const AssistantScreen: React.FC<AssistantScreenProps> = ({
 
     try {
       const botResponse = await assistantService.sendQuery(queryText, messageLang, {
-        farmName: 'Patel Farm',
+        farmName: user?.farmName || 'Patel Farm',
         crop: 'Tomato & Cotton',
         activeDiagnosis,
         weather,

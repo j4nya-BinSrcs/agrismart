@@ -68,7 +68,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     setShowUserMenu(false);
     if (onResetDemo) {
       onResetDemo();
-      showToast('Reset Patel Farm demo dataset.', 'info');
+      showToast(`Reset ${displayFarm} demo dataset.`, 'info');
     }
   };
   const navItems = [

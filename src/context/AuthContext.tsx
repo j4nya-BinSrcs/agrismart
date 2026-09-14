@@ -105,6 +105,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     // 3. Fallback for valid formatted input during demo sessions
     if (trimmedIdentifier.length >= 3 && trimmedPass.length >= 6) {
+      const fallbackFarmName = trimmedIdentifier.includes('@')
+        ? trimmedIdentifier.split('@')[0]
+        : trimmedIdentifier;
       const customUser: User = {
         id: `user-${Date.now()}`,
         name: trimmedIdentifier,
@@ -113,8 +116,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           ? trimmedIdentifier.toLowerCase()
           : `${trimmedIdentifier.toLowerCase()}@agrismart.ai`,
         role: 'Grower / Farm Operator',
-        farmName: 'Patel Farm',
-        location: 'Anand, Gujarat',
+        farmName: fallbackFarmName,
+        location: trimmedIdentifier.includes('@')
+          ? 'Your registered location'
+          : 'Anand, Gujarat',
       };
       setIsAuthenticated(true);
       setUser(customUser);

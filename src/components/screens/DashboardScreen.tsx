@@ -22,6 +22,7 @@ import {
 } from '../../types';
 import { ActionCard } from '../common/ActionCard';
 import { StatusBadge } from '../common/StatusBadge';
+import { useAuth } from '../../context/AuthContext';
 
 interface DashboardScreenProps {
   onNavigate: (screen: ScreenType) => void;
@@ -44,6 +45,10 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
 }) => {
   const [actionFilter, setActionFilter] = useState<'all' | 'urgent' | 'pending' | 'completed'>('all');
   const [showWhyModal, setShowWhyModal] = useState<boolean>(false);
+
+  const { user } = useAuth();
+  const displayFarmName = user?.farmName || 'Patel Farm';
+  const displayLocation = user?.location || 'Anand, Gujarat';
 
   const pendingActions = actions.filter((a) => !a.completed);
   const urgentCount = pendingActions.filter((a) => a.priority === 'urgent').length;
@@ -131,10 +136,10 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-2 border-b border-slate-200/80 dark:border-slate-800">
         <div>
           <h1 className="text-lg sm:text-xl font-semibold text-slate-900 dark:text-slate-100 tracking-tight">
-            Patel Farm Operations
+            {displayFarmName} Operations
           </h1>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-            Anand, Gujarat · {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })} · 88% overall health
+            {displayLocation} · {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })} · 88% overall health
           </p>
         </div>
 

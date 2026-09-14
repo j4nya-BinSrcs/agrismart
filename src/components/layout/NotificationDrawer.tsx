@@ -2,6 +2,7 @@ import React from 'react';
 import { X, ArrowRight, CheckCheck, Check, BellOff } from 'lucide-react';
 import { ScreenType, AppNotification } from '../../types';
 import { StatusBadge } from '../common/StatusBadge';
+import { useAuth } from '../../context/AuthContext';
 
 interface NotificationDrawerProps {
   isOpen: boolean;
@@ -20,6 +21,9 @@ export const NotificationDrawer: React.FC<NotificationDrawerProps> = ({
   onMarkAsRead,
   onMarkAllAsRead,
 }) => {
+  const { user } = useAuth();
+  const displayFarmName = user?.farmName || 'Patel Farm';
+
   if (!isOpen) return null;
 
   const unreadCount = notifications.filter((n) => !n.read).length;
@@ -44,7 +48,7 @@ export const NotificationDrawer: React.FC<NotificationDrawerProps> = ({
                 </span>
               )}
             </div>
-            <p className="text-xs text-slate-500 dark:text-slate-400">Patel Farm operational logs</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400">{displayFarmName} operational logs</p>
           </div>
           <button
             type="button"

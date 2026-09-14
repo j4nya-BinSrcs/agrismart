@@ -10,6 +10,7 @@ import {
   Moon,
 } from 'lucide-react';
 import { ScreenType, WeatherCondition, IrrigationPlan } from '../../types';
+import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
 import { useTheme } from '../../context/ThemeContext';
 
@@ -33,15 +34,18 @@ export const Header: React.FC<HeaderProps> = ({
   weather,
   irrigationPlan,
 }) => {
+  const { user } = useAuth();
   const { showToast } = useToast();
   const { theme, toggleTheme } = useTheme();
   const [showFarmMenu, setShowFarmMenu] = useState(false);
 
-  const [selectedFarm, setSelectedFarm] = useState('Patel Farm (Anand, Gujarat)');
+  const displayFarmName = user?.farmName || 'Patel Farm';
+  const displayLocation = user?.location || 'Anand, Gujarat';
+
+  const selectedFarm = displayFarmName;
 
   const farms = [
-    { id: 'f1', name: 'Patel Farm (Anand, Gujarat)', size: '18.5 Acres', crops: 'Tomato, Cotton, Wheat' },
-    { id: 'f2', name: 'Narmada Valley Plot (Bharuch)', size: '12.0 Acres', crops: 'Sugarcane, Banana' },
+    { id: user?.id || 'user-farm', name: displayFarmName, location: displayLocation },
   ];
 
   return (
@@ -67,12 +71,12 @@ export const Header: React.FC<HeaderProps> = ({
             >
               <div>
                 <div className="text-xs font-semibold text-slate-900 dark:text-slate-100 leading-tight flex items-center gap-1">
-                  <span>{selectedFarm.split('(')[0].trim()}</span>
+                  <span>{selectedFarm}</span>
                   <ChevronDown className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500" />
                 </div>
                 <div className="text-[11px] text-slate-500 dark:text-slate-400 hidden sm:flex items-center gap-1">
                   <MapPin className="w-3 h-3 text-slate-400 dark:text-slate-500" />
-                  <span>Anand, Gujarat · 18.5 Ac</span>
+                  <span>{displayLocation}</span>
                 </div>
               </div>
             </button>
@@ -93,9 +97,8 @@ export const Header: React.FC<HeaderProps> = ({
                       key={f.id}
                       type="button"
                       onClick={() => {
-                        setSelectedFarm(f.name);
                         setShowFarmMenu(false);
-                        showToast(`Switched active farm to ${f.name.split('(')[0].trim()}`, 'info');
+                        showToast(`Switched active farm to ${f.name}`, 'info');
                       }}
                       className={`w-full text-left px-2.5 py-2 rounded-md text-xs transition-colors flex items-start justify-between ${
                         selectedFarm === f.name
@@ -106,7 +109,7 @@ export const Header: React.FC<HeaderProps> = ({
                       <div>
                         <div className="font-medium text-slate-900 dark:text-slate-100">{f.name}</div>
                         <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
-                          {f.size} · Crops: {f.crops}
+                          {f.location}
                         </div>
                       </div>
                       {selectedFarm === f.name && (

@@ -184,7 +184,7 @@ const PROTECTED_SCREENS: ScreenType[] = [
 
 export default function App() {
   const { showToast } = useToast();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   const mainScrollRef = useRef<HTMLElement>(null);
 
   // App navigation and view state
@@ -445,7 +445,7 @@ export default function App() {
       setNotifications(notifList);
       setAssistantQuery('');
       handleNavigate('dashboard');
-      showToast('Demo data restored to initial Patel Farm state.', 'success');
+      showToast(`Demo data restored to initial ${user?.farmName || 'Patel Farm'} state.`, 'success');
     } catch (err) {
       console.error('[App] Demo reset failed:', err);
     }
