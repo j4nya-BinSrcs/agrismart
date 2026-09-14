@@ -122,7 +122,7 @@ export const SAMPLE_LEAF_IMAGES = {
 export const INITIAL_DIAGNOSES: DiagnosisRecord[] = [
   {
     id: 'diag-tomato-01',
-    crop: 'Tomato',
+    crop: 'tomato',
     variety: 'Abhinav Hybrid',
     growthStage: 'Fruiting (Week 9)',
     diseaseName: 'Tomato Early Blight',
@@ -183,10 +183,10 @@ export const INITIAL_DIAGNOSES: DiagnosisRecord[] = [
     }
   },
   {
-    id: 'diag-wheat-02',
-    crop: 'Wheat',
-    variety: 'GW-496',
-    growthStage: 'Tillering stage',
+    id: 'diag-potato-02',
+    crop: 'potato',
+    variety: 'Kufri Jyoti',
+    growthStage: 'Tuber bulking',
     diseaseName: 'Healthy Foliage',
     pathogenName: 'No Pathogen Detected (Vigorous Canopy)',
     isHealthy: true,
@@ -197,15 +197,15 @@ export const INITIAL_DIAGNOSES: DiagnosisRecord[] = [
     fieldLocation: 'Field C (East)',
     shortExplanation: 'No fungal lesions, pest punctures, or nutrient deficiencies detected. Leaf chlorophyll density is uniform and optimal.',
     symptomsMatched: [
-      'Uniform green pigment index (SPAD ~44.2) across blade length',
-      'Clean parallel leaf venation with no necrotic lesions or streaks',
-      'Absence of rust pustules (Puccinia striiformis or P. triticina)',
+      'Uniform green pigment across leaflet surface',
+      'Clean venation with no necrotic lesions or streaks',
+      'Absence of late blight water-soaked lesions',
       'Firm upright leaf posture indicating healthy cellular turgor'
     ],
     symptomsRuledOut: [
-      'Yellow Stripe Rust: Ruled out due to absence of linear chlorotic stripes or yellow uredinia',
-      'Powdery Mildew: Ruled out due to lack of white superficial mycelial patches',
-      'Zinc Deficiency: Ruled out due to absence of longitudinal bleached bands'
+      'Late Blight: Ruled out due to absence of water-soaked grayish margins',
+      'Early Blight: Ruled out due to lack of concentric target spots',
+      'Nutrient Deficiency: Ruled out due to absence of interveinal chlorosis'
     ],
     treatmentProtocols: {
       organic: 'Maintain natural biological soil amendments and vermicompost tea during root crown development.',
@@ -232,31 +232,33 @@ export const INITIAL_DIAGNOSES: DiagnosisRecord[] = [
       }
     ],
     relatedInsights: {
-      weatherRisk: 'Moderate morning dew expected. No rust risk detected in Anand district cluster.',
+      weatherRisk: 'Moderate morning dew expected. No late blight risk flagged for this field cluster.',
       irrigationAdvice: 'Soil moisture at 26% is approaching refill point. Let forecasted rain irrigate naturally.',
       sustainabilityImpact: 'Zero pesticide footprint maintained for Field C this cycle.'
     }
   },
   {
-    id: 'diag-cotton-03',
-    crop: 'Cotton',
-    variety: 'Bt Cotton Hybrid',
-    growthStage: 'Squaring (Vegetative)',
-    diseaseName: 'Bacterial Blight (Angular Leaf Spot)',
-    pathogenName: 'Xanthomonas citri pv. malvacearum (Bacterial)',
+    id: 'diag-pepper-03',
+    crop: 'pepper_bell',
+    variety: 'California Wonder',
+    growthStage: 'Fruit set',
+    diseaseName: 'Bacterial Leaf Spot',
+    pathogenName: 'Xanthomonas spp. (Bacterial)',
     isHealthy: false,
     confidence: 86,
     severity: 'moderate',
     detectedAt: '2 days ago',
     imageUrl: SAMPLE_LEAF_IMAGES.cottonBlight,
     fieldLocation: 'Field B (Block 1)',
-    shortExplanation: 'Early bacterial lesions detected along secondary vein boundaries. Caused by Xanthomonas citri pv. malvacearum.',
+    shortExplanation: 'Early bacterial lesions detected along secondary vein boundaries on pepper foliage.',
     symptomsMatched: [
       'Angular water-soaked spots strictly delimited by small leaf veins',
       'Lesions darkening from translucent yellow to reddish-brown',
       'Lower leaf surface bacterial exudate visible in humid conditions'
     ],
     symptomsRuledOut: [
+      'Early Blight: Ruled out due to absence of concentric target rings',
+      'Powdery Mildew: Ruled out due to lack of white mycelial patches',
       'Alternaria Leaf Spot: Ruled out because lesions are angular rather than circular',
       'Cercospora Leaf Spot: Ruled out due to absence of purple borders with white centers',
       'Target Spot: Ruled out due to lack of large concentric rings'
@@ -268,7 +270,7 @@ export const INITIAL_DIAGNOSES: DiagnosisRecord[] = [
       applicationTiming: 'Apply immediately post-rain once leaf surface is dry.'
     },
     precautions: [
-      'Do not cultivate or walk through wet cotton fields to prevent mechanical transmission.',
+      'Do not walk through wet pepper fields to prevent mechanical transmission.',
       'Improve furrow drainage to avoid standing water pockets.'
     ],
     recommendedActions: [
@@ -424,7 +426,7 @@ export const IRRIGATION_ZONES: IrrigationZone[] = [
   {
     id: 'zone-1',
     name: 'Field A (Plot 2) — Tomato',
-    crop: 'Tomato (Abhinav Hybrid)',
+    crop: 'tomato',
     growthStage: 'Fruiting (Week 9)',
     soilMoistureCurrent: 31,
     soilMoistureTarget: 45,
@@ -438,9 +440,9 @@ export const IRRIGATION_ZONES: IrrigationZone[] = [
   },
   {
     id: 'zone-2',
-    name: 'Field B (Block 1) — Cotton',
-    crop: 'Bt Cotton Hybrid',
-    growthStage: 'Squaring (Vegetative)',
+    name: 'Field B (Block 1) — Potato',
+    crop: 'potato',
+    growthStage: 'Tuber bulking',
     soilMoistureCurrent: 48,
     soilMoistureTarget: 50,
     status: 'optimal',
@@ -448,24 +450,24 @@ export const IRRIGATION_ZONES: IrrigationZone[] = [
     soilType: 'Clay Loam',
     rootDepth: '60 cm',
     lastIrrigated: 'Yesterday',
-    recommendation: 'Optimal soil moisture. Maintain current sensor monitoring.',
+    recommendation: 'Optimal soil moisture for this growth stage based on weather-linked estimate. Confirm with field check or IoT.',
     waterSavedLitres: 0
   },
   {
     id: 'zone-3',
-    name: 'Field C (East) — Wheat',
-    crop: 'Wheat (GW-496)',
-    growthStage: 'Tillering Stage',
+    name: 'Field C (East) — Pepper Bell',
+    crop: 'pepper_bell',
+    growthStage: 'Fruit set',
     soilMoistureCurrent: 26,
     soilMoistureTarget: 40,
-    status: 'delay_recommended',
+    status: 'needs_irrigation',
     rainProbability: 80,
     soilType: 'Loam',
     rootDepth: '30 cm',
     lastIrrigated: '5 days ago',
-    recommendation: 'Delay irrigation today. Impending showers will recharge root zone.',
-    waterSavedLitres: 1200
-  }
+    recommendation: 'Root zone moisture is below target. Prefer waiting for forecasted rain unless plants show wilting.',
+    waterSavedLitres: 920
+  },
 ];
 
 export const SUSTAINABILITY_DATA: SustainabilityMetric = {
@@ -479,7 +481,7 @@ export const SUSTAINABILITY_DATA: SustainabilityMetric = {
   improvements: [
     {
       id: 'imp-1',
-      title: 'Expand straw mulching to Field B Cotton furrows',
+      title: 'Expand straw mulching to Field B potato furrows',
       impact: 'Reduces soil evaporation by 22% and lowers weed germination.',
       potentialPoints: 4,
       category: 'Water & Soil Conservation'

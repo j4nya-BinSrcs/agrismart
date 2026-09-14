@@ -1,5 +1,5 @@
 import mongoose from 'mongoose';
-import Farm, { IFarm, IFarmView, FarmMember } from '../models/Farm.js';
+import Farm, { IFarm, IFarmView } from '../models/Farm.js';
 import Field, { IFieldView } from '../models/Field.js';
 import Zone from '../models/Zone.js';
 import ApiError from '../utils/ApiError.js';

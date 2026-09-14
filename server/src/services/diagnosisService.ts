@@ -176,19 +176,22 @@ export const validateImagePayload = (imageUrl: unknown): boolean => {
     throw ApiError.badRequest('Image payload is required and must be a string.');
   }
 
+  // Reject SVG / illustration reference samples — only real field photos
+  if (imageUrl.startsWith('data:image/svg') || imageUrl.includes('image/svg+xml')) {
+    throw ApiError.badRequest(
+      'Reference or illustration images cannot be analyzed. Upload a JPEG, PNG, or WebP photo captured from the field.'
+    );
+  }
+
   // Base64 Data URI check
   if (imageUrl.startsWith('data:')) {
     const matches = imageUrl.match(/^data:(image\/[a-zA-Z0-9\+\-\.]+);base64,(.+)$/);
     if (!matches) {
-      // Check for raw svg data uri
-      if (imageUrl.startsWith('data:image/svg+xml')) {
-        return true;
-      }
-      throw ApiError.badRequest('Invalid image data URI format. Supported formats: JPEG, PNG, WebP, SVG.');
+      throw ApiError.badRequest('Invalid image data URI format. Supported formats: JPEG, PNG, WebP.');
     }
 
     const mimeType = matches[1].toLowerCase();
-    const allowedMimes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/svg+xml'];
+    const allowedMimes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
     if (!allowedMimes.includes(mimeType)) {
       throw ApiError.badRequest(`Unsupported image MIME type: ${mimeType}. Allowed: JPEG, PNG, WebP.`);
     }

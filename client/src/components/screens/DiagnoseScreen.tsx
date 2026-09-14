@@ -171,6 +171,19 @@ export const DiagnoseScreen: React.FC<DiagnoseScreenProps> = ({
       return;
     }
 
+    // Block known reference/demo sample assets (SVG illustrations and named samples)
+    const looksLikeReference =
+      selectedImage.startsWith('data:image/svg') ||
+      /sample|reference|demo.?leaf|stock/i.test(imageName) ||
+      selectedImage.includes('SAMPLE_LEAF');
+    if (looksLikeReference) {
+      showToast(
+        'Reference sample photos cannot be analyzed. Capture or upload a real field leaf image.',
+        'error'
+      );
+      return;
+    }
+
     setIsAnalyzing(true);
     setAnalysisStep('Preparing expert advisory from crop knowledge...');
 
