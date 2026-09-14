@@ -1,4 +1,4 @@
-import mongoose, { Model, Schema, model } from 'mongoose';
+import mongoose, { Model, Schema, Types, model } from 'mongoose';
 import type { HydratedDocument } from 'mongoose';
 
 export type DiagnosisSource = 'expert_rules' | 'ml_unavailable';
@@ -26,6 +26,9 @@ export interface RelatedInsights {
 
 export interface IDiagnosis {
   id: string;
+  user?: Types.ObjectId | string;
+  farm?: Types.ObjectId | string;
+  field?: Types.ObjectId | string;
   crop: string;
   variety: string;
   growthStage: string;
@@ -88,6 +91,21 @@ const DiagnosisSchema = new Schema<IDiagnosis>(
       type: String,
       required: true,
       unique: true,
+      index: true,
+    },
+    user: {
+      type: Schema.Types.ObjectId,
+      ref: 'User',
+      index: true,
+    },
+    farm: {
+      type: Schema.Types.ObjectId,
+      ref: 'Farm',
+      index: true,
+    },
+    field: {
+      type: Schema.Types.ObjectId,
+      ref: 'Field',
       index: true,
     },
     crop: {
@@ -200,6 +218,8 @@ const DiagnosisSchema = new Schema<IDiagnosis>(
     },
   }
 );
+
+DiagnosisSchema.index({ user: 1, createdAt: -1 });
 
 export const Diagnosis: Model<IDiagnosis> =
   (mongoose.models.Diagnosis as Model<IDiagnosis> | undefined) ??

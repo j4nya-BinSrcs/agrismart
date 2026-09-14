@@ -188,7 +188,7 @@ const PROTECTED_SCREENS: ScreenType[] = [
 ];
 
 export default function App() {
-  const { isAuthenticated, token, isDemo } = useAuth();
+  const { isAuthenticated, token, isDemo, user } = useAuth();
   const { farmCoordinates, activeFarm } = useFarm();
   const mainScrollRef = useRef<HTMLElement>(null);
 
@@ -354,8 +354,8 @@ export default function App() {
             name: plot.name,
             crop: plot.crop,
             growthStage: plot.growthStage || 'vegetative',
-            soilMoistureCurrent: plot.currentMoisture || undefined,
-            soilMoistureTarget: plot.targetMoisture || 45,
+            soilMoistureCurrent: plot.currentMoisture ?? 30,
+            soilMoistureTarget: plot.targetMoisture ?? 45,
             soilType: plot.soilType || 'loam',
             areaAcres: plot.acres,
           })) || [];
@@ -368,9 +368,11 @@ export default function App() {
           irrigPlan,
           sust,
         ] = await Promise.all([
-          diagnosisService.getDiagnosisHistory(),
-          farmService.getTodayActions(),
-          farmService.getNotifications(),
+          isDemo
+            ? diagnosisService.getDiagnosisHistory(null, user?.id)
+            : diagnosisService.getDiagnosisHistory(token, user?.id),
+          farmService.getTodayActions(isDemo),
+          farmService.getNotifications(isDemo),
           weatherService.getFullForecast(coords),
           fieldZones.length > 0 || isDemo
             ? irrigationService.getIrrigationPlan({
@@ -384,7 +386,7 @@ export default function App() {
         ]);
 
         if (isMounted) {
-          // Non-demo: filter out seeded reference/demo diagnoses that weren't user scans
+          // Non-demo: only show this user's diagnoses (backend already scopes; also filter demo seeds)
           const userDiags = isDemo
             ? diagList
             : diagList.filter((d) => !d.id?.startsWith('demo-') && !d.imageUrl?.includes('sample'));
@@ -395,8 +397,8 @@ export default function App() {
           } else {
             setCurrentDiagnosis(null);
           }
-          setActions(isDemo ? actList : actList.filter((a) => a.category === 'weather' || a.category === 'irrigation'));
-          setNotifications(notifList);
+          setActions(isDemo ? actList : []);
+          setNotifications(isDemo ? notifList : []);
           setWeather(weatherBundle.current);
           setHourlyForecast(weatherBundle.hourly);
           setDailyForecast(weatherBundle.daily);
@@ -420,7 +422,7 @@ export default function App() {
     return () => {
       isMounted = false;
     };
-  }, [token, isAuthenticated, isDemo, farmCoordinates.lat, farmCoordinates.lon, activeFarm?.id, activeFarm?.plots]);
+  }, [token, isAuthenticated, isDemo, user?.id, farmCoordinates.lat, farmCoordinates.lon, activeFarm?.id, activeFarm?.plots]);
 
   // Toggle action completion through service
   const handleToggleAction = async (id: string) => {

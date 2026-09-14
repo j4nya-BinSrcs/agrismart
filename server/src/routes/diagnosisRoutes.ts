@@ -6,8 +6,11 @@ import {
   saveDiagnosis,
 } from '../controllers/diagnosisController.js';
 import { requireBodyFields } from '../middleware/validator.js';
+import { authenticate } from '../middleware/auth.js';
 
 const router = Router();
+
+router.use(authenticate);
 
 // POST /api/v1/diagnosis/analyze
 router.post(

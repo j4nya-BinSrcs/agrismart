@@ -95,7 +95,7 @@ export const ManagementScreen: React.FC<ManagementScreenProps> = ({ onNavigate }
         variety: fieldForm.variety,
         growthStage: fieldForm.growthStage,
         soilType: fieldForm.soilType,
-        soilMoisture: null,
+        soilMoisture: 30,
       });
       setFieldForm({
         name: '',
@@ -167,7 +167,8 @@ export const ManagementScreen: React.FC<ManagementScreenProps> = ({ onNavigate }
                         {f.location}
                       </div>
                       <div className="text-[11px] text-slate-400 mt-0.5">
-                        {f.plots.length} field(s) · {f.totalAcres} ac
+                        {f.plots.length} field(s)
+                        {f.totalAcres > 0 ? ` · ${f.totalAcres} ac` : ''}
                       </div>
                     </button>
                     {!isDemo && (
@@ -177,9 +178,14 @@ export const ManagementScreen: React.FC<ManagementScreenProps> = ({ onNavigate }
                         onClick={async () => {
                           if (!confirm(`Delete farm "${f.name}" and all its fields?`)) return;
                           setBusy(true);
+                          setError(null);
                           try {
                             await deleteFarm(f.id);
                             showToast('Farm deleted.', 'info');
+                          } catch (err) {
+                            const msg = err instanceof Error ? err.message : 'Failed to delete farm.';
+                            setError(msg);
+                            showToast(msg, 'error');
                           } finally {
                             setBusy(false);
                           }
@@ -278,7 +284,8 @@ export const ManagementScreen: React.FC<ManagementScreenProps> = ({ onNavigate }
                       </div>
                       <div className="text-[11px] text-slate-500 mt-0.5">
                         {SUPPORTED_CROPS.find((c) => c.value === plot.crop)?.label || plot.crop}
-                        {plot.variety ? ` · ${plot.variety}` : ''} · {plot.acres} ac
+                        {plot.variety ? ` · ${plot.variety}` : ''}
+                        {plot.acres > 0 ? ` · ${plot.acres} ac` : ''}
                       </div>
                       {plot.growthStage && (
                         <div className="text-[11px] text-slate-400">{plot.growthStage}</div>
@@ -291,9 +298,14 @@ export const ManagementScreen: React.FC<ManagementScreenProps> = ({ onNavigate }
                         onClick={async () => {
                           if (!confirm(`Remove field "${plot.name}"?`)) return;
                           setBusy(true);
+                          setError(null);
                           try {
                             await deleteField(plot.id);
                             showToast('Field removed.', 'info');
+                          } catch (err) {
+                            const msg = err instanceof Error ? err.message : 'Failed to remove field.';
+                            setError(msg);
+                            showToast(msg, 'error');
                           } finally {
                             setBusy(false);
                           }

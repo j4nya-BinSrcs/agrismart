@@ -125,7 +125,7 @@ function fieldToPlot(field: BackendField): FarmPlot {
     soilType: field.soilType || '',
     rootDepth: '',
     healthStatus: 'optimal',
-    currentMoisture: field.soilMoisture ?? 0,
+    currentMoisture: field.soilMoisture ?? 30,
     targetMoisture: 45,
   };
 }
@@ -171,16 +171,20 @@ export interface CreateFieldInput {
   soilMoisture?: number | null;
 }
 
-function getLocalFarms(): Farm[] {
-  return getStoredItem<Farm[]>(LOCAL_FARMS_KEY, []);
+function localFarmsKey(userId?: string | null) {
+  return userId ? `${LOCAL_FARMS_KEY}_${userId}` : LOCAL_FARMS_KEY;
 }
 
-function saveLocalFarms(farms: Farm[]) {
-  setStoredItem(LOCAL_FARMS_KEY, farms);
+function getLocalFarms(userId?: string | null): Farm[] {
+  return getStoredItem<Farm[]>(localFarmsKey(userId), []);
+}
+
+function saveLocalFarms(farms: Farm[], userId?: string | null) {
+  setStoredItem(localFarmsKey(userId), farms);
 }
 
 export const farmService = {
-  async listFarms(token: string | null, isDemo = false): Promise<Farm[]> {
+  async listFarms(token: string | null, isDemo = false, userId?: string | null): Promise<Farm[]> {
     if (isDemo) {
       return [DEMO_FARM];
     }
@@ -202,22 +206,21 @@ export const farmService = {
             mapped.push(mapBackendFarmToClient(f, []));
           }
         }
-        if (mapped.length > 0) {
-          saveLocalFarms(mapped);
-          return mapped;
-        }
+        saveLocalFarms(mapped, userId);
+        return mapped;
       } catch (err) {
-        if (!(err instanceof ApiError && (err.statusCode === 0 || err.statusCode === 401))) {
-          // ignore and fall through
+        if (err instanceof ApiError && err.statusCode === 401) {
+          throw err;
         }
+        // Network/offline — fall through to per-user local cache
       }
     }
 
-    return getLocalFarms();
+    return getLocalFarms(userId);
   },
 
-  async getFarmDetails(token: string | null, isDemo = false): Promise<Farm> {
-    const farms = await this.listFarms(token, isDemo);
+  async getFarmDetails(token: string | null, isDemo = false, userId?: string | null): Promise<Farm> {
+    const farms = await this.listFarms(token, isDemo, userId);
     return farms[0] || (isDemo ? DEMO_FARM : {
       id: 'no-farm',
       name: 'No Farm',
@@ -229,7 +232,7 @@ export const farmService = {
     });
   },
 
-  async createFarm(token: string | null, input: CreateFarmInput): Promise<Farm> {
+  async createFarm(token: string | null, input: CreateFarmInput, userId?: string | null): Promise<Farm> {
     const coords =
       input.latitude != null && input.longitude != null
         ? { lat: input.latitude, lon: input.longitude }
@@ -237,38 +240,40 @@ export const farmService = {
     const address = input.location || `${input.district}, ${input.state}`;
 
     if (token) {
-      try {
-        const response = await apiRequestWithAuth<BackendFarmResponse>(
-          '/farms',
-          {
-            method: 'POST',
-            body: JSON.stringify({
-              name: input.name,
-              totalAreaAcres: input.totalAreaAcres ?? 0,
-              state: input.state,
-              district: input.district,
-              location: {
-                latitude: coords.lat,
-                longitude: coords.lon,
-                address,
-              },
-            }),
-          },
-          token
-        );
-        const farm = mapBackendFarmToClient(response.farm, []);
-        const local = getLocalFarms().filter((f) => f.id !== farm.id);
-        saveLocalFarms([farm, ...local]);
-        return farm;
-      } catch {
-        // fall through to local
-      }
+      const response = await apiRequestWithAuth<BackendFarmResponse>(
+        '/farms',
+        {
+          method: 'POST',
+          body: JSON.stringify({
+            name: input.name,
+            totalAreaAcres: input.totalAreaAcres ?? 0,
+            state: input.state,
+            district: input.district,
+            location: {
+              latitude: coords.lat,
+              longitude: coords.lon,
+              address,
+            },
+          }),
+        },
+        token
+      );
+      const farm = mapBackendFarmToClient(response.farm, []);
+      const local = getLocalFarms(userId).filter((f) => f.id !== farm.id);
+      saveLocalFarms([farm, ...local], userId);
+      return farm;
+    }
+
+    // Offline / local-only account
+    const existing = getLocalFarms(userId);
+    if (existing.some((f) => f.name.toLowerCase() === input.name.trim().toLowerCase())) {
+      throw new ApiError(`You already have a farm named "${input.name.trim()}".`, 400);
     }
 
     const localFarm: Farm = {
       id: `local-farm-${Date.now()}`,
       name: input.name,
-      members: [],
+      members: userId ? [{ user: userId, role: 'owner' }] : [],
       location: address,
       state: input.state,
       district: input.district,
@@ -276,48 +281,48 @@ export const farmService = {
       primaryCrops: [],
       plots: [],
     };
-    saveLocalFarms([localFarm, ...getLocalFarms()]);
+    saveLocalFarms([localFarm, ...existing], userId);
     return localFarm;
   },
 
-  async deleteFarm(token: string | null, farmId: string): Promise<void> {
+  async deleteFarm(token: string | null, farmId: string, userId?: string | null): Promise<void> {
     if (token && !farmId.startsWith('local-')) {
-      try {
-        await apiRequestWithAuth(`/farms/${farmId}`, { method: 'DELETE' }, token);
-      } catch {
-        // continue with local cleanup
-      }
+      await apiRequestWithAuth(`/farms/${farmId}`, { method: 'DELETE' }, token);
     }
-    saveLocalFarms(getLocalFarms().filter((f) => f.id !== farmId));
+    saveLocalFarms(getLocalFarms(userId).filter((f) => f.id !== farmId), userId);
   },
 
-  async createField(token: string | null, farmId: string, input: CreateFieldInput): Promise<FarmPlot> {
+  async createField(
+    token: string | null,
+    farmId: string,
+    input: CreateFieldInput,
+    userId?: string | null
+  ): Promise<FarmPlot> {
     if (token && !farmId.startsWith('local-')) {
-      try {
-        const response = await apiRequestWithAuth<BackendFieldResponse>(
-          `/farms/${farmId}/fields`,
-          {
-            method: 'POST',
-            body: JSON.stringify(input),
-          },
-          token
-        );
-        const plot = fieldToPlot(response.field);
-        const farms = getLocalFarms().map((f) => {
-          if (f.id !== farmId) return f;
-          const plots = [...f.plots, plot];
-          return {
-            ...f,
-            plots,
-            primaryCrops: [...new Set(plots.map((p) => p.crop))],
-            totalAcres: plots.reduce((sum, p) => sum + p.acres, 0),
-          };
-        });
-        saveLocalFarms(farms);
-        return plot;
-      } catch {
-        // fall through
-      }
+      const response = await apiRequestWithAuth<BackendFieldResponse>(
+        `/farms/${farmId}/fields`,
+        {
+          method: 'POST',
+          body: JSON.stringify({
+            ...input,
+            soilMoisture: input.soilMoisture ?? 30,
+          }),
+        },
+        token
+      );
+      const plot = fieldToPlot(response.field);
+      const farms = getLocalFarms(userId).map((f) => {
+        if (f.id !== farmId) return f;
+        const plots = [...f.plots, plot];
+        return {
+          ...f,
+          plots,
+          primaryCrops: [...new Set(plots.map((p) => p.crop))],
+          totalAcres: plots.reduce((sum, p) => sum + p.acres, 0),
+        };
+      });
+      saveLocalFarms(farms, userId);
+      return plot;
     }
 
     const plot: FarmPlot = {
@@ -330,11 +335,11 @@ export const farmService = {
       soilType: input.soilType || '',
       rootDepth: '',
       healthStatus: 'optimal',
-      currentMoisture: input.soilMoisture ?? 0,
+      currentMoisture: input.soilMoisture ?? 30,
       targetMoisture: 45,
     };
 
-    const farms = getLocalFarms().map((f) => {
+    const farms = getLocalFarms(userId).map((f) => {
       if (f.id !== farmId) return f;
       const plots = [...f.plots, plot];
       return {
@@ -344,20 +349,21 @@ export const farmService = {
         totalAcres: plots.reduce((sum, p) => sum + p.acres, 0),
       };
     });
-    saveLocalFarms(farms);
+    saveLocalFarms(farms, userId);
     return plot;
   },
 
-  async deleteField(token: string | null, farmId: string, fieldId: string): Promise<void> {
+  async deleteField(
+    token: string | null,
+    farmId: string,
+    fieldId: string,
+    userId?: string | null
+  ): Promise<void> {
     if (token && !farmId.startsWith('local-') && !fieldId.startsWith('local-')) {
-      try {
-        await apiRequestWithAuth(`/farms/${farmId}/fields/${fieldId}`, { method: 'DELETE' }, token);
-      } catch {
-        // continue
-      }
+      await apiRequestWithAuth(`/farms/${farmId}/fields/${fieldId}`, { method: 'DELETE' }, token);
     }
 
-    const farms = getLocalFarms().map((f) => {
+    const farms = getLocalFarms(userId).map((f) => {
       if (f.id !== farmId) return f;
       const plots = f.plots.filter((p) => p.id !== fieldId);
       return {
@@ -367,15 +373,18 @@ export const farmService = {
         totalAcres: plots.reduce((sum, p) => sum + p.acres, 0),
       };
     });
-    saveLocalFarms(farms);
+    saveLocalFarms(farms, userId);
   },
 
-  async getTodayActions(): Promise<ActionItem[]> {
+  async getTodayActions(isDemo = false): Promise<ActionItem[]> {
+    if (!isDemo) {
+      return getStoredItem<ActionItem[]>(ACTIONS_STORAGE_KEY, []);
+    }
     return getStoredItem<ActionItem[]>(ACTIONS_STORAGE_KEY, TODAY_ACTIONS);
   },
 
   async toggleAction(id: string): Promise<ActionItem[]> {
-    const currentActions = await this.getTodayActions();
+    const currentActions = await this.getTodayActions(true);
     const updated = currentActions.map((act) =>
       act.id === id ? { ...act, completed: !act.completed } : act
     );
@@ -384,13 +393,16 @@ export const farmService = {
   },
 
   async addAction(action: ActionItem): Promise<ActionItem[]> {
-    const currentActions = await this.getTodayActions();
+    const currentActions = await this.getTodayActions(true);
     const updated = [action, ...currentActions];
     setStoredItem(ACTIONS_STORAGE_KEY, updated);
     return updated;
   },
 
-  async getNotifications(): Promise<AppNotification[]> {
+  async getNotifications(isDemo = false): Promise<AppNotification[]> {
+    if (!isDemo) {
+      return getStoredItem<AppNotification[]>(NOTIFICATIONS_STORAGE_KEY, []);
+    }
     return getStoredItem<AppNotification[]>(NOTIFICATIONS_STORAGE_KEY, INITIAL_NOTIFICATIONS);
   },
 

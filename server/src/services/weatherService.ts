@@ -3,7 +3,10 @@ import ApiError from '../utils/ApiError.js';
 import logger from '../utils/logger.js';
 
 const OPEN_METEO_BASE_URL = 'https://api.open-meteo.com/v1/forecast';
-const REQUEST_TIMEOUT_MS = 5000;
+const REQUEST_TIMEOUT_MS = Number(process.env.WEATHER_TIMEOUT_MS) || 15000;
+const MAX_RETRIES = 2;
+const RETRY_BASE_DELAY_MS = 400;
+const CACHE_TTL_MS = Number(process.env.WEATHER_CACHE_TTL_MS) || 10 * 60 * 1000;
 
 interface OpenMeteoHourly {
   time: string[];
@@ -47,6 +50,41 @@ interface OpenMeteoRawPayload {
   daily?: OpenMeteoDaily;
 }
 
+type WeatherForecastResult = {
+  location: {
+    latitude: number;
+    longitude: number;
+    timezone: string;
+    elevationMeters: number | null;
+  };
+  current: {
+    temperature: number | null;
+    feelsLike: number | null;
+    condition: string;
+    weatherCode: number;
+    humidity: number | null;
+    windSpeedKmH: number | null;
+    uvIndex: number | null;
+    precipitationMm: number;
+    rainfallExpectedMm: number;
+    rainProbability: number;
+    forecastSummary: string;
+    updatedAt: string;
+  };
+  hourly: ReturnType<typeof formatHourlyData>;
+  daily: ReturnType<typeof formatDailyData>;
+  provider: string;
+  cached?: boolean;
+  stale?: boolean;
+};
+
+interface CacheEntry {
+  expiresAt: number;
+  data: WeatherForecastResult;
+}
+
+const forecastCache = new Map<string, CacheEntry>();
+
 const getErrorMessage = (err: unknown) => (err instanceof Error ? err.message : String(err));
 
 const isAbortError = (err: unknown) =>
@@ -54,6 +92,11 @@ const isAbortError = (err: unknown) =>
   err !== null &&
   'name' in err &&
   (err as { name?: unknown }).name === 'AbortError';
+
+const cacheKeyFor = (latitude: number, longitude: number) =>
+  `${latitude.toFixed(3)},${longitude.toFixed(3)}`;
+
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 /**
  * Maps WMO weather interpretation code to clear description
@@ -252,9 +295,85 @@ const INDIAN_DISTRICT_COORDS: Record<string, { lat: number; lon: number }> = {
   coimbatore: { lat: 11.0168, lon: 76.9558 },
 };
 
+const buildForecastResponse = (
+  payload: OpenMeteoRawPayload,
+  latitude: number,
+  longitude: number
+): WeatherForecastResult => {
+  const { current, hourly, daily } = payload;
+  if (!current) {
+    throw ApiError.internal('Weather data provider returned an incomplete payload.');
+  }
+
+  const condition = mapWmoCodeToCondition(current.weather_code);
+  const currentRainProb = daily?.precipitation_probability_max?.[0] ?? ((current.rain ?? 0) > 0 ? 80 : 10);
+  const rainfallExpectedMm = daily?.precipitation_sum?.[0] ?? current.precipitation ?? 0;
+
+  return {
+    location: {
+      latitude: payload.latitude ?? latitude,
+      longitude: payload.longitude ?? longitude,
+      timezone: payload.timezone ?? 'Asia/Kolkata',
+      elevationMeters: payload.elevation ?? null,
+    },
+    current: {
+      temperature: current.temperature_2m ?? null,
+      feelsLike: current.apparent_temperature ?? current.temperature_2m ?? null,
+      condition,
+      weatherCode: current.weather_code ?? 0,
+      humidity: current.relative_humidity_2m ?? null,
+      windSpeedKmH: current.wind_speed_10m ?? null,
+      uvIndex: current.uv_index ?? null,
+      precipitationMm: current.precipitation ?? 0,
+      rainfallExpectedMm,
+      rainProbability: currentRainProb,
+      forecastSummary: `${condition} with ${current.temperature_2m}°C and ${current.relative_humidity_2m}% humidity.`,
+      updatedAt: current.time ? new Date(current.time).toISOString() : new Date().toISOString(),
+    },
+    hourly: formatHourlyData(hourly, 0, 24),
+    daily: formatDailyData(daily),
+    provider: 'Open-Meteo',
+  };
+};
+
+const fetchOpenMeteoOnce = async (targetUrl: string, latitude: number, longitude: number) => {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+
+  try {
+    const response = await fetch(targetUrl, { signal: controller.signal });
+    if (!response.ok) {
+      const errorText = await response.text().catch(() => '');
+      throw ApiError.internal(`Weather provider error (${response.status}): ${errorText || 'Upstream request failed'}`);
+    }
+
+    let payload: OpenMeteoRawPayload | null = null;
+    try {
+      payload = (await response.json()) as OpenMeteoRawPayload | null;
+    } catch (jsonErr) {
+      logger.error(`Failed to parse Open-Meteo response JSON: ${getErrorMessage(jsonErr)}`);
+      throw ApiError.internal('Malformed response received from weather provider.');
+    }
+
+    if (!payload || typeof payload !== 'object' || !payload.current) {
+      logger.error('Invalid payload structure received from Open-Meteo');
+      throw ApiError.internal('Weather data provider returned an incomplete payload.');
+    }
+
+    return buildForecastResponse(payload, latitude, longitude);
+  } catch (err) {
+    if (isAbortError(err)) {
+      throw ApiError.internal(`Weather service request timed out after ${REQUEST_TIMEOUT_MS}ms. Please try again.`);
+    }
+    throw err;
+  } finally {
+    clearTimeout(timeoutId);
+  }
+};
+
 export const weatherService = {
   /**
-   * Fetches weather forecast from Open-Meteo
+   * Fetches weather forecast from Open-Meteo (with retries + short TTL cache)
    */
   async getForecast(latParam?: unknown, lonParam?: unknown, districtParam?: unknown) {
     let targetLat = latParam;
@@ -278,6 +397,11 @@ export const weatherService = {
       : config.weather.defaultLongitude;
 
     const { latitude, longitude } = validateCoordinates(lat, lon);
+    const cacheKey = cacheKeyFor(latitude, longitude);
+    const cached = forecastCache.get(cacheKey);
+    if (cached && cached.expiresAt > Date.now()) {
+      return { ...cached.data, cached: true };
+    }
 
     // 2. Build Open-Meteo Query
     const queryParams = new URLSearchParams({
@@ -315,76 +439,54 @@ export const weatherService = {
 
     const targetUrl = `${OPEN_METEO_BASE_URL}?${queryParams.toString()}`;
 
-    // 3. Dispatch HTTP request with timeout
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+    let lastError: unknown;
+    for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+      try {
+        const result = await fetchOpenMeteoOnce(targetUrl, latitude, longitude);
+        forecastCache.set(cacheKey, {
+          expiresAt: Date.now() + CACHE_TTL_MS,
+          data: result,
+        });
+        return result;
+      } catch (err) {
+        lastError = err;
+        const isTimeout =
+          (err instanceof ApiError && err.message.toLowerCase().includes('timed out')) ||
+          isAbortError(err);
+        const isNetwork =
+          !(err instanceof ApiError) ||
+          err.message.toLowerCase().includes('connect') ||
+          err.message.toLowerCase().includes('fetch');
 
-    let response;
-    try {
-      response = await fetch(targetUrl, { signal: controller.signal });
-    } catch (err) {
-      clearTimeout(timeoutId);
-      if (isAbortError(err)) {
-        logger.error(`Open-Meteo request timed out after ${REQUEST_TIMEOUT_MS}ms for [${latitude}, ${longitude}]`);
-        throw ApiError.internal('Weather service request timed out. Please try again.');
+        if (attempt < MAX_RETRIES && (isTimeout || isNetwork)) {
+          const delay = RETRY_BASE_DELAY_MS * (attempt + 1);
+          logger.warn(
+            `Open-Meteo attempt ${attempt + 1} failed for [${latitude}, ${longitude}]; retrying in ${delay}ms`
+          );
+          await sleep(delay);
+          continue;
+        }
+        break;
       }
-      logger.error(`Open-Meteo network connectivity failed: ${getErrorMessage(err)}`);
-      throw ApiError.internal(`Failed to connect to weather data provider: ${getErrorMessage(err)}`);
-    } finally {
-      clearTimeout(timeoutId);
     }
 
-    if (!response.ok) {
-      const errorText = await response.text().catch(() => '');
-      logger.error(`Open-Meteo returned HTTP ${response.status}: ${errorText}`);
-      throw ApiError.internal(`Weather provider error (${response.status}): ${errorText || 'Upstream request failed'}`);
+    // Serve stale cache if available so the UI stays usable during outages
+    if (cached) {
+      logger.warn(`Serving stale weather cache for [${latitude}, ${longitude}] after upstream failure`);
+      return { ...cached.data, cached: true, stale: true };
     }
 
-    let payload: OpenMeteoRawPayload | null = null;
-    try {
-      payload = (await response.json()) as OpenMeteoRawPayload | null;
-    } catch (jsonErr) {
-      logger.error(`Failed to parse Open-Meteo response JSON: ${getErrorMessage(jsonErr)}`);
-      throw ApiError.internal('Malformed response received from weather provider.');
+    if (lastError instanceof ApiError) {
+      if (lastError.message.toLowerCase().includes('timed out')) {
+        logger.error(`Open-Meteo request timed out after ${REQUEST_TIMEOUT_MS}ms for [${latitude}, ${longitude}]`);
+      } else {
+        logger.error(`Open-Meteo request failed for [${latitude}, ${longitude}]: ${lastError.message}`);
+      }
+      throw lastError;
     }
 
-    // 4. Validate Provider Payload Integrity
-    if (!payload || typeof payload !== 'object' || !payload.current) {
-      logger.error('Invalid payload structure received from Open-Meteo');
-      throw ApiError.internal('Weather data provider returned an incomplete payload.');
-    }
-
-    const { current, hourly, daily } = payload;
-    const condition = mapWmoCodeToCondition(current.weather_code);
-    const currentRainProb = daily?.precipitation_probability_max?.[0] ?? ((current.rain ?? 0) > 0 ? 80 : 10);
-    const rainfallExpectedMm = daily?.precipitation_sum?.[0] ?? current.precipitation ?? 0;
-
-    // 5. Structure clean response
-    return {
-      location: {
-        latitude: payload.latitude ?? latitude,
-        longitude: payload.longitude ?? longitude,
-        timezone: payload.timezone ?? 'Asia/Kolkata',
-        elevationMeters: payload.elevation ?? null,
-      },
-      current: {
-        temperature: current.temperature_2m ?? null,
-        feelsLike: current.apparent_temperature ?? current.temperature_2m ?? null,
-        condition,
-        weatherCode: current.weather_code ?? 0,
-        humidity: current.relative_humidity_2m ?? null,
-        windSpeedKmH: current.wind_speed_10m ?? null,
-        uvIndex: current.uv_index ?? null,
-        precipitationMm: current.precipitation ?? 0,
-        rainfallExpectedMm,
-        rainProbability: currentRainProb,
-        forecastSummary: `${condition} with ${current.temperature_2m}°C and ${current.relative_humidity_2m}% humidity.`,
-        updatedAt: current.time ? new Date(current.time).toISOString() : new Date().toISOString(),
-      },
-      hourly: formatHourlyData(hourly, 0, 24),
-      daily: formatDailyData(daily),
-      provider: 'Open-Meteo',
-    };
+    logger.error(`Open-Meteo network connectivity failed: ${getErrorMessage(lastError)}`);
+    throw ApiError.internal(`Failed to connect to weather data provider: ${getErrorMessage(lastError)}`);
   },
 };
 

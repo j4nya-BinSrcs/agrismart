@@ -15,8 +15,18 @@ export const errorHandler = (err: unknown, req: Request, res: Response, _next: N
     const rawStatus = errRecord.statusCode;
     const name = errRecord.name;
     const rawMessage = errRecord.message;
-    const statusCode = Number(rawStatus) || (name === 'ValidationError' ? 400 : 500);
-    const message = typeof rawMessage === 'string' && rawMessage ? rawMessage : 'Internal Server Error';
+    const mongoCode = errRecord.code;
+    let statusCode = Number(rawStatus) || (name === 'ValidationError' ? 400 : 500);
+    let message = typeof rawMessage === 'string' && rawMessage ? rawMessage : 'Internal Server Error';
+
+    if (mongoCode === 11000) {
+      statusCode = 400;
+      message = 'A record with those unique fields already exists.';
+    } else if (name === 'MongoServerSelectionError' || name === 'MongooseError') {
+      statusCode = 503;
+      message = 'Database is unavailable. Please try again shortly.';
+    }
+
     const errors = Array.isArray(errRecord.errors) ? errRecord.errors : [];
     const stack = err instanceof Error ? err.stack : '';
     error = new ApiError(statusCode, message, errors, stack);

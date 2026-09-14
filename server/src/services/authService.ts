@@ -1,10 +1,19 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import mongoose from 'mongoose';
 import User from '../models/User.js';
 import type { UserDocument, UserRole } from '../models/User.js';
 import config from '../config/env.js';
 import ApiError from '../utils/ApiError.js';
 import logger from '../utils/logger.js';
+
+const assertDatabaseReady = () => {
+  if (mongoose.connection.readyState !== 1) {
+    throw ApiError.serviceUnavailable(
+      'Database is unavailable. Start MongoDB and restart the server, then try again.'
+    );
+  }
+};
 
 const EMAIL_REGEX = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
 const MIN_PASSWORD_LENGTH = 6;
@@ -86,6 +95,8 @@ export const authService = {
     const allowedRoles = ['owner', 'farmer', 'manager', 'agronomist', 'admin'];
     const assignedRole = allowedRoles.includes(role) ? (role as UserRole) : 'farmer';
 
+    assertDatabaseReady();
+
     // Check for duplicate email
     const existingUser = await User.findOne({ email: normalizedEmail });
     if (existingUser) {
@@ -96,12 +107,21 @@ export const authService = {
     const passwordHash = await bcrypt.hash(password, BCRYPT_SALT_ROUNDS);
 
     // Persist user to MongoDB
-    const newUser = await User.create({
-      name: name.trim(),
-      email: normalizedEmail,
-      passwordHash,
-      role: assignedRole,
-    });
+    let newUser: UserDocument;
+    try {
+      newUser = await User.create({
+        name: name.trim(),
+        email: normalizedEmail,
+        passwordHash,
+        role: assignedRole,
+      });
+    } catch (err) {
+      const code = typeof err === 'object' && err !== null && 'code' in err ? (err as { code?: number }).code : undefined;
+      if (code === 11000) {
+        throw ApiError.badRequest('An account with this email address already exists.');
+      }
+      throw err;
+    }
 
     const token = generateToken(newUser);
 
@@ -129,6 +149,8 @@ export const authService = {
     if (!password || typeof password !== 'string' || !password.trim()) {
       throw ApiError.badRequest('Password is required.');
     }
+
+    assertDatabaseReady();
 
     const normalizedEmail = email.trim().toLowerCase();
     const user = await User.findOne({ email: normalizedEmail });

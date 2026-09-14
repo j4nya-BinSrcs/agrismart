@@ -295,13 +295,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           },
           backendToken
         );
-      } catch {
-        // Keep pending farm for FarmContext offline/local creation
+        // Farm created — do not keep a pending farm that would recreate it later
+        localStorage.removeItem(PENDING_FARM_KEY);
+      } catch (farmErr) {
+        // Keep pending farm for FarmContext to retry only if user still has zero farms
         setStoredItem(PENDING_FARM_KEY, pendingFarm);
+        if (farmErr instanceof ApiError && farmErr.statusCode >= 500) {
+          // continue — account was created
+        }
       }
     } catch (err) {
-      if (err instanceof ApiError && err.statusCode === 400) {
-        return { success: false, error: err.message || 'Could not create account.' };
+      if (err instanceof ApiError) {
+        if (err.statusCode === 400 || err.statusCode === 503 || err.statusCode >= 500) {
+          return {
+            success: false,
+            error: err.message || 'Could not create account. Ensure MongoDB is running and try again.',
+          };
+        }
       }
       // Backend unavailable — continue with local registration
       setStoredItem(PENDING_FARM_KEY, pendingFarm);
@@ -316,9 +326,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
 
     const existing = getStoredItem<StoredAccount[]>(REGISTERED_ACCOUNTS_KEY, []);
+    const shouldKeepPending = Boolean(getStoredItem(PENDING_FARM_KEY, null));
     setStoredItem<StoredAccount[]>(REGISTERED_ACCOUNTS_KEY, [
       ...existing.filter((a) => a.user.email !== newUser.email),
-      { user: newUser, password: data.password.trim(), pendingFarm },
+      {
+        user: newUser,
+        password: data.password.trim(),
+        ...(shouldKeepPending ? { pendingFarm } : {}),
+      },
     ]);
 
     if (!backendToken) {

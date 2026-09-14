@@ -23,12 +23,14 @@ interface FarmContextValue {
 const FarmContext = createContext<FarmContextValue | undefined>(undefined);
 
 export const FarmProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { isAuthenticated, token, isDemo, consumePendingFarm } = useAuth();
+  const { isAuthenticated, token, isDemo, user, consumePendingFarm } = useAuth();
   const [farms, setFarms] = useState<Farm[]>([]);
   const [activeFarmId, setActiveFarmIdState] = useState<string | null>(() =>
     localStorage.getItem(ACTIVE_FARM_KEY)
   );
   const [isLoading, setIsLoading] = useState(false);
+
+  const userId = user?.id ?? null;
 
   const refreshFarms = useCallback(async () => {
     if (!isAuthenticated) {
@@ -38,20 +40,36 @@ export const FarmProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     setIsLoading(true);
     try {
+      // Only materialize a pending signup farm when the user has no farms yet
       let pending = consumePendingFarm();
-      if (pending && !isDemo) {
-        await farmService.createFarm(token, {
-          name: pending.name,
-          state: pending.state,
-          district: pending.district,
-          location: pending.location,
-          latitude: pending.latitude,
-          longitude: pending.longitude,
-          totalAreaAcres: pending.totalAreaAcres ?? 0,
-        });
+      let list = await farmService.listFarms(token, isDemo, userId);
+
+      if (pending && !isDemo && list.length === 0) {
+        try {
+          await farmService.createFarm(
+            token,
+            {
+              name: pending.name,
+              state: pending.state,
+              district: pending.district,
+              location: pending.location,
+              latitude: pending.latitude,
+              longitude: pending.longitude,
+              totalAreaAcres: pending.totalAreaAcres ?? 0,
+            },
+            userId
+          );
+          list = await farmService.listFarms(token, isDemo, userId);
+        } catch (err) {
+          // Restore pending so a later refresh can retry (e.g. after Mongo comes up)
+          localStorage.setItem('agrismart_pending_farm', JSON.stringify(pending));
+          console.warn('[FarmContext] Pending farm create failed:', err);
+        }
+      } else if (pending && list.length > 0) {
+        // User already has farms — drop stale pending so add-field never recreates one
+        localStorage.removeItem('agrismart_pending_farm');
       }
 
-      const list = await farmService.listFarms(token, isDemo);
       setFarms(list);
 
       if (list.length > 0) {
@@ -67,12 +85,12 @@ export const FarmProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } finally {
       setIsLoading(false);
     }
-  }, [isAuthenticated, token, isDemo, consumePendingFarm, activeFarmId]);
+  }, [isAuthenticated, token, isDemo, userId, consumePendingFarm, activeFarmId]);
 
   useEffect(() => {
     void refreshFarms();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isAuthenticated, token, isDemo]);
+  }, [isAuthenticated, token, isDemo, userId]);
 
   const setActiveFarmId = useCallback((farmId: string) => {
     setActiveFarmIdState(farmId);
@@ -81,20 +99,20 @@ export const FarmProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const createFarm = useCallback(
     async (input: CreateFarmInput) => {
-      const farm = await farmService.createFarm(token, input);
+      const farm = await farmService.createFarm(token, input, userId);
       await refreshFarms();
       setActiveFarmId(farm.id);
       return farm;
     },
-    [token, refreshFarms, setActiveFarmId]
+    [token, userId, refreshFarms, setActiveFarmId]
   );
 
   const deleteFarm = useCallback(
     async (farmId: string) => {
-      await farmService.deleteFarm(token, farmId);
+      await farmService.deleteFarm(token, farmId, userId);
       await refreshFarms();
     },
-    [token, refreshFarms]
+    [token, userId, refreshFarms]
   );
 
   const createField = useCallback(
@@ -103,21 +121,21 @@ export const FarmProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (!farmId) {
         throw new Error('No active farm selected.');
       }
-      const plot = await farmService.createField(token, farmId, input);
+      const plot = await farmService.createField(token, farmId, input, userId);
       await refreshFarms();
       return plot;
     },
-    [token, activeFarmId, farms, refreshFarms]
+    [token, userId, activeFarmId, farms, refreshFarms]
   );
 
   const deleteField = useCallback(
     async (fieldId: string) => {
       const farmId = activeFarmId || farms[0]?.id;
       if (!farmId) return;
-      await farmService.deleteField(token, farmId, fieldId);
+      await farmService.deleteField(token, farmId, fieldId, userId);
       await refreshFarms();
     },
-    [token, activeFarmId, farms, refreshFarms]
+    [token, userId, activeFarmId, farms, refreshFarms]
   );
 
   const activeFarm = useMemo(() => {

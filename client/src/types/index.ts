@@ -169,6 +169,8 @@ export interface DiagnosisAnalysisRequest {
   growthStage?: string;
   fieldLocation?: string;
   soilMoistureContext?: string;
+  farmId?: string;
+  fieldId?: string;
 }
 
 export interface WeatherCondition {

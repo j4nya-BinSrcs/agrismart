@@ -11,6 +11,7 @@ import { DiagnosisRecord, ScreenType, SupportedCrop, SUPPORTED_CROPS } from '../
 import { diagnosisService } from '../../services/diagnosisService';
 import { useToast } from '../../context/ToastContext';
 import { useFarm } from '../../context/FarmContext';
+import { useAuth } from '../../context/AuthContext';
 import { BackButton } from '../common/BackButton';
 
 interface DiagnoseScreenProps {
@@ -23,6 +24,7 @@ export const DiagnoseScreen: React.FC<DiagnoseScreenProps> = ({
   onNavigate,
 }) => {
   const { showToast } = useToast();
+  const { token, user, isDemo } = useAuth();
   const { activeFarm } = useFarm();
 
   const [selectedImage, setSelectedImage] = useState<string>('');
@@ -188,6 +190,19 @@ export const DiagnoseScreen: React.FC<DiagnoseScreenProps> = ({
     setAnalysisStep('Preparing expert advisory from crop knowledge...');
 
     try {
+      if (isDemo || !token) {
+        setIsAnalyzing(false);
+        showToast(
+          isDemo
+            ? 'Demo mode cannot save diagnoses. Sign up for a real account to run assessments.'
+            : 'Sign in required to run crop diagnosis.',
+          'error'
+        );
+        return;
+      }
+
+      const matchedField = fields.find((f) => f.name === fieldLocation);
+
       const record = await diagnosisService.analyzeCrop(
         {
           imageUrl: selectedImage,
@@ -197,11 +212,14 @@ export const DiagnoseScreen: React.FC<DiagnoseScreenProps> = ({
           growthStage,
           fieldLocation: fieldLocation || 'Unspecified field',
           soilMoistureContext: 'No IoT sensor — moisture unknown',
+          farmId: activeFarm?.id?.startsWith('local-') ? undefined : activeFarm?.id,
+          fieldId: matchedField?.id?.startsWith('local-') ? undefined : matchedField?.id,
         },
+        token,
         (step) => setAnalysisStep(step)
       );
 
-      await diagnosisService.saveDiagnosis(record);
+      await diagnosisService.saveDiagnosis(record, token, user?.id);
       setIsAnalyzing(false);
       onDiagnosisComplete(record);
       onNavigate('diagnosis-result');

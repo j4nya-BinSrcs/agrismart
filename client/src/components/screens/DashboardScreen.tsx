@@ -554,7 +554,12 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
                       </div>
                       <div className="text-slate-500 dark:text-slate-400 flex items-center justify-between text-[11px]">
                         <span>
-                          {field.acres} Ac · {field.growthStage || 'Stage not set'}
+                          {[
+                            field.acres > 0 ? `${field.acres} Ac` : null,
+                            field.growthStage || 'Stage not set',
+                          ]
+                            .filter(Boolean)
+                            .join(' · ')}
                         </span>
                         <span className="text-emerald-800 dark:text-emerald-400 font-medium">
                           {fieldDiag ? 'View diagnosis' : 'Scan leaf'}

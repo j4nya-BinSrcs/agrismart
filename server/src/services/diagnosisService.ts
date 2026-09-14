@@ -23,10 +23,16 @@ export interface DiagnosisRequestInput {
   fieldLocation?: string;
   imageUrl?: string;
   soilMoistureContext?: string;
+  userId?: string;
+  farmId?: string;
+  fieldId?: string;
 }
 
 export interface ExpertAdvisoryRecord {
   id: string;
+  user?: string;
+  farm?: string;
+  field?: string;
   crop: string;
   variety: string;
   growthStage: string;
@@ -324,6 +330,9 @@ const createDiagnosisRecord = async (input: DiagnosisRequestInput): Promise<Expe
 
   return {
     id: `diag-${now.getTime()}-${Math.random().toString(36).substring(2, 7)}`,
+    ...(input.userId ? { user: input.userId } : {}),
+    ...(input.farmId ? { farm: input.farmId } : {}),
+    ...(input.fieldId ? { field: input.fieldId } : {}),
     crop,
     variety,
     growthStage,
@@ -430,7 +439,8 @@ export const diagnosisService = {
    * Produces an explainable agronomic advisory assessment for a submitted crop image.
    */
   async analyzeCrop(requestData: DiagnosisRequestInput): Promise<ExpertAdvisoryRecord> {
-    const { crop, growthStage, fieldLocation, imageUrl, variety, soilMoistureContext } = requestData;
+    const { crop, growthStage, fieldLocation, imageUrl, variety, soilMoistureContext, userId, farmId, fieldId } =
+      requestData;
 
     if (!crop || typeof crop !== 'string' || !crop.trim()) {
       throw ApiError.badRequest('Crop name is required (e.g. "Tomato", "Pepper Bell", "Potato").');
@@ -451,12 +461,25 @@ export const diagnosisService = {
       fieldLocation,
       imageUrl,
       soilMoistureContext,
+      userId,
+      farmId,
+      fieldId,
     });
 
     // Persist to MongoDB if database is connected
     if (mongoose.connection.readyState === 1) {
       try {
-        await Diagnosis.create(record);
+        const persistPayload: Record<string, unknown> = { ...record };
+        if (userId && mongoose.Types.ObjectId.isValid(userId)) {
+          persistPayload.user = new mongoose.Types.ObjectId(userId);
+        }
+        if (farmId && mongoose.Types.ObjectId.isValid(farmId)) {
+          persistPayload.farm = new mongoose.Types.ObjectId(farmId);
+        }
+        if (fieldId && mongoose.Types.ObjectId.isValid(fieldId)) {
+          persistPayload.field = new mongoose.Types.ObjectId(fieldId);
+        }
+        await Diagnosis.create(persistPayload);
         logger.info(`Persisted diagnosis record ${record.id} to MongoDB.`);
       } catch (err) {
         logger.warn(`Failed to persist diagnosis record to MongoDB: ${getErrorMessage(err)}`);
@@ -467,19 +490,34 @@ export const diagnosisService = {
   },
 
   /**
-   * Retrieves diagnosis history
+   * Retrieves diagnosis history for a user (falls back to unscoped only when no userId)
    */
-  async getHistory(limit = 20) {
+  async getHistory(limit = 20, userId?: string) {
     if (mongoose.connection.readyState === 1) {
       try {
-        const records = await Diagnosis.find()
+        const filter: Record<string, unknown> = {};
+        if (userId && mongoose.Types.ObjectId.isValid(userId)) {
+          filter.user = new mongoose.Types.ObjectId(userId);
+        } else if (userId) {
+          // Non-ObjectId local/demo ids — match string user field if any
+          filter.user = userId;
+        } else {
+          return [];
+        }
+
+        const records = await Diagnosis.find(filter)
           .sort({ createdAt: -1 })
           .limit(limit)
           .lean();
 
         return records.map((r) => {
           const { _id, __v, ...rest } = r;
-          return rest;
+          return {
+            ...rest,
+            user: rest.user?.toString?.() ?? rest.user,
+            farm: rest.farm?.toString?.() ?? rest.farm,
+            field: rest.field?.toString?.() ?? rest.field,
+          };
         });
       } catch (err) {
         logger.warn(`Error querying MongoDB diagnosis history: ${getErrorMessage(err)}`);
@@ -489,18 +527,27 @@ export const diagnosisService = {
   },
 
   /**
-   * Retrieves single diagnosis by ID
+   * Retrieves single diagnosis by ID (scoped to user when provided)
    */
-  async getById(id: string) {
+  async getById(id: string, userId?: string) {
     if (!id) {
       throw ApiError.badRequest('Diagnosis ID is required.');
     }
 
     if (mongoose.connection.readyState === 1) {
-      const record = await Diagnosis.findOne({ id }).lean();
+      const filter: Record<string, unknown> = { id };
+      if (userId && mongoose.Types.ObjectId.isValid(userId)) {
+        filter.user = new mongoose.Types.ObjectId(userId);
+      }
+      const record = await Diagnosis.findOne(filter).lean();
       if (record) {
         const { _id, __v, ...rest } = record;
-        return rest;
+        return {
+          ...rest,
+          user: rest.user?.toString?.() ?? rest.user,
+          farm: rest.farm?.toString?.() ?? rest.farm,
+          field: rest.field?.toString?.() ?? rest.field,
+        };
       }
     }
     return null;
@@ -509,22 +556,37 @@ export const diagnosisService = {
   /**
    * Saves or bookmarks a diagnosis record
    */
-  async saveDiagnosis(recordData: SaveDiagnosisInput) {
+  async saveDiagnosis(recordData: SaveDiagnosisInput, userId?: string) {
     if (!recordData || !recordData.id) {
       throw ApiError.badRequest('Valid diagnosis record with ID is required.');
     }
 
     if (mongoose.connection.readyState === 1) {
+      const payload: Record<string, unknown> = { ...recordData };
+      if (userId && mongoose.Types.ObjectId.isValid(userId)) {
+        payload.user = new mongoose.Types.ObjectId(userId);
+      }
+
+      const filter: Record<string, unknown> = { id: recordData.id };
+      if (userId && mongoose.Types.ObjectId.isValid(userId)) {
+        filter.user = new mongoose.Types.ObjectId(userId);
+      }
+
       const updated = await Diagnosis.findOneAndUpdate(
-        { id: recordData.id },
-        { $set: recordData },
+        filter,
+        { $set: payload },
         { upsert: true, returnDocument: 'after', setDefaultsOnInsert: true }
       ).lean();
       if (!updated) {
         return recordData;
       }
       const { _id, __v, ...rest } = updated;
-      return rest;
+      return {
+        ...rest,
+        user: rest.user?.toString?.() ?? rest.user,
+        farm: rest.farm?.toString?.() ?? rest.farm,
+        field: rest.field?.toString?.() ?? rest.field,
+      };
     }
     return recordData;
   },

@@ -1,6 +1,7 @@
 import mongoose from 'mongoose';
 import Zone, { IZone, IZoneView } from '../models/Zone.js';
 import Field from '../models/Field.js';
+import Farm from '../models/Farm.js';
 import ApiError from '../utils/ApiError.js';
 import logger from '../utils/logger.js';
 import { validateObjectId } from './farmService.js';
@@ -16,20 +17,28 @@ export interface ZoneInput {
 const toZoneView = (zone: InstanceType<typeof Zone>): IZoneView =>
   zone.toJSON() as unknown as IZoneView;
 
+const assertFarmMemberWithField = async (userId: string, farmId: string, fieldId: string) => {
+  const farm = await Farm.findOne({ _id: farmId, 'members.user': userId });
+  if (!farm) {
+    throw ApiError.notFound('Farm not found or access denied.');
+  }
+  const field = await Field.findOne({ _id: fieldId, farm: farmId });
+  if (!field) {
+    throw ApiError.notFound('Field not found.');
+  }
+  return { farm, field };
+};
+
 export const zoneService = {
   /**
-   * Creates a new Zone under a Field and Farm owned by the authenticated user
+   * Creates a new Zone under a Field on a farm the user belongs to
    */
   async createZone(userId: string, farmId: string, fieldId: string, data: ZoneInput = {}): Promise<IZoneView> {
     validateObjectId(userId, 'User ID');
     validateObjectId(farmId, 'Farm ID');
     validateObjectId(fieldId, 'Field ID');
 
-    // Verify parent field ownership and farm association
-    const field = await Field.findOne({ _id: fieldId, farm: farmId, owner: userId });
-    if (!field) {
-      throw ApiError.notFound('Field not found.');
-    }
+    await assertFarmMemberWithField(userId, farmId, fieldId);
 
     const { name, areaAcres, irrigationMethod, soilMoisture, description } = data;
 
@@ -68,24 +77,21 @@ export const zoneService = {
   },
 
   /**
-   * Retrieves all zones for a specific field owned by the user
+   * Retrieves all zones for a specific field on a farm the user belongs to
    */
   async getZonesByField(userId: string, farmId: string, fieldId: string): Promise<IZoneView[]> {
     validateObjectId(userId, 'User ID');
     validateObjectId(farmId, 'Farm ID');
     validateObjectId(fieldId, 'Field ID');
 
-    const field = await Field.findOne({ _id: fieldId, farm: farmId, owner: userId });
-    if (!field) {
-      throw ApiError.notFound('Field not found.');
-    }
+    await assertFarmMemberWithField(userId, farmId, fieldId);
 
-    const zones = await Zone.find({ field: fieldId, farm: farmId, owner: userId }).sort({ createdAt: 1 });
+    const zones = await Zone.find({ field: fieldId, farm: farmId }).sort({ createdAt: 1 });
     return zones.map((z) => toZoneView(z));
   },
 
   /**
-   * Retrieves a specific zone by ID ensuring ownership chain
+   * Retrieves a specific zone by ID ensuring farm membership
    */
   async getZoneById(userId: string, farmId: string, fieldId: string, zoneId: string): Promise<IZoneView> {
     validateObjectId(userId, 'User ID');
@@ -93,7 +99,9 @@ export const zoneService = {
     validateObjectId(fieldId, 'Field ID');
     validateObjectId(zoneId, 'Zone ID');
 
-    const zone = await Zone.findOne({ _id: zoneId, field: fieldId, farm: farmId, owner: userId });
+    await assertFarmMemberWithField(userId, farmId, fieldId);
+
+    const zone = await Zone.findOne({ _id: zoneId, field: fieldId, farm: farmId });
     if (!zone) {
       throw ApiError.notFound('Zone not found.');
     }
@@ -110,7 +118,9 @@ export const zoneService = {
     validateObjectId(fieldId, 'Field ID');
     validateObjectId(zoneId, 'Zone ID');
 
-    const zone = await Zone.findOne({ _id: zoneId, field: fieldId, farm: farmId, owner: userId });
+    await assertFarmMemberWithField(userId, farmId, fieldId);
+
+    const zone = await Zone.findOne({ _id: zoneId, field: fieldId, farm: farmId });
     if (!zone) {
       throw ApiError.notFound('Zone not found.');
     }
@@ -164,12 +174,14 @@ export const zoneService = {
     validateObjectId(fieldId, 'Field ID');
     validateObjectId(zoneId, 'Zone ID');
 
-    const zone = await Zone.findOne({ _id: zoneId, field: fieldId, farm: farmId, owner: userId });
+    await assertFarmMemberWithField(userId, farmId, fieldId);
+
+    const zone = await Zone.findOne({ _id: zoneId, field: fieldId, farm: farmId });
     if (!zone) {
       throw ApiError.notFound('Zone not found.');
     }
 
-    await Zone.deleteOne({ _id: zoneId, field: fieldId, farm: farmId, owner: userId });
+    await Zone.deleteOne({ _id: zoneId, field: fieldId, farm: farmId });
     logger.info(`Zone deleted: ${zoneId} under Field ${fieldId} by User ${userId}`);
 
     return {

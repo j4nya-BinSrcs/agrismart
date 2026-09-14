@@ -71,7 +71,7 @@ export const sustainabilityService = {
 
     if (farmId) {
       validateObjectId(farmId, 'Farm ID');
-      const farm = await Farm.findOne({ _id: farmId, owner: userId });
+      const farm = await Farm.findOne({ _id: farmId, 'members.user': userId });
       if (!farm) {
         throw ApiError.notFound('Farm not found.');
       }
@@ -79,23 +79,24 @@ export const sustainabilityService = {
 
       if (fieldId) {
         validateObjectId(fieldId, 'Field ID');
-        const field = await Field.findOne({ _id: fieldId, farm: farmId, owner: userId });
+        const field = await Field.findOne({ _id: fieldId, farm: farmId });
         if (!field) {
           throw ApiError.notFound('Field not found.');
         }
         fields = [field];
-        zones = await Zone.find({ field: fieldId, farm: farmId, owner: userId });
+        zones = await Zone.find({ field: fieldId, farm: farmId });
       } else {
-        fields = await Field.find({ farm: farmId, owner: userId });
-        zones = await Zone.find({ farm: farmId, owner: userId });
+        fields = await Field.find({ farm: farmId });
+        zones = await Zone.find({ farm: farmId });
       }
     } else {
       if (fieldId) {
         throw ApiError.badRequest('farmId is required when specifying a fieldId.');
       }
-      farms = await Farm.find({ owner: userId });
-      fields = await Field.find({ owner: userId });
-      zones = await Zone.find({ owner: userId });
+      farms = await Farm.find({ 'members.user': userId });
+      const farmIds = farms.map((f) => f._id);
+      fields = await Field.find({ farm: { $in: farmIds } });
+      zones = await Zone.find({ farm: { $in: farmIds } });
     }
 
     // 3. Handle Empty Scope Gracefully

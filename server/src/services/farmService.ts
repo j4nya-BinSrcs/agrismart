@@ -69,6 +69,17 @@ export const farmService = {
 
     validateCoordinates(location);
 
+    const trimmedName = name.trim();
+    const duplicate = await Farm.findOne({
+      'members.user': userId,
+      name: { $regex: new RegExp(`^${trimmedName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') },
+    });
+    if (duplicate) {
+      throw ApiError.badRequest(
+        `You already have a farm named "${trimmedName}". Use a different name or add fields to the existing farm.`
+      );
+    }
+
     const stateValue = typeof state === 'string' ? state.trim() : undefined;
     const districtValue = typeof district === 'string' ? district.trim() : undefined;
     const addressFallback =
@@ -77,7 +88,7 @@ export const farmService = {
         : [districtValue, stateValue].filter(Boolean).join(', ');
 
     const farmData: IFarm = {
-      name: name.trim(),
+      name: trimmedName,
       totalAreaAcres: Number(totalAreaAcres),
       description: typeof description === 'string' ? description.trim() : '',
       state: stateValue,
@@ -147,7 +158,16 @@ export const farmService = {
       if (typeof updateData.name !== 'string' || !updateData.name.trim()) {
         throw ApiError.badRequest('Farm name cannot be empty.');
       }
-      farm.name = updateData.name.trim();
+      const trimmedName = updateData.name.trim();
+      const duplicate = await Farm.findOne({
+        _id: { $ne: farmId },
+        'members.user': userId,
+        name: { $regex: new RegExp(`^${trimmedName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') },
+      });
+      if (duplicate) {
+        throw ApiError.badRequest(`You already have a farm named "${trimmedName}".`);
+      }
+      farm.name = trimmedName;
     }
 
     if (updateData.totalAreaAcres !== undefined) {

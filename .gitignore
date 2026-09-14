@@ -12,6 +12,10 @@ yarn-debug.log*
 # Environment variables & secrets
 .env*
 !.env.example
+scripts/launch/local.env
+
+# Launcher runtime (PIDs, logs, local MongoDB data)
+.run/
 
 # OS and IDE files
 .DS_Store

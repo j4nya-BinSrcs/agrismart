@@ -404,8 +404,15 @@ export const evaluateZone = (
     lastIrrigated = '2 days ago',
   } = zoneInput;
 
-  // 1. Validation
-  const moistureCurrent = Number(soilMoistureCurrent);
+  // 1. Validation — default when IoT / field moisture is unknown
+  const DEFAULT_SOIL_MOISTURE = 30;
+  const hasMoistureReading =
+    soilMoistureCurrent !== undefined &&
+    soilMoistureCurrent !== null &&
+    soilMoistureCurrent !== '';
+  const moistureCurrent = hasMoistureReading
+    ? Number(soilMoistureCurrent)
+    : DEFAULT_SOIL_MOISTURE;
   if (isNaN(moistureCurrent) || moistureCurrent < 0 || moistureCurrent > 100) {
     throw ApiError.badRequest(
       `Invalid soil moisture for '${name}': '${soilMoistureCurrent}'. Must be a percentage between 0 and 100.`
