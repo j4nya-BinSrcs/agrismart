@@ -4,11 +4,11 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "dev": "tsx watch server.js",
-    "start": "node server.js",
-    "build": "tsc --noEmit",
-    "lint": "tsc --noEmit",
-    "test": "node tests/assistant.test.js && node tests/auth.test.js && node tests/farm.test.js && node tests/sustainability.test.js"
+    "dev": "tsx watch src/server.ts",
+    "start": "node dist/server.js",
+    "build": "tsc",
+    "lint": "tsc --noEmit -p tsconfig.lint.json",
+    "test": "tsx tests/assistant.test.ts && tsx tests/auth.test.ts && tsx tests/farm.test.ts && tsx tests/sustainability.test.ts"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",
