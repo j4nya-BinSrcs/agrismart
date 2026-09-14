@@ -18,6 +18,7 @@ import {
   ScreenType,
 } from '../../types';
 import { BackButton } from '../common/BackButton';
+import { useFarm } from '../../context/FarmContext';
 
 interface WeatherScreenProps {
   weather: WeatherCondition;
@@ -35,6 +36,8 @@ export const WeatherScreen: React.FC<WeatherScreenProps> = ({
   onNavigate,
 }) => {
   const [activeHorizon, setActiveHorizon] = useState<TimeHorizon>('today');
+  const { locationLabel, activeFarm } = useFarm();
+  const farmLocation = locationLabel || activeFarm?.location || 'Farm location';
 
   if (!weather || !hourly || !daily) {
     return (
@@ -42,9 +45,9 @@ export const WeatherScreen: React.FC<WeatherScreenProps> = ({
         <div className="w-12 h-12 rounded-full bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 mx-auto flex items-center justify-center mb-3">
           <CloudRain className="w-6 h-6" />
         </div>
-        <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100 mb-1">Weather Telemetry Unavailable</h3>
+        <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100 mb-1">Weather data unavailable</h3>
         <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">
-          Local meteorological station telemetry is connecting. Check sensor online status or return to dashboard.
+          Could not load the Open-Meteo forecast for your farm location. Check your connection and try again.
         </p>
         <button
           type="button"

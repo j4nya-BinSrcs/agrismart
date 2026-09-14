@@ -36,22 +36,30 @@ export const IrrigationScreen: React.FC<IrrigationScreenProps> = ({
   const [showReasoningModal, setShowReasoningModal] = useState<boolean>(false);
   const [scenario, setScenario] = useState<IrrigationScenario>('rain_imminent');
 
+  const iotBanner = (
+    <div className="rounded-lg border border-sky-200 dark:border-sky-900/50 bg-sky-50/70 dark:bg-sky-950/30 px-3.5 py-2.5 text-xs text-sky-900 dark:text-sky-200 mb-4">
+      Integrate IoT soil-moisture sensors for accurate zone readings and automated pump control.
+      Without sensors, moisture values are estimates from weather and any field data you entered — not live telemetry.
+    </div>
+  );
+
   if (!zones || zones.length === 0) {
     return (
       <div className="max-w-md mx-auto py-20 px-4 text-center">
+        {iotBanner}
         <div className="w-12 h-12 rounded-full bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 mx-auto flex items-center justify-center mb-3">
           <Droplets className="w-6 h-6" />
         </div>
-        <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100 mb-1">No Irrigation Zones Configured</h3>
+        <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100 mb-1">No irrigation zones yet</h3>
         <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">
-          Add sensor-monitored plots to view soil moisture and automated weather-synced pump holds.
+          Add fields with crop types in Farm Management. Weather-based irrigation advice will use those zones.
         </p>
         <button
           type="button"
-          onClick={() => onNavigate('dashboard')}
-          className="px-3.5 py-1.5 rounded-md bg-emerald-800 hover:bg-emerald-900 text-white text-xs font-medium cursor-pointer transition-all shadow-xs hover:shadow-md hover:-translate-y-px active:translate-y-0"
+          onClick={() => onNavigate('management')}
+          className="px-3.5 py-1.5 rounded-md bg-emerald-800 hover:bg-emerald-900 text-white text-xs font-medium cursor-pointer"
         >
-          Return to Dashboard
+          Open Farm Management
         </button>
       </div>
     );
@@ -115,6 +123,7 @@ export const IrrigationScreen: React.FC<IrrigationScreenProps> = ({
 
   return (
     <div className="space-y-5 pb-12">
+      {iotBanner}
       {/* "Why Delay Irrigation?" Agronomic Reasoning Modal */}
       {showReasoningModal && (
         <div

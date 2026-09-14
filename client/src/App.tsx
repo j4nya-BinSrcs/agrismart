@@ -36,10 +36,11 @@ import { NotFoundScreen } from './components/screens/NotFoundScreen';
 import { LandingScreen } from './components/screens/LandingScreen';
 import { LoginScreen } from './components/screens/LoginScreen';
 import { SignupScreen } from './components/screens/SignupScreen';
+import { ManagementScreen } from './components/screens/ManagementScreen';
 import { LoadingState } from './components/common/LoadingState';
 import { ErrorBoundary } from './components/common/ErrorBoundary';
-import { useToast } from './context/ToastContext';
 import { useAuth } from './context/AuthContext';
+import { useFarm } from './context/FarmContext';
 import { getStoredItem } from './utils/storage';
 
 // Mobile bottom navigation icons
@@ -61,6 +62,8 @@ function screenToPath(screen: ScreenType): string {
       return '/signup';
     case 'dashboard':
       return '/dashboard';
+    case 'management':
+      return '/management';
     case 'diagnose':
     case 'diagnosis':
       return '/diagnosis';
@@ -125,6 +128,9 @@ function pathToScreen(pathname: string, hash: string): ScreenType {
   if (cleanPath === '/dashboard') {
     return 'dashboard';
   }
+  if (cleanPath === '/management') {
+    return 'management';
+  }
   if (cleanPath === '/diagnose' || cleanPath === '/diagnosis') {
     return 'diagnose';
   }
@@ -154,6 +160,7 @@ const VALID_SCREENS: ScreenType[] = [
   'login',
   'signup',
   'dashboard',
+  'management',
   'diagnose',
   'diagnosis',
   'diagnosis-result',
@@ -170,6 +177,7 @@ function isValidScreen(value: unknown): value is ScreenType {
 
 const PROTECTED_SCREENS: ScreenType[] = [
   'dashboard',
+  'management',
   'diagnose',
   'diagnosis',
   'diagnosis-result',
@@ -180,8 +188,8 @@ const PROTECTED_SCREENS: ScreenType[] = [
 ];
 
 export default function App() {
-  const { showToast } = useToast();
-  const { isAuthenticated, user, token } = useAuth();
+  const { isAuthenticated, token, isDemo } = useAuth();
+  const { farmCoordinates, activeFarm } = useFarm();
   const mainScrollRef = useRef<HTMLElement>(null);
 
   // App navigation and view state
@@ -298,6 +306,7 @@ export default function App() {
       login: 'Operator Sign In — AgriSmart AI Operations Console',
       signup: 'Register Farm — AgriSmart AI',
       dashboard: 'Farm Operations Dashboard — AgriSmart AI',
+      management: 'Farm Management — AgriSmart AI',
       diagnose: 'Crop Disease Diagnosis — AgriSmart AI',
       diagnosis: 'Crop Disease Diagnosis — AgriSmart AI',
       'diagnosis-result': 'Diagnosis Report & Advisory — AgriSmart AI',
@@ -328,12 +337,29 @@ export default function App() {
     }
   }, [currentScreen]);
 
-  // Load initial data through service architecture
+  // Load initial data through service architecture — weather uses active farm coords
   useEffect(() => {
     let isMounted = true;
 
     async function loadData() {
       try {
+        const coords = {
+          latitude: farmCoordinates.lat,
+          longitude: farmCoordinates.lon,
+        };
+
+        const fieldZones =
+          activeFarm?.plots.map((plot) => ({
+            id: plot.id,
+            name: plot.name,
+            crop: plot.crop,
+            growthStage: plot.growthStage || 'vegetative',
+            soilMoistureCurrent: plot.currentMoisture || undefined,
+            soilMoistureTarget: plot.targetMoisture || 45,
+            soilType: plot.soilType || 'loam',
+            areaAcres: plot.acres,
+          })) || [];
+
         const [
           diagList,
           actList,
@@ -345,17 +371,28 @@ export default function App() {
           diagnosisService.getDiagnosisHistory(),
           farmService.getTodayActions(),
           farmService.getNotifications(),
-          weatherService.getFullForecast(),
-          irrigationService.getIrrigationPlan(),
+          weatherService.getFullForecast(coords),
+          irrigationService.getIrrigationPlan({
+            latitude: coords.latitude,
+            longitude: coords.longitude,
+            zones: fieldZones.length > 0 ? fieldZones : undefined,
+          }),
           sustainabilityService.getSustainabilityMetrics(token),
         ]);
 
         if (isMounted) {
-          setDiagnoses(diagList);
-          if (diagList.length > 0) {
-            setCurrentDiagnosis(diagList[0]);
+          // Non-demo: filter out seeded reference/demo diagnoses that weren't user scans
+          const userDiags = isDemo
+            ? diagList
+            : diagList.filter((d) => !d.id?.startsWith('demo-') && !d.imageUrl?.includes('sample'));
+
+          setDiagnoses(userDiags);
+          if (userDiags.length > 0) {
+            setCurrentDiagnosis(userDiags[0]);
+          } else {
+            setCurrentDiagnosis(null);
           }
-          setActions(actList);
+          setActions(isDemo ? actList : actList.filter((a) => a.category === 'weather' || a.category === 'irrigation'));
           setNotifications(notifList);
           setWeather(weatherBundle.current);
           setHourlyForecast(weatherBundle.hourly);
@@ -369,11 +406,13 @@ export default function App() {
       }
     }
 
-    loadData();
+    if (isAuthenticated) {
+      loadData();
+    }
     return () => {
       isMounted = false;
     };
-  }, [token]);
+  }, [token, isAuthenticated, isDemo, farmCoordinates.lat, farmCoordinates.lon, activeFarm?.id, activeFarm?.plots]);
 
   // Toggle action completion through service
   const handleToggleAction = async (id: string) => {
@@ -397,7 +436,7 @@ export default function App() {
         category: 'crop_protection',
         priority: 'urgent',
         actionText: newRecord.recommendedActions[0]?.description || 'Prune affected foliage.',
-        reason: 'Prevent spore germination and rain-splash spread.',
+        reason: 'Based on your leaf scan advisory.',
         cropAffected: `${newRecord.crop} (${newRecord.fieldLocation})`,
         completed: false,
         timeframe: 'Target today before rain',
@@ -422,29 +461,6 @@ export default function App() {
   const handleMarkAllAsRead = async () => {
     const updated = await farmService.markAllNotificationsAsRead();
     setNotifications(updated);
-  };
-
-  // Demo reset mechanism (Section 24)
-  const handleResetDemoData = async () => {
-    try {
-      await farmService.resetDemoData();
-      const [diagList, actList, notifList] = await Promise.all([
-        diagnosisService.getDiagnosisHistory(),
-        farmService.getTodayActions(),
-        farmService.getNotifications(),
-      ]);
-      setDiagnoses(diagList);
-      if (diagList.length > 0) {
-        setCurrentDiagnosis(diagList[0]);
-      }
-      setActions(actList);
-      setNotifications(notifList);
-      setAssistantQuery('');
-      handleNavigate('dashboard');
-      showToast(`Demo data restored to initial ${user?.farmName || 'Patel Farm'} state.`, 'success');
-    } catch (err) {
-      console.error('[App] Demo reset failed:', err);
-    }
   };
 
   const unreadNotificationsCount = notifications.filter((n) => !n.read).length;
@@ -496,7 +512,6 @@ export default function App() {
         isMobileOpen={isMobileSidebarOpen}
         onCloseMobile={() => setIsMobileSidebarOpen(false)}
         hasActiveDiagnosis={Boolean(currentDiagnosis)}
-        onResetDemo={handleResetDemoData}
         weather={weather || undefined}
         irrigationPlan={irrigationPlan || undefined}
       />
@@ -510,7 +525,6 @@ export default function App() {
           onToggleMobileSidebar={() => setIsMobileSidebarOpen(true)}
           onOpenNotifications={() => setIsNotificationDrawerOpen(true)}
           unreadCount={unreadNotificationsCount}
-          onResetDemo={handleResetDemoData}
           weather={weather || undefined}
           irrigationPlan={irrigationPlan || undefined}
         />
@@ -543,6 +557,10 @@ export default function App() {
               ) : (
                 <LoadingState message="Loading farm operations console..." />
               )
+            )}
+
+            {currentScreen === 'management' && (
+              <ManagementScreen onNavigate={handleNavigate} />
             )}
 
             {currentScreen === 'diagnose' && (

@@ -9,9 +9,10 @@ import {
   RotateCcw,
   Languages,
 } from 'lucide-react';
-import { AssistantMessage, ScreenType, DiagnosisRecord, WeatherCondition, IrrigationPlan, Language } from '../../types';
+import { AssistantMessage, ScreenType, DiagnosisRecord, WeatherCondition, IrrigationPlan, Language, SUPPORTED_CROPS } from '../../types';
 import { assistantService } from '../../services/assistantService';
 import { useAuth } from '../../context/AuthContext';
+import { useFarm } from '../../context/FarmContext';
 
 interface AssistantScreenProps {
   initialQuery?: string;
@@ -148,6 +149,7 @@ export const AssistantScreen: React.FC<AssistantScreenProps> = ({
   irrigation,
 }) => {
   const { user } = useAuth();
+  const { activeFarm, locationLabel } = useFarm();
   const [selectedLanguage, setSelectedLanguage] = useState<Language>('en');
   const [lastFailedQuery, setLastFailedQuery] = useState<string | null>(null);
 
@@ -236,8 +238,8 @@ export const AssistantScreen: React.FC<AssistantScreenProps> = ({
 
     try {
       const botResponse = await assistantService.sendQuery(queryText, messageLang, {
-        farmName: user?.farmName || 'Patel Farm',
-        crop: 'Tomato & Cotton',
+        farmName: activeFarm?.name || 'Your Farm',
+        crop: activeFarm?.primaryCrops?.map((c) => SUPPORTED_CROPS.find((x) => x.value === c)?.label || c).join(', ') || 'tomato',
         activeDiagnosis,
         weather,
         irrigation,

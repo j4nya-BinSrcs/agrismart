@@ -1,5 +1,6 @@
 import Diagnosis from '../models/Diagnosis.js';
 import CropKnowledge from '../models/CropKnowledge.js';
+import type { DiseaseInfo, SupportedCrop } from '../models/CropKnowledge.js';
 import type { IDiagnosis, RecommendedActionStep, RelatedInsights, TreatmentProtocols } from '../models/Diagnosis.js';
 import ApiError from '../utils/ApiError.js';
 import logger from '../utils/logger.js';
@@ -54,6 +55,120 @@ export interface SaveDiagnosisInput extends Partial<IDiagnosis> {
 }
 
 /**
+ * Maps free-form crop labels to CropKnowledge keys.
+ * Examples: "Tomato"/"tomato" → tomato, "Potato" → potato,
+ * "Pepper"/"Pepper Bell"/"pepper_bell" → pepper_bell.
+ */
+export const normalizeCropKey = (crop: string): SupportedCrop | null => {
+  const key = crop.trim().toLowerCase().replace(/[\s-]+/g, '_');
+  if (key === 'tomato') return 'tomato';
+  if (key === 'potato') return 'potato';
+  if (
+    key === 'pepper_bell' ||
+    key === 'pepper' ||
+    key === 'bell_pepper' ||
+    key === 'pepperbell'
+  ) {
+    return 'pepper_bell';
+  }
+  return null;
+};
+
+const uniqueStrings = (items: string[]) => [...new Set(items.map((s) => s.trim()).filter(Boolean))];
+
+/**
+ * Builds expert-advisory fields from persisted CropKnowledge disease entries
+ * without claiming an automated disease classification.
+ */
+const buildAdvisoryFromCropKnowledge = (
+  diseases: DiseaseInfo[],
+  context: {
+    cropLabel: string;
+    growthStage: string;
+    fieldLocation: string;
+    variety: string;
+    soilAdvice: string;
+  }
+) => {
+  const healthy = diseases.find((d) => d.isHealthy);
+  const pathogenEntries = diseases.filter((d) => !d.isHealthy);
+  const referenceEntries = pathogenEntries.length > 0 ? pathogenEntries : diseases;
+
+  const diseaseNames = pathogenEntries.map((d) => d.diseaseName);
+  const pathogenNames = uniqueStrings(pathogenEntries.map((d) => d.pathogenName));
+
+  const symptomChecklist = referenceEntries.flatMap((disease) =>
+    disease.symptoms.map((symptom) => `${disease.diseaseName}: ${symptom.name} — ${symptom.description}`)
+  );
+
+  const precautions = uniqueStrings([
+    ...(healthy?.precautions ?? []),
+    ...pathogenEntries.flatMap((d) => d.precautions),
+  ]);
+
+  const treatmentSource = healthy ?? pathogenEntries[0] ?? diseases[0];
+  const treatmentProtocols: TreatmentProtocols = {
+    organic: treatmentSource.treatmentProtocols.organic,
+    conventional: treatmentSource.treatmentProtocols.conventional,
+    dosage: treatmentSource.treatmentProtocols.dosage,
+    applicationTiming: treatmentSource.treatmentProtocols.applicationTiming,
+  };
+
+  // Prefer healthy scouting actions; otherwise surface the first pathogen playbook.
+  const actionSource = healthy ?? pathogenEntries[0] ?? diseases[0];
+  const recommendedActions: RecommendedActionStep[] = actionSource.recommendedActions.map((action) => ({
+    step: action.step,
+    title: action.title,
+    description: action.description,
+    timing: action.timing,
+  }));
+
+  const insightSources = [healthy, ...pathogenEntries].filter(Boolean) as DiseaseInfo[];
+  const relatedInsights: RelatedInsights = {
+    weatherRisk: uniqueStrings(insightSources.map((d) => d.relatedInsights.weatherRisk)).join(' '),
+    irrigationAdvice:
+      uniqueStrings(insightSources.map((d) => d.relatedInsights.irrigationAdvice)).join(' ') ||
+      context.soilAdvice,
+    sustainabilityImpact: uniqueStrings(
+      insightSources.map((d) => d.relatedInsights.sustainabilityImpact)
+    ).join(' '),
+  };
+
+  const monitoredList =
+    diseaseNames.length > 0
+      ? diseaseNames.join(', ')
+      : diseases.map((d) => d.diseaseName).join(', ');
+
+  return {
+    diseaseName: EXPERT_ADVISORY_ASSESSMENT_LABEL,
+    pathogenName: '',
+    isHealthy: false,
+    confidence: 0,
+    severity: 'low' as const,
+    shortExplanation:
+      `AgriSmart is running in expert advisory mode for ${context.cropLabel} (${context.growthStage}, ${context.fieldLocation}). ` +
+      `Automated image-based disease classification is not performed; guidance below is drawn from CropKnowledge entries covering: ${monitoredList}. ` +
+      `Use it as a scouting and response checklist — not as a confirmed pathogen diagnosis.` +
+      (pathogenNames.length ? ` Known pathogens in the knowledge base include ${pathogenNames.join('; ')}.` : ''),
+    symptomsMatched: [
+      `Field cluster assessed: ${context.fieldLocation} — ${context.cropLabel} at ${context.growthStage} stage`,
+      `Foliage imagery registered for ${context.cropLabel} (${context.variety})`,
+      context.soilAdvice,
+      ...symptomChecklist.slice(0, 12),
+    ],
+    symptomsRuledOut: [
+      'No specific pathogen is named or ruled out — microscopic/lab confirmation was not performed.',
+      'Automated image classification is not part of this build, so no disease probability is reported.',
+      ...diseaseNames.map((name) => `${name} is catalogued for scouting reference only until field/lab confirmation.`),
+    ],
+    treatmentProtocols,
+    precautions: precautions.slice(0, 12),
+    recommendedActions,
+    relatedInsights,
+  };
+};
+
+/**
  * Validates image data URL / format and size
  */
 export const validateImagePayload = (imageUrl: unknown): boolean => {
@@ -93,14 +208,14 @@ export const validateImagePayload = (imageUrl: unknown): boolean => {
 };
 
 /**
- * Gets crop knowledge from database for the given crop
+ * Gets crop knowledge from database for the given crop key
  */
-async function getCropKnowledge(crop: string) {
+async function getCropKnowledge(cropKey: SupportedCrop) {
   if (mongoose.connection.readyState !== 1) {
     return null;
   }
   try {
-    const knowledge = await CropKnowledge.findOne({ crop: crop.toLowerCase() }).lean();
+    const knowledge = await CropKnowledge.findOne({ crop: cropKey }).lean();
     return knowledge;
   } catch (err) {
     logger.warn(`Failed to fetch crop knowledge: ${getErrorMessage(err)}`);
@@ -119,19 +234,15 @@ const createDiagnosisRecord = async (input: DiagnosisRequestInput): Promise<Expe
   const soilContext = input.soilMoistureContext || '';
   const now = new Date();
 
-  // Try to get specific disease knowledge for this crop
-  const cropKnowledge = await getCropKnowledge(crop.toLowerCase());
-
-  // For now, return expert advisory since we don't have ML classification
-  // In production, this would use the cropKnowledge.diseases to match symptoms
-  const rules = getScoutingRules(crop);
+  const cropKey = normalizeCropKey(crop);
+  const cropKnowledge = cropKey ? await getCropKnowledge(cropKey) : null;
+  const rules = getScoutingRules(cropKey || crop);
 
   const soilAdvice =
     typeof soilContext === 'string' && /\d{1,2}\s*%/i.test(soilContext)
       ? `Reading of ${soilContext} recorded for ${fieldLocation}. Re-verify moisture at root zone before any irrigation decision.`
       : `Soil moisture reading for ${fieldLocation} was not available; verify root-zone moisture before irrigating.`;
 
-  // If we have crop knowledge, use the first disease as an example
   let diseaseName = EXPERT_ADVISORY_ASSESSMENT_LABEL;
   let pathogenName = '';
   let isHealthy = false;
@@ -186,21 +297,26 @@ const createDiagnosisRecord = async (input: DiagnosisRequestInput): Promise<Expe
     sustainabilityImpact: 'Preventive, targeted scouting avoids blanket chemical spraying, saving on runoff and preserving beneficial insects.',
   };
 
-  // If we have crop knowledge with diseases, use the first one as a template
   if (cropKnowledge && cropKnowledge.diseases.length > 0) {
-    const disease = cropKnowledge.diseases[0];
-    diseaseName = disease.diseaseName;
-    pathogenName = disease.pathogenName;
-    isHealthy = disease.isHealthy;
-    confidence = isHealthy ? 95 : 85;
-    severity = disease.symptoms[0]?.severity as 'low' | 'moderate' | 'high' | 'severe' || 'moderate';
-    shortExplanation = `Based on expert knowledge for ${crop}, this assessment references known disease patterns for ${disease.diseaseName} (${disease.pathogenName}). ${isHealthy ? 'No disease symptoms detected.' : 'Symptoms match known patterns; lab confirmation recommended.'}`;
-    symptomsMatched = disease.symptoms.map(s => s.name);
-    symptomsRuledOut = ['Lab confirmation required for definitive diagnosis'];
-    treatmentProtocols = disease.treatmentProtocols;
-    precautions = disease.precautions;
-    recommendedActions = disease.recommendedActions;
-    relatedInsights = disease.relatedInsights;
+    const fromDb = buildAdvisoryFromCropKnowledge(cropKnowledge.diseases as DiseaseInfo[], {
+      cropLabel: crop,
+      growthStage,
+      fieldLocation,
+      variety,
+      soilAdvice,
+    });
+    diseaseName = fromDb.diseaseName;
+    pathogenName = fromDb.pathogenName;
+    isHealthy = fromDb.isHealthy;
+    confidence = fromDb.confidence;
+    severity = fromDb.severity;
+    shortExplanation = fromDb.shortExplanation;
+    symptomsMatched = fromDb.symptomsMatched;
+    symptomsRuledOut = fromDb.symptomsRuledOut;
+    treatmentProtocols = fromDb.treatmentProtocols;
+    precautions = fromDb.precautions;
+    recommendedActions = fromDb.recommendedActions;
+    relatedInsights = fromDb.relatedInsights;
   }
 
   return {
@@ -302,7 +418,8 @@ const DEFAULT_SCOUTING_RULES: ScoutingRules = {
 
 const getScoutingRules = (crop = ''): ScoutingRules => {
   if (!crop) return DEFAULT_SCOUTING_RULES;
-  return CROP_SCOUTING_RULES[crop.trim().toLowerCase()] || DEFAULT_SCOUTING_RULES;
+  const key = normalizeCropKey(crop) || crop.trim().toLowerCase();
+  return CROP_SCOUTING_RULES[key] || DEFAULT_SCOUTING_RULES;
 };
 
 export const diagnosisService = {

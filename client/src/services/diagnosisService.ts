@@ -1,5 +1,4 @@
 import { DiagnosisRecord, DiagnosisAnalysisRequest } from '../types';
-import { INITIAL_DIAGNOSES } from '../data/mockData';
 import { getStoredItem, setStoredItem } from '../utils/storage';
 import { apiRequest, ApiError, API_BASE_URL } from './apiClient';
 
@@ -19,7 +18,7 @@ export const diagnosisService = {
     } catch (err) {
       console.warn('[diagnosisService] Backend history unavailable, using local cache:', err);
     }
-    return getStoredItem<DiagnosisRecord[]>(DIAGNOSES_STORAGE_KEY, INITIAL_DIAGNOSES);
+    return getStoredItem<DiagnosisRecord[]>(DIAGNOSES_STORAGE_KEY, []);
   },
 
   /**
@@ -43,7 +42,7 @@ export const diagnosisService = {
    */
   async saveDiagnosis(record: DiagnosisRecord): Promise<DiagnosisRecord[]> {
     // 1. Sync to local storage
-    const current = getStoredItem<DiagnosisRecord[]>(DIAGNOSES_STORAGE_KEY, INITIAL_DIAGNOSES);
+    const current = getStoredItem<DiagnosisRecord[]>(DIAGNOSES_STORAGE_KEY, []);
     const updated = [record, ...current.filter((d) => d.id !== record.id)];
     setStoredItem(DIAGNOSES_STORAGE_KEY, updated);
 

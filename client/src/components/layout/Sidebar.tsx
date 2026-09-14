@@ -7,13 +7,14 @@ import {
   Droplets,
   Leaf,
   MessageSquareHeart,
+  Settings2,
   X,
   ChevronDown,
   LogOut,
-  RotateCcw,
 } from 'lucide-react';
 import { ScreenType, WeatherCondition, IrrigationPlan } from '../../types';
 import { useAuth } from '../../context/AuthContext';
+import { useFarm } from '../../context/FarmContext';
 import { useToast } from '../../context/ToastContext';
 
 interface SidebarProps {
@@ -33,18 +34,18 @@ export const Sidebar: React.FC<SidebarProps> = ({
   isMobileOpen,
   onCloseMobile,
   hasActiveDiagnosis,
-  onResetDemo,
   weather,
   irrigationPlan,
 }) => {
-  const { user, logout } = useAuth();
+  const { user, logout, isDemo } = useAuth();
+  const { activeFarm, locationLabel } = useFarm();
   const { showToast } = useToast();
   const [showUserMenu, setShowUserMenu] = useState(false);
 
-  const displayName = user?.name || 'AgriSmartDemo';
-  const displayFarm = user?.farmName || 'Patel Farm';
-  const displayLocation = user?.location || 'Anand, Gujarat';
-  const displayRole = user?.role || 'Lead Grower';
+  const displayName = user?.name || 'User';
+  const displayFarm = activeFarm?.name || 'No farm';
+  const displayLocation = locationLabel || '';
+  const displayRole = user?.role || 'farmer';
   const initials =
     displayName.includes(' ')
       ? displayName
@@ -64,53 +65,17 @@ export const Sidebar: React.FC<SidebarProps> = ({
     onNavigate('landing');
   };
 
-  const handleResetDemo = () => {
-    setShowUserMenu(false);
-    if (onResetDemo) {
-      onResetDemo();
-      showToast(`Reset ${displayFarm} demo dataset.`, 'info');
-    }
-  };
   const navItems = [
-    {
-      id: 'dashboard' as ScreenType,
-      label: 'Dashboard',
-      icon: LayoutDashboard,
-    },
-    {
-      id: 'diagnose' as ScreenType,
-      label: 'Crop Diagnosis',
-      icon: ScanLine,
-    },
+    { id: 'dashboard' as ScreenType, label: 'Dashboard', icon: LayoutDashboard },
+    { id: 'management' as ScreenType, label: 'Farm Management', icon: Settings2 },
+    { id: 'diagnose' as ScreenType, label: 'Crop Diagnosis', icon: ScanLine },
     ...(hasActiveDiagnosis
-      ? [
-          {
-            id: 'diagnosis-result' as ScreenType,
-            label: 'Diagnosis Result',
-            icon: FileCheck2,
-          }
-        ]
+      ? [{ id: 'diagnosis-result' as ScreenType, label: 'Diagnosis Result', icon: FileCheck2 }]
       : []),
-    {
-      id: 'weather' as ScreenType,
-      label: 'Weather Intelligence',
-      icon: CloudSun,
-    },
-    {
-      id: 'irrigation' as ScreenType,
-      label: 'Smart Irrigation',
-      icon: Droplets,
-    },
-    {
-      id: 'sustainability' as ScreenType,
-      label: 'Sustainability',
-      icon: Leaf,
-    },
-    {
-      id: 'assistant' as ScreenType,
-      label: 'Farmer Assistant',
-      icon: MessageSquareHeart,
-    },
+    { id: 'weather' as ScreenType, label: 'Weather Intelligence', icon: CloudSun },
+    { id: 'irrigation' as ScreenType, label: 'Smart Irrigation', icon: Droplets },
+    { id: 'sustainability' as ScreenType, label: 'Sustainability', icon: Leaf },
+    { id: 'assistant' as ScreenType, label: 'Farmer Assistant', icon: MessageSquareHeart },
   ];
 
   const handleItemClick = (screen: ScreenType) => {
@@ -120,20 +85,16 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   const content = (
     <div className="flex flex-col h-full bg-[#242424] dark:bg-[#0f0f0f] text-white transition-colors">
-      {/* Brand Header */}
       <div className="px-5 py-4 border-b border-zinc-700/60 dark:border-[#222222] flex items-center justify-between">
         <div className="flex items-center gap-2.5">
           <div className="w-7 h-7 rounded-md bg-emerald-800 border border-emerald-700/60 text-white flex items-center justify-center shadow-xs">
             <Leaf className="w-4 h-4 text-emerald-200" />
           </div>
           <div>
-            <div className="font-semibold text-sm text-white tracking-tight">
-              AGRI SMART
-            </div>
+            <div className="font-semibold text-sm text-white tracking-tight">AGRI SMART</div>
             <div className="text-[10px] text-emerald-300/80">Operations Console</div>
           </div>
         </div>
-        {/* Mobile close button */}
         <button
           type="button"
           onClick={onCloseMobile}
@@ -143,7 +104,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </button>
       </div>
 
-      {/* Main Navigation */}
       <nav className="flex-1 overflow-y-auto px-2 py-3 space-y-0.5">
         {navItems.map((item) => {
           const Icon = item.icon;
@@ -161,141 +121,99 @@ export const Sidebar: React.FC<SidebarProps> = ({
               className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-xs font-medium transition-all text-left cursor-pointer ${
                 isActive
                   ? 'bg-emerald-800 text-white font-semibold shadow-xs'
-                  : 'text-zinc-300 hover:text-white hover:bg-zinc-800/70 dark:hover:bg-[#1a1a1a] hover:translate-x-0.5'
+                  : 'text-zinc-300 hover:text-white hover:bg-zinc-800/70 dark:hover:bg-[#1a1a1a]'
               }`}
             >
-              <Icon
-                className={`w-4 h-4 shrink-0 transition-colors ${
-                  isActive ? 'text-white' : 'text-emerald-400'
-                }`}
-              />
+              <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-white' : 'text-emerald-400'}`} />
               <span className="truncate">{item.label}</span>
-              {isActive && (
-                <span className="ml-auto w-1 h-3.5 rounded-full bg-emerald-400 shrink-0 transition-all" />
-              )}
             </button>
           );
         })}
       </nav>
 
-      {/* Pinned Bottom Section: Farm Status + User Profile & Logout */}
-      <div className="mt-auto shrink-0 border-t border-zinc-700/60 dark:border-[#222222] bg-[#222222]/40 dark:bg-[#0c0c0c]/60 text-xs">
-        {/* Farm Status Card */}
+      <div className="mt-auto shrink-0 border-t border-zinc-700/60 dark:border-[#222222] bg-[#222222]/40 text-xs">
         <div className="p-3 pb-2">
-          <div className="p-2.5 rounded-lg bg-zinc-800/80 dark:bg-[#161616] border border-zinc-700/60 dark:border-[#262626] space-y-1.5">
+          <div className="p-2.5 rounded-lg bg-zinc-800/80 dark:bg-[#161616] border border-zinc-700/60 space-y-1.5">
             <div className="flex items-center justify-between text-[11px] text-emerald-400 font-medium">
               <span>FARM STATUS</span>
-              <span className="flex items-center gap-1 text-emerald-400 text-[10px] font-medium">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-                Sensors online
-              </span>
-            </div>
-
-            <div className="flex items-center justify-between text-zinc-300 text-[11px]">
-              <span>Soil moisture</span>
-              <span className="font-mono text-white font-medium">
-                {irrigationPlan?.zones?.[0]?.soilMoistureCurrent !== undefined
-                  ? `${irrigationPlan.zones[0].soilMoistureCurrent}%`
-                  : '31%'}
-              </span>
+              {isDemo ? (
+                <span className="flex items-center gap-1 text-amber-400 text-[10px] font-medium">
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+                  Demo sensors
+                </span>
+              ) : (
+                <span className="text-zinc-400 text-[10px] font-medium">Weather-linked</span>
+              )}
             </div>
 
             <div className="flex items-center justify-between text-zinc-300 text-[11px]">
               <span>Rain probability</span>
               <span className="font-mono text-white font-medium">
-                {weather?.rainProbability !== undefined
-                  ? `${weather.rainProbability}%`
-                  : '80%'}
+                {weather?.rainProbability !== undefined ? `${weather.rainProbability}%` : '—'}
               </span>
             </div>
 
-            <div className="pt-1.5 border-t border-zinc-700/60 dark:border-[#262626] text-[10px] text-emerald-300 font-medium flex items-center justify-between">
-              <span>
-                {(() => {
-                  const rec = (irrigationPlan?.overallRecommendation || '').toLowerCase();
-                  if (
-                    rec.includes('irrigation recommended') ||
-                    (irrigationPlan?.zones && irrigationPlan.zones.some((z) => z.status === 'needs_irrigation'))
-                  ) {
-                    return 'Irrigation scheduled';
-                  }
-                  if (
-                    rec.includes('optimal') ||
-                    (irrigationPlan?.zones &&
-                      irrigationPlan.zones.length > 0 &&
-                      irrigationPlan.zones.every((z) => z.status === 'optimal'))
-                  ) {
-                    return 'Moisture optimal';
-                  }
-                  return 'Irrigation delayed';
-                })()}
-              </span>
+            <div className="pt-1.5 border-t border-zinc-700/60 text-[10px] text-emerald-300 font-medium">
+              {irrigationPlan?.overallRecommendation
+                ? irrigationPlan.overallRecommendation.slice(0, 48) +
+                  (irrigationPlan.overallRecommendation.length > 48 ? '…' : '')
+                : 'Awaiting weather advisory'}
             </div>
           </div>
         </div>
 
-        {/* User Profile & Logout Section */}
         <div className="px-3 pb-3 relative">
           {showUserMenu && (
             <>
-              <div
-                className="fixed inset-0 z-40"
-                onClick={() => setShowUserMenu(false)}
-              />
-              <div className="absolute left-3 right-3 bottom-full mb-1.5 rounded-lg bg-zinc-900 dark:bg-[#181818] border border-zinc-700/80 dark:border-[#282828] shadow-2xl p-2 z-50 text-xs">
-                <div className="px-2 py-1.5 border-b border-zinc-800 dark:border-[#262626]">
+              <div className="fixed inset-0 z-40" onClick={() => setShowUserMenu(false)} />
+              <div className="absolute left-3 right-3 bottom-full mb-1.5 rounded-lg bg-zinc-900 border border-zinc-700/80 shadow-2xl p-2 z-50 text-xs">
+                <div className="px-2 py-1.5 border-b border-zinc-800">
                   <div className="font-semibold text-white truncate text-xs">{displayName}</div>
                   {user?.username && (
                     <div className="text-[10px] font-mono text-emerald-400">@{user.username}</div>
                   )}
-                  <div className="text-[11px] text-zinc-400 truncate mt-0.5">{displayFarm} • {displayLocation}</div>
-                  <div className="text-[10px] text-emerald-400 font-medium mt-0.5">{displayRole}</div>
+                  <div className="text-[11px] text-zinc-400 truncate mt-0.5">
+                    {displayFarm}
+                    {displayLocation ? ` • ${displayLocation}` : ''}
+                  </div>
+                  <div className="text-[10px] text-emerald-400 font-medium mt-0.5 capitalize">{displayRole}</div>
                 </div>
-                {onResetDemo && (
-                  <button
-                    type="button"
-                    onClick={handleResetDemo}
-                    className="w-full text-left px-2 py-1.5 mt-1 rounded-md text-xs text-zinc-300 hover:text-white hover:bg-zinc-800 dark:hover:bg-[#242424] flex items-center gap-2 transition-colors cursor-pointer"
-                  >
-                    <RotateCcw className="w-3.5 h-3.5 text-zinc-400" />
-                    <span>Reset Demo Data</span>
-                  </button>
-                )}
                 <button
                   type="button"
                   onClick={handleLogout}
-                  className="w-full text-left px-2 py-1.5 mt-0.5 rounded-md text-xs text-rose-400 hover:text-rose-300 hover:bg-rose-950/40 flex items-center gap-2 transition-colors cursor-pointer"
+                  className="w-full text-left px-2 py-1.5 mt-1 rounded-md text-xs text-rose-400 hover:text-rose-300 hover:bg-rose-950/40 flex items-center gap-2 cursor-pointer"
                 >
-                  <LogOut className="w-3.5 h-3.5 text-rose-400" />
+                  <LogOut className="w-3.5 h-3.5" />
                   <span>Log Out</span>
                 </button>
               </div>
             </>
           )}
 
-          {/* Compact Profile Row */}
-          <div className="flex items-center justify-between gap-1.5 p-1 rounded-lg bg-zinc-800/60 dark:bg-[#161616] border border-zinc-700/50 dark:border-[#262626]">
+          <div className="flex items-center justify-between gap-1.5 p-1 rounded-lg bg-zinc-800/60 border border-zinc-700/50">
             <button
               type="button"
               onClick={() => setShowUserMenu(!showUserMenu)}
-              className="flex items-center gap-2 min-w-0 flex-1 text-left p-1 rounded-md hover:bg-zinc-700/40 dark:hover:bg-[#202020] transition-colors cursor-pointer"
-              aria-label="User profile settings"
+              className="flex items-center gap-2 min-w-0 flex-1 text-left p-1 rounded-md hover:bg-zinc-700/40 cursor-pointer"
             >
-              <div className="w-7 h-7 rounded-full bg-emerald-900/80 text-emerald-300 border border-emerald-700/60 flex items-center justify-center font-semibold text-[11px] shrink-0 shadow-xs">
+              <div className="w-7 h-7 rounded-full bg-emerald-900/80 text-emerald-300 border border-emerald-700/60 flex items-center justify-center font-semibold text-[11px] shrink-0">
                 {initials}
               </div>
               <div className="min-w-0 flex-1 leading-tight">
                 <div className="text-xs font-medium text-white truncate">{displayName}</div>
-                <div className="text-[10px] font-mono text-zinc-400 dark:text-zinc-500 truncate">@{user?.username || 'AgriSmartDemo'}</div>
+                <div className="text-[10px] font-mono text-zinc-400 truncate">
+                  @{user?.username || user?.email?.split('@')[0] || 'user'}
+                </div>
               </div>
-              <ChevronDown className={`w-3.5 h-3.5 text-zinc-400 transition-transform duration-200 ${showUserMenu ? 'rotate-180 text-emerald-400' : ''} shrink-0`} />
+              <ChevronDown
+                className={`w-3.5 h-3.5 text-zinc-400 transition-transform ${showUserMenu ? 'rotate-180' : ''}`}
+              />
             </button>
             <button
               type="button"
               onClick={handleLogout}
-              className="p-1.5 rounded-md text-rose-400/80 hover:text-rose-300 hover:bg-rose-950/40 transition-colors cursor-pointer shrink-0"
-              title="Log Out of workspace"
-              aria-label="Log Out"
+              className="p-1.5 rounded-md text-rose-400/80 hover:text-rose-300 hover:bg-rose-950/40 cursor-pointer shrink-0"
+              title="Log Out"
             >
               <LogOut className="w-3.5 h-3.5" />
             </button>
@@ -307,19 +225,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   return (
     <>
-      {/* Desktop Persistent Sidebar */}
-      <aside className="hidden lg:block w-60 shrink-0 h-screen sticky top-0 border-r border-zinc-800 dark:border-[#222222] bg-[#242424] dark:bg-[#0f0f0f] transition-colors">
+      <aside className="hidden lg:block w-60 shrink-0 h-screen sticky top-0 border-r border-zinc-800 dark:border-[#222222] bg-[#242424] dark:bg-[#0f0f0f]">
         {content}
       </aside>
 
-      {/* Mobile Drawer */}
       {isMobileOpen && (
         <div className="fixed inset-0 z-50 lg:hidden flex">
-          <div
-            className="fixed inset-0 bg-black/60 backdrop-blur-xs"
-            onClick={onCloseMobile}
-          />
-          <div className="drawer-enter-left relative w-64 max-w-[85vw] h-full shadow-xl z-10 bg-[#242424] dark:bg-[#0f0f0f] border-r border-zinc-800 dark:border-[#222222]">
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-xs" onClick={onCloseMobile} />
+          <div className="drawer-enter-left relative w-64 max-w-[85vw] h-full shadow-xl z-10 bg-[#242424] dark:bg-[#0f0f0f] border-r border-zinc-800">
             {content}
           </div>
         </div>
@@ -327,4 +240,3 @@ export const Sidebar: React.FC<SidebarProps> = ({
     </>
   );
 };
-

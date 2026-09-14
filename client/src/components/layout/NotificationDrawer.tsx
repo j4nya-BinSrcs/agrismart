@@ -2,7 +2,7 @@ import React from 'react';
 import { X, ArrowRight, CheckCheck, Check, BellOff } from 'lucide-react';
 import { ScreenType, AppNotification } from '../../types';
 import { StatusBadge } from '../common/StatusBadge';
-import { useAuth } from '../../context/AuthContext';
+import { useFarm } from '../../context/FarmContext';
 
 interface NotificationDrawerProps {
   isOpen: boolean;
@@ -21,8 +21,8 @@ export const NotificationDrawer: React.FC<NotificationDrawerProps> = ({
   onMarkAsRead,
   onMarkAllAsRead,
 }) => {
-  const { user } = useAuth();
-  const displayFarmName = user?.farmName || 'Patel Farm';
+  const { activeFarm } = useFarm();
+  const displayFarmName = activeFarm?.name || 'Farm';
 
   if (!isOpen) return null;
 
