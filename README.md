@@ -72,6 +72,55 @@ Instead of simply showing weather data, the interface focuses on:
 
 ---
 
+## 🚀 Getting Started
+
+```bash
+# 1. Install all workspace dependencies (client + server)
+npm install
+
+# 2. Configure environment
+cp .env.example .env                  # server vars (GEMINI_API_KEY, MONGODB_URI, JWT_SECRET...)
+cp client/.env.example client/.env    # frontend vars (VITE_API_URL)
+
+# 3. Run the full stack (client on :3000, API on :5000)
+npm run dev
+```
+
+Useful per-app commands:
+
+| Command | Description |
+| :--- | :--- |
+| `npm run dev` | Run client + server together (concurrently) |
+| `npm run dev:client` | Vite dev server on `http://localhost:3000` |
+| `npm run dev:server` | Express API (tsx watch) on `http://localhost:5000` |
+| `npm run build` | Production build for client + server type-check |
+| `npm run lint` | `tsc --noEmit` for both workspaces |
+| `npm test` | Server test harness (`server/tests/*.test.js`) |
+
+## 🏗️ Project Structure
+
+```text
+AgriSmart/
+├── .env / .env.example        # server configuration
+├── client/                    # React + Vite + Tailwind frontend (npm workspace)
+│   ├── .env.example           # VITE_API_URL
+│   ├── vercel.json            # SPA rewrites for static hosting
+│   └── src/                   # screens, components, services, contexts, types
+└── server/                    # Express + Mongoose backend (npm workspace)
+    ├── server.js              # entry point
+    ├── src/
+    │   ├── config/            # env + DB connection
+    │   ├── controllers/       # request handlers
+    │   ├── models/            # User, Farm, Field, Zone, Diagnosis
+    │   ├── routes/            # /api/v1 routers
+    │   ├── services/          # auth, diagnosis, gemini, weather, irrigation, ...
+    │   ├── middleware/        # JWT auth, error/not-found handlers, validators
+    │   └── utils/             # ApiError, ApiResponse, logger
+    └── tests/                 # hand-rolled Node test harness
+```
+
+---
+
 ## 🎯 Core User Flow
 
 ```text

@@ -9,11 +9,11 @@ Welcome to the **AgriSmart** project repository! This guide contains all the ins
 | Branch | Purpose | What it Contains |
 | :--- | :--- | :--- |
 | `main` | Production / Stable | Core stable release. |
-| `backend` | **Active Full-Stack Development** | Complete stack: React Frontend + Express Backend. |
-| `frontend` | UI/UX Prototyping | Dedicated frontend component development & mock testing. |
+| `agri` | **Active Full-Stack Development** | Complete MERN stack: React/Vite client + Express/MongoDB API (npm workspaces). |
+| `backend` / `frontend` | Legacy | Previous split-branch prototypes. |
 
 > 💡 **Recommendation for the Team:**
-> Check out the **`backend`** branch for the most up-to-date end-to-end working system (Frontend + Backend APIs).
+> Check out the **`agri`** branch for the most up-to-date end-to-end working system (Frontend + Backend APIs).
 
 ---
 
@@ -40,11 +40,7 @@ cd AgriSmart
 ### Step 3: Switch to the Desired Branch
 - **For Full-Stack (Frontend + Backend API):**
   ```bash
-  git checkout backend
-  ```
-- **For Frontend Only:**
-  ```bash
-  git checkout frontend
+  git checkout agri
   ```
 
 ### Step 4: Install Dependencies
@@ -53,35 +49,47 @@ npm install
 ```
 
 ### Step 5: Configure Environment Variables
-Create your local `.env` configuration file from the template:
 
-- **Windows (PowerShell):**
-  ```powershell
-  Copy-Item .env.example .env
-  ```
-- **macOS / Linux / Git Bash:**
-  ```bash
-  cp .env.example .env
-  ```
+The repo uses **npm workspaces**: the backend reads the root `.env`, and the frontend reads `client/.env`.
 
-*(Open `.env` in VS Code / notepad and fill in your `GEMINI_API_KEY` or `MONGODB_URI` if available).*
+1. **Backend** — copy the root template:
+   - **Windows (PowerShell):**
+     ```powershell
+     Copy-Item .env.example .env
+     ```
+   - **macOS / Linux / Git Bash:**
+     ```bash
+     cp .env.example .env
+     ```
+2. **Frontend** — copy the client template (contains `VITE_API_URL`):
+   ```bash
+   cp client/.env.example client/.env
+   ```
+
+*(Open `server` env vars in `.env` and fill in your `GEMINI_API_KEY` or `MONGODB_URI` if available).*
 
 ---
 
 ## 🚀 4. Running the Application
 
-To run the complete system, open **two separate terminal windows/tabs** inside the `AgriSmart` folder:
-
-### **Terminal 1: Backend Server (Port 5000)**
+### **Option A — One command (both apps):**
 ```bash
-npm run server:dev
+npm run dev
+```
+- Runs the Vite client (**port 3000**) and the Express API (**port 5000**) together.
+
+### **Option B — Two separate terminal windows/tabs:**
+
+#### **Terminal 1: Backend Server (Port 5000)**
+```bash
+npm run dev:server
 ```
 - Starts the Express API server with live reloading on `http://localhost:5000`
 - API Health Check: `http://localhost:5000/api/v1/health`
 
-### **Terminal 2: Frontend App (Port 3000)**
+#### **Terminal 2: Frontend App (Port 3000)**
 ```bash
-npm run dev
+npm run dev:client
 ```
 - Starts the Vite React development server on `http://localhost:3000`
 
@@ -94,8 +102,8 @@ npm run dev
 ### A. Pulling Latest Updates Before You Start Working
 Always pull the latest changes so you are in sync with your teammates:
 ```bash
-git checkout backend
-git pull origin backend
+git checkout agri
+git pull origin agri
 ```
 
 ### B. Committing and Pushing Your Changes
@@ -113,25 +121,25 @@ git add .
 git commit -m "feat: your feature description"
 
 # 4. Push to the branch
-git push origin backend
+git push origin agri
 ```
 
 #### **Quick Single-Line Command (PowerShell):**
 ```powershell
-git add . ; git commit -m "feat: description of changes" ; git push origin backend
+git add . ; git commit -m "feat: description of changes" ; git push origin agri
 ```
 
 ---
 
-## 🔀 6. Working Across Frontend & Backend Branches
+## 🔀 6. Working Across Frontend & Backend Workspaces
 
 If team members want to work on separate features without conflicts:
 
 ### Creating a Feature Branch:
 ```bash
-# Branch off from backend
-git checkout backend
-git pull origin backend
+# Branch off from agri
+git checkout agri
+git pull origin agri
 git checkout -b feat/my-new-feature
 
 # Work on your code, then commit and push:
@@ -140,13 +148,13 @@ git commit -m "feat: add weather radar component"
 git push -u origin feat/my-new-feature
 ```
 
-### Merging Feature into `backend`:
-Once your feature is tested, you can merge it back into `backend`:
+### Merging Feature into `agri`:
+Once your feature is tested, you can merge it back into `agri`:
 ```bash
-git checkout backend
-git pull origin backend
+git checkout agri
+git pull origin agri
 git merge feat/my-new-feature
-git push origin backend
+git push origin agri
 ```
 
 ---
