@@ -1,0 +1,41 @@
+{
+  "experiment_id": "baseline_001",
+  "model": "tf_efficientnetv2_s",
+  "pretrained": true,
+  "image_size": 224,
+  "batch_size": 16,
+  "epochs": 2,
+  "optimizer": "AdamW",
+  "learning_rate": 0.001,
+  "weight_decay": 0.0001,
+  "scheduler": "cosine",
+  "augmentation": "minimal",
+  "loss": "CrossEntropyLoss",
+  "seed": 42,
+  "stage": "baseline",
+  "freeze_backbone": true,
+  "device": "cuda",
+  "dataset": {
+    "num_classes": 15,
+    "classes": [
+      "Pepper__bell___Bacterial_spot",
+      "Pepper__bell___healthy",
+      "Potato___Early_blight",
+      "Potato___Late_blight",
+      "Potato___healthy",
+      "Tomato_Bacterial_spot",
+      "Tomato_Early_blight",
+      "Tomato_Late_blight",
+      "Tomato_Leaf_Mold",
+      "Tomato_Septoria_leaf_spot",
+      "Tomato_Spider_mites_Two_spotted_spider_mite",
+      "Tomato__Target_Spot",
+      "Tomato__Tomato_YellowLeaf__Curl_Virus",
+      "Tomato__Tomato_mosaic_virus",
+      "Tomato_healthy"
+    ]
+  },
+  "best_epoch": 2,
+  "best_validation_macro_f1": 0.7431570900482092,
+  "best_validation_accuracy": 0.7775979281320816
+}

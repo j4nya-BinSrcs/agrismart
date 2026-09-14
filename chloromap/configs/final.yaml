@@ -1,0 +1,67 @@
+# Final experiment — production recipe (retargeted for this GPU)
+#
+# Tuning-observation (NVIDIA T1200, 4 GB, measured in place):
+#   - This GPU is ~7x slower with FP16+deterministic cuDNN than with FP32
+#     (fallback to non-tensor-core FP16 paths), so AMP is DISABLED here.
+#   - tf_efficientnet_b0 FP32 = ~20 img/s (batch 32 fits, v2-S does 3-8 img/s
+#     and is not worth 6-10x the wall-clock; B0 reaches ~98-99% on PlantVillage).
+#
+# Recipe: full fine-tune with warmup+cosine, mixup, random erasing,
+# class-balanced sampling (helps the 21x-more-rare Potato___healthy).
+#
+# Run from the repo root:
+#   cd ~/Documents/AgriSmart
+#   python ml/scripts/train.py --config ml/configs/final.yaml
+
+data_dir: ../data/raw/plantvillage
+output_dir: ../ml/weights
+reports_dir: ../ml/reports
+
+model:
+  model_name: tf_efficientnet_b0
+  pretrained: true
+
+image:
+  image_size: 224
+
+training:
+  epochs: 12
+  batch_size: 16
+  num_workers: 4
+  balanced_sampling: true
+
+optimizer:
+  optimizer: AdamW
+  learning_rate: 0.0001
+  weight_decay: 0.0001
+
+scheduler:
+  scheduler: warmup_cosine
+  warmup_epochs: 2
+
+loss:
+  loss: CrossEntropyLoss
+  label_smoothing: 0.1
+
+augmentation:
+  augmentation: mild
+  mixup_alpha: 0.2
+  erasing: 0.2
+
+stage:
+  stage: finetune
+  freeze_backbone: false
+  unfreeze_from_layer: "blocks.0"
+
+reproducibility:
+  seed: 42
+
+mixed_precision:
+  use_amp: false  # FP16 is slower than FP32 on this GPU (measured)
+
+device:
+  device: cuda
+
+bookkeeping:
+  experiment_id: final_004
+  experiment_name: Fine-tuned EfficientNet-B0 (full finetune, warmup+cosine, mixup/erasing, balanced sampling)

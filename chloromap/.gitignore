@@ -1,0 +1,28 @@
+# Byte-compiled / optimized files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+
+# Testing & Linting
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Logs
+logs/*.log
+!logs/.gitkeep
+
+# Temporary files & OS files
+.DS_Store
+*.swp
+*.swo
+tmp/
+
+# Baseline weights backup
+weights/*.pth.baseline

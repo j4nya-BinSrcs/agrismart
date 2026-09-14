@@ -1,0 +1,26 @@
+[project]
+name = "chloromap"
+version = "0.1.0"
+description = "Chloromap — Crop Disease Classification ML Subsystem"
+requires-python = ">=3.13"
+dependencies = [
+    "torch>=2.14.0",
+    "uvicorn>=0.53.0",
+]
+
+[project.scripts]
+chloromap-serve = "chloromap.api:load_model"
+
+[tool.uv]
+# CUDA build of PyTorch must come from the local PyTorch index.
+# See requirements.txt for the pinned torch==2.14.0+cu132.
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src", "tests"]
+filterwarnings = ["ignore::DeprecationWarning"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py313"
+src = ["src", "tests", "scripts"]
