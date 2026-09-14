@@ -33,7 +33,6 @@ export const config = Object.freeze({
     },
   },
   appUrl: process.env.APP_URL || 'http://localhost:5000',
-  mlServiceUrl: process.env.ML_SERVICE_URL || 'http://127.0.0.1:8000',
   weather: {
     defaultLatitude: parseFloat(process.env.DEFAULT_LATITUDE || '22.5645'),
     defaultLongitude: parseFloat(process.env.DEFAULT_LONGITUDE || '72.9289'),

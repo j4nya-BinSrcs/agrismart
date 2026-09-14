@@ -160,16 +160,16 @@ export const DiagnosisResultScreen: React.FC<DiagnosisResultScreenProps> = ({
 
       {/* Primary Diagnosis Header Card */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-5 space-y-4">
-        {/* ML Offline / Baseline Guidance Banner */}
+        {/* Expert Advisory Mode Banner */}
         {diagnosis.isMlPrediction === false && (
           <div className="p-3.5 rounded-md border border-amber-200 dark:border-amber-800/80 bg-amber-50/70 dark:bg-amber-950/30 flex items-start gap-2.5 text-xs text-amber-900 dark:text-amber-200">
             <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" />
             <div className="space-y-0.5">
               <div className="font-semibold text-amber-950 dark:text-amber-100">
-                Baseline Agronomic Mode (ML Classifier Offline / In Training)
+                Expert Advisory Mode (Automated Image Classification Not Performed)
               </div>
               <p className="text-[11px] text-amber-800 dark:text-amber-300 leading-relaxed">
-                The machine learning model is not currently configured or trained. The recommendations below represent baseline agronomic scouting guidance and must not be interpreted as an automated disease prediction.
+                Automated image-based disease identification is not performed in this build. The recommendations below are rule-based agronomic guidance derived from the crop, growth stage and soil details you provided — treat them as a scouting checklist, not an automated disease prediction.
               </p>
             </div>
           </div>
@@ -204,7 +204,7 @@ export const DiagnosisResultScreen: React.FC<DiagnosisResultScreenProps> = ({
                 status={diagnosis.isMlPrediction === false ? 'delay' : diagnosis.isHealthy ? 'healthy' : 'warning'}
                 label={
                   diagnosis.isMlPrediction === false
-                    ? 'Baseline Guidance (No ML)'
+                    ? 'Expert Advisory Guidance'
                     : diagnosis.isHealthy
                     ? 'Healthy'
                     : `${diagnosis.confidence}% Confidence`
@@ -280,7 +280,7 @@ export const DiagnosisResultScreen: React.FC<DiagnosisResultScreenProps> = ({
               </div>
               <div className="absolute bottom-1.5 left-1.5 right-1.5 bg-slate-900/80 text-white text-[10px] px-1.5 py-0.5 rounded flex items-center justify-between font-mono">
                 <span>{diagnosis.crop}</span>
-                <span>{diagnosis.isMlPrediction === false ? 'Baseline Guidance' : `${diagnosis.confidence}%`}</span>
+                <span>{diagnosis.isMlPrediction === false ? 'Advisory Mode' : `${diagnosis.confidence}%`}</span>
               </div>
             </div>
           </div>

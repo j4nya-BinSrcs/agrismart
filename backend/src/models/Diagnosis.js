@@ -119,11 +119,13 @@ const DiagnosisSchema = new mongoose.Schema(
       type: RelatedInsightsSchema,
       default: () => ({}),
     },
-    // Explicit ML provenance flags
+    // Provenance flags. Automated image classification is not performed in
+    // this build; new records always use source="expert_rules" and
+    // isMlPrediction=false. Legacy "ml_unavailable" records remain readable.
     source: {
       type: String,
-      enum: ['ml_service', 'ml_unavailable', 'expert_rules'],
-      default: 'ml_unavailable',
+      enum: ['expert_rules', 'ml_unavailable'],
+      default: 'expert_rules',
     },
     isMlPrediction: {
       type: Boolean,

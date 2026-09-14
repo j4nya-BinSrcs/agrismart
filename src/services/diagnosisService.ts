@@ -64,7 +64,7 @@ export const diagnosisService = {
    * Analyzes crop leaf image via real backend POST /api/v1/diagnosis/analyze
    *
    * Handles:
-   * - 200: Returns real backend diagnosis response (with isMlPrediction and source)
+   * - 200: Returns real backend diagnosis response (isMlPrediction flag and source set by backend)
    * - 400: Throws validation error from backend
    * - 413: Throws file-size error from backend
    * - Network/server failure: Throws actionable error with backend status

@@ -1,10 +1,97 @@
 import Diagnosis from '../models/Diagnosis.js';
-import mlClient from './mlClient.js';
 import ApiError from '../utils/ApiError.js';
 import logger from '../utils/logger.js';
 import mongoose from 'mongoose';
 
 const MAX_IMAGE_SIZE_BYTES = 10 * 1024 * 1024; // 10MB limit
+
+/**
+ * Verified, honest label used across frontend and assistant grounding whenever
+ * no automated image-based disease classification is performed.
+ */
+export const EXPERT_ADVISORY_ASSESSMENT_LABEL = 'Expert Advisory Assessment';
+
+/**
+ * Rule-based scouting guidance keyed by crop. Every entry is preventive/
+ * production advice — never a claimed disease diagnosis.
+ */
+const CROP_SCOUTING_RULES = {
+  tomato: {
+    seasonNotes:
+      'Monitor for foliar spots, wilting, and fruit-rot organisms, especially during humid spells and after rain splash from bare soil.',
+    focusAreas: [
+      'Inspect lower canopy leaves for concentric ring spots with a yellow halo (soil-splash borne).',
+      'Check for vascular wilting and stem browning during hot afternoons.',
+      'Hunt for sucking pest clusters (aphids, whiteflies) on leaf undersides.',
+    ],
+    prevention: [
+      'Keep beds mulched (5cm organic straw) to prevent soil splash onto lower foliage.',
+      'Prune and remove symptomatic lower leaves from the canopy; do not compost infected debris.',
+      'Maintain drip irrigation and avoid over-head watering that wets foliage overnight.',
+    ],
+  },
+  cotton: {
+    seasonNotes:
+      'Watch feeding damage on squares and bolls (bollworm complex) and foliar spotting during squaring.',
+    focusAreas: [
+      'Check terminal buds and squares for bollworm entry holes and frass.',
+      'Inspect lower leaves for phloem-feeding pest clusters and associated sooty mould.',
+      'Look for leaf yellowing or reddening indicating nutrient stress rather than disease.',
+    ],
+    prevention: [
+      'Install pheromone traps and maintain weekly scouting records during peak squaring.',
+      'Remove crop residues and volunteer plants between seasons to break pest cycles.',
+      'Stagger watering to avoid prolonged canopy wetness during boll development.',
+    ],
+  },
+  wheat: {
+    seasonNotes:
+      'Watch for rust-type pustules and powdery mildew when mornings stay damp and dense canopies reduce airflow.',
+    focusAreas: [
+      'Inspect flag leaves for linear orange/yellow pustules during tillering to flowering.',
+      'Check for white superficial mycelial patches under humid, low-light canopies.',
+      'Confirm adequate zinc by checking for discrete longitudinal bleached bands on younger leaves.',
+    ],
+    prevention: [
+      'Match nitrogen top-dressing to stage; excessive lodging-prone canopies invite foliar pathogens.',
+      'Ensure row ventilation and avoid late-evening irrigation.',
+      'Rogue out heavily infected patches early and burn off-site.',
+    ],
+  },
+  potato: {
+    seasonNotes:
+      'Humid, cool spells favour blight-type foliar diseases; dense lush canopies accelerate spread.',
+    focusAreas: [
+      'Inspect leaf margins for water-soaked, darkened patches following prolonged leaf wetness.',
+      'Look for tuber discolouration risk from excess late-season soil moisture.',
+      'Check for early dying / wilting symptoms during canopy closure.',
+    ],
+    prevention: [
+      'Hill soil around plants well and avoid frequent overhead irrigation once canopy closes.',
+      'Remove and bag symptomatic leaves promptly; do not compost them.',
+      'Plan harvest-time soil moisture to avoid tuber bruising and rot organisms.',
+    ],
+  },
+};
+
+const DEFAULT_SCOUTING_RULES = {
+  seasonNotes: 'Schedule regular field scouting — walk the block diagonally and inspect representative plants from canopy bottom to top.',
+  focusAreas: [
+    'Record any unusual leaf discolouration, spotting, or growth deviation.',
+    'Check both leaf surfaces and stem bases for pests and fungal growth.',
+    'Note soil moisture, drainage, and recent weather to interpret findings.',
+  ],
+  prevention: [
+    'Maintain balanced irrigation and avoid prolonged foliage wetness.',
+    'Keep working tools and pruning equipment clean between rows.',
+    'Escalate suspected pathogen outbreaks to the local Krishi Vigyan Kendra (KVK) for lab confirmation.',
+  ],
+};
+
+const getScoutingRules = (crop = '') => {
+  if (!crop) return DEFAULT_SCOUTING_RULES;
+  return CROP_SCOUTING_RULES[crop.trim().toLowerCase()] || DEFAULT_SCOUTING_RULES;
+};
 
 /**
  * Validates image data URL / format and size
@@ -46,69 +133,103 @@ export const validateImagePayload = (imageUrl) => {
 };
 
 /**
- * Generates an honest baseline agronomic guidance record when ML service is offline.
- * Clearly marked with isMlPrediction=false, source="ml_unavailable", confidence=0.
+ * Generates a deterministic, explainable expert advisory record built from
+ * the exact details the farmer entered (crop, growth stage, field, soil
+ * moisture). It never fabricates a disease name or confidence rating.
  */
-const createBaselineGuidanceRecord = (input) => {
+const createExpertAdvisoryRecord = (input) => {
   const crop = input.crop || 'Crop';
   const variety = input.variety || 'Standard Variety';
   const growthStage = input.growthStage || 'Active Growth';
   const fieldLocation = input.fieldLocation || 'Field A';
+  const soilContext = input.soilMoistureContext || '';
+
+  const rules = getScoutingRules(crop);
+  const now = new Date();
+
+  const soilAdvice =
+    typeof soilContext === 'string' && /\d{1,2}\s*%/i.test(soilContext)
+      ? `Reading of ${soilContext} recorded for ${fieldLocation}. Re-verify moisture at root zone before any irrigation decision.`
+      : `Soil moisture reading for ${fieldLocation} was not available; verify root-zone moisture before irrigating.`;
+
+  const moistureRisk =
+    typeof soilContext === 'string' && /\d{1,2}\s*%/i.test(soilContext)
+      ? (() => {
+          const value = parseInt(soilContext, 10);
+          if (value > 60) return 'Elevated soil moisture raises fungal and root-rot risk; avoid further irrigation until it drains.';
+          if (value < 20) return 'Low soil moisture stresses the canopy; schedule irrigation if no rain is expected within 48 hours.';
+          return 'Soil moisture is within a favourable band for most agronomic operations.';
+        })()
+      : 'Maintain root-zone moisture near field capacity without prolonged waterlogging.';
 
   return {
-    id: `diag-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+    id: `diag-${now.getTime()}-${Math.random().toString(36).substring(2, 7)}`,
     crop,
     variety,
     growthStage,
-    diseaseName: 'ML Classification Unavailable',
-    pathogenName: 'No ML Prediction Generated (Classifier Offline)',
+    diseaseName: EXPERT_ADVISORY_ASSESSMENT_LABEL,
+    pathogenName: '',
     isHealthy: false,
     confidence: 0,
     severity: 'low',
-    detectedAt: new Date().toISOString(),
+    detectedAt: now.toISOString(),
     imageUrl: input.imageUrl,
     fieldLocation,
     shortExplanation:
-      'The automated disease classification pipeline is currently operating in baseline advisory mode because the machine learning model is undergoing dataset training. Agronomic scouting guidelines are provided below.',
+      `AgriSmart is running in expert advisory mode. Automated image-based disease classification is not performed in this build; ` +
+      `the guidance below is generated from validated agronomic rules applied to the details you entered (${crop}, ${growthStage}, ${fieldLocation}). ` +
+      'Follow it as a scouting checklist — it is not an automated disease prediction.',
     symptomsMatched: [
-      `Foliage assessment registered for ${crop} (${variety}) at ${growthStage}`,
-      `Field cluster: ${fieldLocation}`,
-      'Color calibration and image geometry validated successfully',
+      `Field cluster assessed: ${fieldLocation} — ${crop} at ${growthStage} stage`,
+      `Foliage imagery registered for ${crop} (${variety})`,
+      soilAdvice,
+      ...rules.focusAreas,
     ],
     symptomsRuledOut: [
-      'Acute Defoliation: Visual structure intact',
-      'Systemic Vascular Wilt: Stem posture normal',
+      'No specific pathogen is named or ruled out — microscopic/lab confirmation was not performed.',
+      'Automated image classification is not part of this build, so no disease probability is reported.',
     ],
     treatmentProtocols: {
-      organic: 'Apply neem oil (5ml/L) or botanical bio-fungicide as prophylactic foliar spray in high-humidity periods.',
-      conventional: 'Consult district Krishi Vigyan Kendra (KVK) representative before applying synthetic broad-spectrum fungicides.',
-      dosage: 'Standard preventative spray rate: 2-3 ml per litre of water.',
-      applicationTiming: 'Early morning or late afternoon during clear, calm weather.',
+      organic: 'Apply neem oil (5ml/L) or a botanical bio-fungicide as a preventive foliar spray during high-humidity periods.',
+      conventional:
+        'Before considering any synthetic treatment, consult the district Krishi Vigyan Kendra (KVK) for a lab-confirmed diagnosis.',
+      dosage: 'Use a preventive spray rate of 2-3 ml per litre of water only if target pests/pathogens are observed.',
+      applicationTiming: 'Early morning or late afternoon during clear, calm weather; never spray before rain.',
     },
     precautions: [
-      'Isolate symptomatic leaf clippings and avoid overhead irrigation to minimize spore dispersal.',
-      'Check underside of leaves for early fungal mycelia or aphid clusters during routine scouting.',
+      ...rules.prevention,
+      'Isolate symptomatic leaf clippings and avoid overhead irrigation to slow spore / pest spread.',
+      'Check undersides of leaves during routine scouting for early pest clusters.',
+      'Do not apply blanket fungicides without a confirmed pest or pathogen presence.',
     ],
     recommendedActions: [
       {
         step: 1,
-        title: 'Conduct manual physical scouting',
-        description: `Walk diagonally across ${fieldLocation} inspecting 10-15 random plants for chlorosis or necrotic spotting.`,
+        title: 'Conduct a structured field scouting walk',
+        description: `Walk diagonally across ${fieldLocation} inspecting 10-15 random plants for chlorosis, necrotic spotting, or pest damage.`,
         timing: 'Within 24 hours',
       },
       {
         step: 2,
         title: 'Verify soil moisture and drainage',
-        description: 'Ensure root zone is not waterlogged to prevent secondary soil-borne pathogen infection.',
-        timing: 'Next 48 hours',
+        description: 'Confirm the root zone is not waterlogged and moisture matches the recorded reading before the next irrigation cycle.',
+        timing: 'Within 48 hours',
+      },
+      {
+        step: 3,
+        title: 'Record observations and escalate if needed',
+        description:
+          'Log any rapid leaf browning, wilting, or spreading lesions and share fresh, close-up photos with a local extension officer.',
+        timing: 'Within 3 days',
       },
     ],
     relatedInsights: {
-      weatherRisk: 'Moderate humidity and morning dew may accelerate fungal germination if unventilated.',
-      irrigationAdvice: 'Maintain recommended drip cycles; avoid wet foliage overnight.',
-      sustainabilityImpact: 'Zero synthetic chemical usage recommended until pathogen identity is lab-confirmed.',
+      weatherRisk: `${rules.seasonNotes} High humidity or morning dew may accelerate fungal germination if beds remain unventilated and leaves stay wet.`,
+      irrigationAdvice: soilContext ? soilAdvice : 'Maintain recommended drip cycles; avoid wet foliage overnight.',
+      sustainabilityImpact:
+        'Preventive, targeted scouting avoids blanket chemical spraying, saving on runoff and preserving beneficial insects.',
     },
-    source: 'ml_unavailable',
+    source: 'expert_rules',
     isMlPrediction: false,
     rawModelOutput: null,
   };
@@ -116,7 +237,7 @@ const createBaselineGuidanceRecord = (input) => {
 
 export const diagnosisService = {
   /**
-   * Analyzes an uploaded crop image with validation and ML microservice integration
+   * Produces an explainable agronomic advisory assessment for a submitted crop image.
    */
   async analyzeCrop(requestData) {
     const { crop, growthStage, fieldLocation, imageUrl, variety, soilMoistureContext } = requestData;
@@ -133,47 +254,14 @@ export const diagnosisService = {
 
     validateImagePayload(imageUrl);
 
-    // Call ML service microservice bridge
-    const mlResult = await mlClient.predict(imageUrl, { crop, variety, growthStage });
-
-    let record;
-
-    if (mlResult.isAvailable && mlResult.prediction) {
-      const pred = mlResult.prediction;
-      record = {
-        id: `diag-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
-        crop,
-        variety: variety || '',
-        growthStage,
-        diseaseName: pred.diseaseName || 'Detected Foliar Anomaly',
-        pathogenName: pred.pathogenName || '',
-        isHealthy: Boolean(pred.isHealthy),
-        confidence: Math.round(Number(pred.confidence || 0) * 100),
-        severity: pred.severity || 'moderate',
-        detectedAt: new Date().toISOString(),
-        imageUrl,
-        fieldLocation,
-        shortExplanation: pred.explanation || `ML classification completed with ${Math.round((pred.confidence || 0) * 100)}% confidence.`,
-        symptomsMatched: pred.symptomsMatched || [],
-        symptomsRuledOut: pred.symptomsRuledOut || [],
-        treatmentProtocols: pred.treatmentProtocols || {},
-        precautions: pred.precautions || [],
-        recommendedActions: pred.recommendedActions || [],
-        relatedInsights: pred.relatedInsights || {},
-        source: 'ml_service',
-        isMlPrediction: true,
-        rawModelOutput: pred,
-      };
-    } else {
-      record = createBaselineGuidanceRecord({
-        crop,
-        variety,
-        growthStage,
-        fieldLocation,
-        imageUrl,
-        soilMoistureContext,
-      });
-    }
+    const record = createExpertAdvisoryRecord({
+      crop,
+      variety,
+      growthStage,
+      fieldLocation,
+      imageUrl,
+      soilMoistureContext,
+    });
 
     // Persist to MongoDB if database is connected
     if (mongoose.connection.readyState === 1) {

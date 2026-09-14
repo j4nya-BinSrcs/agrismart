@@ -6,7 +6,7 @@ AgriSmart AI is an AI-powered agricultural decision-support platform designed to
 
 The platform brings crop disease diagnosis, weather intelligence, smart irrigation, sustainability insights, and an agricultural assistant into one connected experience.
 
-> 🚧 **Current Status:** Frontend Phase — UI and interactions are implemented using realistic mock/demo data. Backend, APIs, ML models, authentication, and database integration are not included in this phase.
+> 🚧 **Current Status:** MERN full-stack build — Express + MongoDB API (auth, diagnosis, weather, irrigation, assistant, sustainability), a Gemini-grounded farmer assistant, and a React/Vite client with realistic demo-data fallbacks when the backend or external APIs are offline.
 
 ---
 

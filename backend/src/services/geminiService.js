@@ -12,6 +12,13 @@ export const SUPPORTED_LANGUAGES = Object.freeze({
 });
 
 /**
+ * Honest label used whenever the backend produces a rule-based advisory
+ * assessment instead of an automated image-based disease prediction.
+ * Kept in sync with diagnosisService; never treat it as a disease name.
+ */
+export const EXPERT_ADVISORY_ASSESSMENT_LABEL = 'Expert Advisory Assessment';
+
+/**
  * Extracts normalized irrigation decision from context
  */
 export const extractIrrigationDecision = (context = {}) => {
@@ -154,8 +161,8 @@ ABSOLUTE GROUNDING LAWS (VIOLATION IS STRICTLY PROHIBITED):
    - Example: If context says 80% rain and 3.2 mm, you MUST state 80% and 3.2 mm.
 
 4. COMPUTER-VISION DISEASE MODEL GROUNDING:
-   - If ML Model prediction is unavailable (isMlPrediction === false or diseaseName is "ML Classification Unavailable"):
-     * You MUST explicitly state that the image-based disease classifier is currently offline / in training.
+   - If the backend assessment is rule-based advisory (isMlPrediction === false or diseaseName is "Expert Advisory Assessment"):
+     * You MUST explicitly state that automated image-based disease identification is not performed in this build.
      * You MUST NOT invent, guess, speculate, or mention any disease name (such as Early Blight, Late Blight, etc.).
      * You MAY still explain verified weather and irrigation guidance.
 
@@ -228,11 +235,11 @@ export const formatContextForPrompt = (context = {}) => {
   if (context.diagnosis || context.activeDiagnosis) {
     const diag = context.diagnosis || context.activeDiagnosis;
     const isMl = Boolean(diag.isMlPrediction);
-    const disease = isMl ? (diag.diseaseName || 'Healthy') : 'ML Classification Unavailable';
+    const disease = isMl ? (diag.diseaseName || 'Healthy') : EXPERT_ADVISORY_ASSESSMENT_LABEL;
 
     sections.push(
       `--- COMPUTER VISION DIAGNOSIS STATUS ---`,
-      `ML Model Authoritative Prediction: ${isMl ? 'YES (Verified by CV Model)' : 'NO (Classifier Unavailable / Offline)'}`,
+      `Automated Disease Prediction: ${isMl ? diag.diseaseName || 'Healthy' : 'NOT PERFORMED (Rule-based advisory only)'}`,
       `Disease Name: ${disease}`,
       `Rule: ${!isMl ? 'Do NOT speculate or name any disease name in your response.' : 'Explain verified diagnosis.'}`
     );
@@ -255,10 +262,10 @@ export const buildContextTag = (context = {}, language = 'en') => {
 
   if (context.diagnosis || context.activeDiagnosis) {
     const diag = context.diagnosis || context.activeDiagnosis;
-    if (diag.isMlPrediction && diag.diseaseName && diag.diseaseName !== 'ML Classification Unavailable') {
+    if (diag.isMlPrediction && diag.diseaseName && diag.diseaseName !== EXPERT_ADVISORY_ASSESSMENT_LABEL) {
       parts.push(diag.diseaseName);
     } else {
-      parts.push(isGu ? 'રોગ તપાસ' : (isHi ? 'रोग विश्लेषण' : 'Diagnosis'));
+      parts.push(isGu ? 'રોગ તપાસ' : (isHi ? 'રોગ વિશ્લેષણ' : 'Diagnosis'));
     }
   }
 
@@ -306,16 +313,16 @@ export const generateActionSuggestions = (context = {}, language = 'en') => {
  */
 export const generateDeterministicGroundedResponse = (context = {}, language = 'en') => {
   const diag = context.diagnosis || context.activeDiagnosis;
-  const isMlUnavailable = diag && (!diag.isMlPrediction || diag.diseaseName === 'ML Classification Unavailable');
+  const isMlUnavailable = diag && (!diag.isMlPrediction || diag.diseaseName === EXPERT_ADVISORY_ASSESSMENT_LABEL);
 
   if (isMlUnavailable && (!context.irrigation && !context.irrigationPlan)) {
     if (language === 'gu') {
-      return `કમ્પ્યુટર વિઝન રોગ નિદાન હાલમાં ઉપલબ્ધ નથી (ML Classification Unavailable). કોઈ સ્વચાલિત રોગ અનુમાન કરવામાં આવ્યું નથી. કૃપા કરીને પાકના લક્ષણોનું પ્રત્યક્ષ નિરીક્ષણ કરો અથવા સ્થાનિક કૃષિ અધિકારીનો સંપર્ક કરો.`;
+      return `કમ્પ્યુટર આધારિત રોગ નિદાન આ બિલ્ડમાં હાથ ધરવામાં આવતું નથી (Expert Advisory Assessment). કોઈ સ્વચાલિત રોગ અનુમાન કરવામાં આવ્યું નથી. કૃપા કરીને પાકના લક્ષણોનું પ્રત્યક્ષ નિરીક્ષણ કરો અથવા સ્થાનિક કૃષિ અધિકારીનો સંપર્ક કરો.`;
     }
     if (language === 'hi') {
-      return `कंप्यूटर विजन रोग वर्गीकरण वर्तमान में उपलब्ध नहीं है (ML Classification Unavailable)। कोई स्वचालित रोग निदान नहीं किया गया है। कृपया फसल के लक्षणों की प्रत्यक्ष जांच करें या कृषि विशेषज्ञ से परामर्श लें।`;
+      return `इस बिल्ड में स्वचालित रोग पहचान नहीं की जाती है (Expert Advisory Assessment)। कोई स्वचालित रोग निदान नहीं किया गया है। कृपया फसल के लक्षणों की प्रत्यक्ष जांच करें या कृषि विशेषज्ञ से परामर्श लें।`;
     }
-    return `Automated computer vision disease classification is currently unavailable (ML Classification Unavailable). No automated disease prediction has been made. Please inspect crop leaves visually or consult a local agricultural extension expert.`;
+    return `Automated image-based disease identification is not performed in this build (Expert Advisory Assessment). No automated disease prediction has been made. Please inspect crop leaves visually or consult a local agricultural extension expert.`;
   }
 
   const decision = extractIrrigationDecision(context);
@@ -458,7 +465,7 @@ export const validateGrounding = (replyText = '', context = {}) => {
       if (text.includes(d)) {
         return {
           isValid: false,
-          reason: `Hallucination: Disease classifier is offline but response named specific pathogen '${d}'.`,
+          reason: `Hallucination: Assessment is rule-based advisory but response named specific pathogen '${d}'.`,
         };
       }
     }

@@ -9,7 +9,7 @@ Welcome to the **AgriSmart** project repository! This guide contains all the ins
 | Branch | Purpose | What it Contains |
 | :--- | :--- | :--- |
 | `main` | Production / Stable | Core stable release. |
-| `backend` | **Active Full-Stack Development** | Complete stack: React Frontend + Express Backend + ML Service integrations. |
+| `backend` | **Active Full-Stack Development** | Complete stack: React Frontend + Express Backend. |
 | `frontend` | UI/UX Prototyping | Dedicated frontend component development & mock testing. |
 
 > 💡 **Recommendation for the Team:**
@@ -23,7 +23,6 @@ Make sure you have installed on your computer:
 1. **Node.js**: v18.0.0 or higher ([Download Node.js](https://nodejs.org/))
 2. **Git**: Latest version ([Download Git](https://git-scm.com/))
 3. **MongoDB** *(Optional)*: [MongoDB Community Server](https://www.mongodb.com/try/download/community) or MongoDB Atlas URI for full database persistence.
-4. **Python 3.11+** *(Optional)*: Required only if running the standalone ML disease detection service.
 
 ---
 

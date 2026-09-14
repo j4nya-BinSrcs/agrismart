@@ -113,21 +113,21 @@ await runTest('Test 3: Input estimated avoided irrigation = 1850 litres is stric
   assert(!response.reply.includes('14,56,868'), 'Must NOT hallucinate arbitrary water volume like 14,56,868');
 });
 
-// Test 4: ML classification unavailable -> Must NOT name a disease
-await runTest('Test 4: When ML classification is unavailable, assistant strictly does not name a disease', async () => {
+// Test 4: Advisory assessment available -> Must NOT name a disease
+await runTest('Test 4: When only expert advisory guidance is available, assistant strictly does not name a disease', async () => {
   const context = {
     farmName: 'Patel Farm',
     crop: 'Tomato',
     activeDiagnosis: {
       isMlPrediction: false,
-      diseaseName: 'ML Classification Unavailable',
+      diseaseName: 'Expert Advisory Assessment',
     },
     weather: { rainProbability: 82, precipitationMm: 14.5 },
     irrigation: { overallDecision: 'Delay Irrigation' },
   };
 
   const prompt = formatContextForPrompt(context);
-  assert(prompt.includes('ML Classification Unavailable'), 'Prompt must indicate ML unavailable');
+  assert(prompt.includes('Expert Advisory Assessment'), 'Prompt must indicate advisory-only assessment');
   assert(prompt.includes('Do NOT speculate or name any disease name'), 'Must forbid disease speculation');
 
   const validation = validateGrounding('Your tomato plants have Early Blight and you must spray fungicide.', context);
@@ -158,7 +158,7 @@ await runTest('Test 5: Conflicting LLM output is intercepted and replaced with s
     const context = {
       farmName: 'Patel Farm',
       crop: 'Tomato',
-      activeDiagnosis: { isMlPrediction: false, diseaseName: 'ML Classification Unavailable' },
+      activeDiagnosis: { isMlPrediction: false, diseaseName: 'Expert Advisory Assessment' },
       weather: { rainProbability: 82, precipitationMm: 14.5, temperature: 28 },
       irrigation: {
         overallDecision: 'Delay Irrigation',

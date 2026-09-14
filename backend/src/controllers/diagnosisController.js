@@ -5,11 +5,12 @@ import ApiError from '../utils/ApiError.js';
 export const analyzeCrop = async (req, res, next) => {
   try {
     const record = await diagnosisService.analyzeCrop(req.body);
-    const message = record.isMlPrediction
-      ? 'Crop image successfully analyzed with ML classifier'
-      : 'Crop assessment completed (ML service offline - baseline guidance provided)';
-
-    return ApiResponse.success(res, 200, message, record);
+    return ApiResponse.success(
+      res,
+      200,
+      'Crop assessment completed with expert agronomic advisory guidance',
+      record
+    );
   } catch (error) {
     next(error);
   }

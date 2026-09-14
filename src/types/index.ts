@@ -122,7 +122,7 @@ export interface DiagnosisRecord {
   precautions: string[];
   recommendedActions: RecommendedActionStep[];
   relatedInsights: RelatedInsights;
-  source?: 'ml_service' | 'ml_unavailable' | 'expert_rules' | string;
+  source?: 'expert_rules' | 'ml_unavailable' | string;
   isMlPrediction?: boolean;
   rawModelOutput?: unknown;
 }
