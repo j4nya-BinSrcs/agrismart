@@ -94,10 +94,10 @@ export const SustainabilityScreen: React.FC<SustainabilityScreenProps> = ({
                 </span>
               </div>
               <p className="text-xs font-medium text-slate-800 dark:text-slate-200">
-                Operating in the top 15% of water-efficient farms in Anand district.
+                Estimates from weather-linked irrigation decisions when available — not a certified regional ranking.
               </p>
               <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
-                Calculated through soil moisture telemetry, weather sync, and targeted disease spot treatment.
+                Full scoring needs IoT moisture telemetry plus logged irrigation and treatment history. Figures shown may be illustrative until sensors are integrated.
               </p>
             </div>
           </div>
@@ -199,7 +199,7 @@ export const SustainabilityScreen: React.FC<SustainabilityScreenProps> = ({
               </span>
             </div>
             <p className="text-xs text-slate-600 dark:text-slate-300 mt-0.5">
-              Correlating live precipitation forecasts with root-zone soil sensors prevented unnecessary pumping cycles.
+              Correlating precipitation forecasts with irrigation decisions can reduce unnecessary pumping. Integrate IoT soil sensors for verified savings.
             </p>
           </div>
         </div>
@@ -437,7 +437,7 @@ export const SustainabilityScreen: React.FC<SustainabilityScreenProps> = ({
                   <span>1. Weather Forecast Detection</span>
                 </div>
                 <p className="text-[11px] text-slate-600 dark:text-slate-400 pl-6">
-                  When the Anand district radar signals ≥70% rainfall probability with ≥10 mm expected accumulation, AgriSmart AI flags pending irrigation tasks.
+                  When rainfall probability is ≥70% with ≥10 mm expected accumulation, AgriSmart flags pending irrigation tasks for review.
                 </p>
               </div>
 

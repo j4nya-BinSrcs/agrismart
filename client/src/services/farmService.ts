@@ -1,6 +1,6 @@
 import { Farm, FarmPlot, ActionItem, AppNotification, SupportedCrop, FarmMember } from '../types';
 import { TODAY_ACTIONS, INITIAL_NOTIFICATIONS } from '../data/mockData';
-import { getStoredItem, setStoredItem, clearAllStoredData } from '../utils/storage';
+import { getStoredItem, setStoredItem } from '../utils/storage';
 import { apiRequestWithAuth, ApiError } from './apiClient';
 import { findDistrictCoordinates } from '../data/indiaLocationData';
 
@@ -406,9 +406,5 @@ export const farmService = {
     const updated = notifications.map((n) => ({ ...n, read: true }));
     setStoredItem(NOTIFICATIONS_STORAGE_KEY, updated);
     return updated;
-  },
-
-  async resetDemoData(): Promise<void> {
-    clearAllStoredData();
   },
 };

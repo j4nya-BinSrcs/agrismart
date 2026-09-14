@@ -20,7 +20,6 @@ interface HeaderProps {
   onToggleMobileSidebar: () => void;
   onOpenNotifications: () => void;
   unreadCount: number;
-  onResetDemo?: () => void;
   weather?: WeatherCondition;
   irrigationPlan?: IrrigationPlan;
 }

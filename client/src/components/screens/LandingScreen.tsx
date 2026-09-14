@@ -373,9 +373,8 @@ export const LandingScreen: React.FC<LandingScreenProps> = ({ onNavigate }) => {
                   Patel Farm (Anand, Gujarat) • Operations Console
                 </span>
               </div>
-              <div className="hidden sm:flex items-center gap-2 text-[11px] text-emerald-700 dark:text-emerald-400 font-medium">
-                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                <span>Sensors Online • 18.5 Acres</span>
+              <div className="hidden sm:flex items-center gap-2 text-[11px] text-slate-500 dark:text-slate-400 font-medium">
+                <span>Demo preview • 18.5 Acres</span>
               </div>
             </div>
 

@@ -23,7 +23,6 @@ interface SidebarProps {
   isMobileOpen: boolean;
   onCloseMobile: () => void;
   hasActiveDiagnosis: boolean;
-  onResetDemo?: () => void;
   weather?: WeatherCondition;
   irrigationPlan?: IrrigationPlan;
 }
@@ -139,7 +138,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               {isDemo ? (
                 <span className="flex items-center gap-1 text-amber-400 text-[10px] font-medium">
                   <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
-                  Demo sensors
+                  Demo workspace
                 </span>
               ) : (
                 <span className="text-zinc-400 text-[10px] font-medium">Weather-linked</span>
