@@ -1,6 +1,7 @@
 import { Farm, ActionItem, AppNotification } from '../types';
 import { TODAY_ACTIONS, INITIAL_NOTIFICATIONS } from '../data/mockData';
 import { getStoredItem, setStoredItem, clearAllStoredData } from '../utils/storage';
+import { apiRequestWithAuth, ApiError } from './apiClient';
 
 export const DEFAULT_FARM: Farm = {
   id: 'farm-patel-anand',
@@ -55,8 +56,54 @@ export const DEFAULT_FARM: Farm = {
 const ACTIONS_STORAGE_KEY = 'actions_list';
 const NOTIFICATIONS_STORAGE_KEY = 'notifications_list';
 
+interface BackendFarm {
+  id: string;
+  owner: string;
+  name: string;
+  location: {
+    latitude?: number;
+    longitude?: number;
+    address: string;
+  };
+  totalAreaAcres: number;
+  description: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface BackendFarmListResponse {
+  farms: BackendFarm[];
+}
+
+function mapBackendFarmToClient(backendFarm: BackendFarm): Farm {
+  return {
+    id: backendFarm.id,
+    name: backendFarm.name,
+    owner: backendFarm.owner,
+    location: backendFarm.location.address || 'Unknown location',
+    totalAcres: backendFarm.totalAreaAcres,
+    primaryCrops: [],
+    plots: [],
+  };
+}
+
 export const farmService = {
-  async getFarmDetails(): Promise<Farm> {
+  async getFarmDetails(token: string | null): Promise<Farm> {
+    if (token) {
+      try {
+        const response = await apiRequestWithAuth<BackendFarmListResponse>('/farms', {}, token);
+        if (response.farms && response.farms.length > 0) {
+          return mapBackendFarmToClient(response.farms[0]);
+        }
+      } catch (err) {
+        if (err instanceof ApiError && err.statusCode === 0) {
+          // Network error - backend unavailable, fall back to local
+        } else if (err instanceof ApiError && err.statusCode === 401) {
+          // Unauthorized - token invalid, fall back to local
+        }
+      }
+    }
+    // Offline fallback or no token
     return DEFAULT_FARM;
   },
 

@@ -20,7 +20,6 @@ import { BackButton } from '../common/BackButton';
 interface IrrigationScreenProps {
   zones: IrrigationZone[];
   plan?: import('../../types').IrrigationPlan;
-  totalSavedLitres: number;
   onNavigate: (screen: ScreenType) => void;
 }
 
@@ -29,7 +28,6 @@ type IrrigationScenario = 'rain_imminent' | 'dry_spell' | 'post_rain';
 export const IrrigationScreen: React.FC<IrrigationScreenProps> = ({
   zones,
   plan,
-  totalSavedLitres,
   onNavigate,
 }) => {
   const { showToast } = useToast();

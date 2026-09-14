@@ -26,12 +26,27 @@ export async function apiRequest<T>(
   endpoint: string,
   options: RequestInit = {}
 ): Promise<T> {
+  return apiRequestWithAuth<T>(endpoint, options, null);
+}
+
+/**
+ * Standard HTTP JSON request helper with optional auth token
+ */
+export async function apiRequestWithAuth<T>(
+  endpoint: string,
+  options: RequestInit = {},
+  authToken: string | null
+): Promise<T> {
   const url = `${API_BASE_URL}${endpoint.startsWith('/') ? endpoint : `/${endpoint}`}`;
 
   const defaultHeaders: HeadersInit = {
     'Content-Type': 'application/json',
     Accept: 'application/json',
   };
+
+  if (authToken) {
+    defaultHeaders['Authorization'] = `Bearer ${authToken}`;
+  }
 
   const config: RequestInit = {
     ...options,

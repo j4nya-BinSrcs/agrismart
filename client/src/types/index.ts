@@ -6,7 +6,6 @@ export type ScreenType =
   | 'diagnose'
   | 'diagnosis'
   | 'diagnosis-result'
-  | 'diagnosis/result'
   | 'weather'
   | 'irrigation'
   | 'sustainability'
@@ -26,6 +25,7 @@ export interface User {
 export interface AuthContextType {
   isAuthenticated: boolean;
   user: User | null;
+  token: string | null;
   login: (usernameOrEmail: string, password: string) => Promise<{ success: boolean; error?: string }>;
   loginAsDemo: () => void;
   signup: (data: {

@@ -65,7 +65,6 @@ function screenToPath(screen: ScreenType): string {
     case 'diagnosis':
       return '/diagnosis';
     case 'diagnosis-result':
-    case 'diagnosis/result':
       return '/diagnosis/result';
     case 'weather':
       return '/weather';
@@ -158,7 +157,6 @@ const VALID_SCREENS: ScreenType[] = [
   'diagnose',
   'diagnosis',
   'diagnosis-result',
-  'diagnosis/result',
   'weather',
   'irrigation',
   'sustainability',
@@ -175,7 +173,6 @@ const PROTECTED_SCREENS: ScreenType[] = [
   'diagnose',
   'diagnosis',
   'diagnosis-result',
-  'diagnosis/result',
   'weather',
   'irrigation',
   'sustainability',
@@ -184,7 +181,7 @@ const PROTECTED_SCREENS: ScreenType[] = [
 
 export default function App() {
   const { showToast } = useToast();
-  const { isAuthenticated, user } = useAuth();
+  const { isAuthenticated, user, token } = useAuth();
   const mainScrollRef = useRef<HTMLElement>(null);
 
   // App navigation and view state
@@ -304,7 +301,6 @@ export default function App() {
       diagnose: 'Crop Disease Diagnosis — AgriSmart AI',
       diagnosis: 'Crop Disease Diagnosis — AgriSmart AI',
       'diagnosis-result': 'Diagnosis Report & Advisory — AgriSmart AI',
-      'diagnosis/result': 'Diagnosis Report & Advisory — AgriSmart AI',
       weather: 'Weather Intelligence & Spray Windows — AgriSmart AI',
       irrigation: 'Smart Irrigation & Soil Moisture — AgriSmart AI',
       sustainability: 'Sustainability & Resource Accounting — AgriSmart AI',
@@ -351,7 +347,7 @@ export default function App() {
           farmService.getNotifications(),
           weatherService.getFullForecast(),
           irrigationService.getIrrigationPlan(),
-          sustainabilityService.getSustainabilityMetrics(),
+          sustainabilityService.getSustainabilityMetrics(token),
         ]);
 
         if (isMounted) {
@@ -377,7 +373,7 @@ export default function App() {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [token]);
 
   // Toggle action completion through service
   const handleToggleAction = async (id: string) => {
@@ -573,11 +569,10 @@ export default function App() {
               />
             )}
 
-            {currentScreen === 'irrigation' && sustainability && (
+            {currentScreen === 'irrigation' && irrigationPlan && (
               <IrrigationScreen
                 zones={irrigationZones}
-                plan={irrigationPlan || undefined}
-                totalSavedLitres={irrigationPlan?.totalEstimatedAvoidedIrrigationLitres ?? sustainability.waterSavedMonthLitres}
+                plan={irrigationPlan}
                 onNavigate={handleNavigate}
               />
             )}

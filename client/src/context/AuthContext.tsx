@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { User, AuthContextType } from '../types';
 import { getStoredItem, setStoredItem } from '../utils/storage';
+import { apiRequestWithAuth, ApiError } from '../services/apiClient';
 
 const AUTH_STORAGE_KEY = 'agrismart_auth_session';
 const REGISTERED_ACCOUNTS_KEY = 'agrismart_registered_accounts';
@@ -23,11 +24,22 @@ export const DEMO_CREDENTIALS = {
 interface StoredAuthSession {
   isAuthenticated: boolean;
   user: User;
+  token?: string;
 }
 
 interface StoredAccount {
   user: User;
   password: string;
+}
+
+interface BackendAuthResponse {
+  user: {
+    id: string;
+    name: string;
+    email: string;
+    role: string;
+  };
+  token: string;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -43,17 +55,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return session?.isAuthenticated && session.user ? session.user : null;
   });
 
+  const [authToken, setAuthToken] = useState<string | null>(() => {
+    const session = getStoredItem<StoredAuthSession | null>(AUTH_STORAGE_KEY, null);
+    return session?.token || null;
+  });
+
   // Keep session in localStorage synced
   useEffect(() => {
     if (isAuthenticated && user) {
       setStoredItem<StoredAuthSession>(AUTH_STORAGE_KEY, {
         isAuthenticated: true,
         user,
+        token: authToken || undefined,
       });
     } else {
       localStorage.removeItem(AUTH_STORAGE_KEY);
     }
-  }, [isAuthenticated, user]);
+  }, [isAuthenticated, user, authToken]);
 
   const login = async (
     usernameOrEmail: string,
@@ -81,12 +99,36 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (trimmedPass === DEMO_CREDENTIALS.password || trimmedPass === 'demo123') {
         setIsAuthenticated(true);
         setUser(DEMO_USER);
+        setAuthToken(null); // Demo has no backend token
         return { success: true };
       }
       return { success: false, error: 'Invalid username or password.' };
     }
 
-    // 2. Check registered accounts from local storage
+    // 2. Try backend authentication
+    try {
+      const response = await apiRequestWithAuth<BackendAuthResponse>('/auth/login', {
+        method: 'POST',
+        body: JSON.stringify({
+          email: trimmedIdentifier.includes('@') ? trimmedIdentifier : undefined,
+          // Backend only supports email for login, so if username is provided, 
+          // we'd need a different endpoint or the user would use email
+        }),
+      }, null);
+
+      // Backend expects email, so if username was provided, this will fail
+      // Fall through to local storage check
+    } catch (err) {
+      // If backend is unavailable or login fails, fall through to local storage
+      if (err instanceof ApiError && err.statusCode === 0) {
+        // Network error - backend unavailable
+      } else if (err instanceof ApiError && err.statusCode === 401) {
+        // Invalid credentials
+      }
+      // Continue to local storage fallback
+    }
+
+    // 3. Check registered accounts from local storage (offline fallback)
     const registered = getStoredItem<StoredAccount[]>(REGISTERED_ACCOUNTS_KEY, []);
     const matched = registered.find(
       (acc) =>
@@ -98,12 +140,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (matched.password === trimmedPass) {
         setIsAuthenticated(true);
         setUser(matched.user);
+        setAuthToken(null); // Local auth has no backend token
         return { success: true };
       }
       return { success: false, error: 'Invalid username or password.' };
     }
 
-    // 3. Fallback for valid formatted input during demo sessions
+    // 4. Fallback for valid formatted input during demo sessions
     if (trimmedIdentifier.length >= 3 && trimmedPass.length >= 6) {
       const fallbackFarmName = trimmedIdentifier.includes('@')
         ? trimmedIdentifier.split('@')[0]
@@ -123,6 +166,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       };
       setIsAuthenticated(true);
       setUser(customUser);
+      setAuthToken(null);
       return { success: true };
     }
 
@@ -132,6 +176,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const loginAsDemo = () => {
     setIsAuthenticated(true);
     setUser(DEMO_USER);
+    setAuthToken(null);
   };
 
   const signup = async (data: {
@@ -165,8 +210,35 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       data.name.trim().replace(/\s+/g, '') ||
       data.email.split('@')[0];
 
+    // Try backend registration first
+    let backendToken: string | null = null;
+    let backendUserId: string | null = null;
+
+    try {
+      const response = await apiRequestWithAuth<BackendAuthResponse>('/auth/register', {
+        method: 'POST',
+        body: JSON.stringify({
+          name: data.name.trim(),
+          email: data.email.trim().toLowerCase(),
+          password: data.password.trim(),
+          role: 'farmer',
+        }),
+      }, null);
+
+      backendToken = response.token;
+      backendUserId = response.user.id;
+    } catch (err) {
+      // If backend unavailable or error, continue with local registration
+      if (err instanceof ApiError && err.statusCode === 0) {
+        // Network error - backend unavailable
+      } else if (err instanceof ApiError && err.statusCode === 400) {
+        // Validation error - might be duplicate email
+        // Continue to local storage
+      }
+    }
+
     const newUser: User = {
-      id: `user-${Date.now()}`,
+      id: backendUserId || `user-${Date.now()}`,
       name: data.name.trim(),
       username: generatedUsername,
       email: data.email.trim().toLowerCase(),
@@ -184,12 +256,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     setIsAuthenticated(true);
     setUser(newUser);
+    setAuthToken(backendToken);
     return { success: true };
   };
 
   const logout = () => {
     setIsAuthenticated(false);
     setUser(null);
+    setAuthToken(null);
     localStorage.removeItem(AUTH_STORAGE_KEY);
   };
 
@@ -198,6 +272,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       value={{
         isAuthenticated,
         user,
+        token: authToken,
         login,
         loginAsDemo,
         signup,

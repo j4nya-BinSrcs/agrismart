@@ -150,8 +150,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           const isActive =
             currentScreen === item.id ||
             (item.id === 'diagnose' && currentScreen === 'diagnosis') ||
-            (item.id === 'diagnosis-result' &&
-              (currentScreen === 'diagnosis/result' || currentScreen === 'diagnosis-result'));
+            (item.id === 'diagnosis-result' && currentScreen === 'diagnosis-result');
 
           return (
             <button
