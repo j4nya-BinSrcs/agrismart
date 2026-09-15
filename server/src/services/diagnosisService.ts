@@ -269,11 +269,16 @@ const buildAdvisoryFromCropKnowledge = (
   ]);
 
   const treatmentSource = healthy ?? pathogenEntries[0] ?? diseases[0];
+  const treatmentEntries = pathogenEntries.length > 0 ? pathogenEntries : [healthy].filter(Boolean) as DiseaseInfo[];
+  const titleTreatmentLine = (get: (d: DiseaseInfo) => string) =>
+    pathogenEntries.length > 0
+      ? pathogenEntries.map((d) => `${d.diseaseName}: ${get(d)}`).join(' ')
+      : get(treatmentSource);
   const treatmentProtocols: TreatmentProtocols = {
-    organic: treatmentSource.treatmentProtocols.organic,
-    conventional: treatmentSource.treatmentProtocols.conventional,
-    dosage: treatmentSource.treatmentProtocols.dosage,
-    applicationTiming: treatmentSource.treatmentProtocols.applicationTiming,
+    organic: titleTreatmentLine((d) => d.treatmentProtocols.organic),
+    conventional: titleTreatmentLine((d) => d.treatmentProtocols.conventional),
+    dosage: treatmentEntries[0].treatmentProtocols.dosage || treatmentSource.treatmentProtocols.dosage,
+    applicationTiming: treatmentEntries[0].treatmentProtocols.applicationTiming || treatmentSource.treatmentProtocols.applicationTiming,
   };
 
   // Prefer healthy scouting actions; otherwise surface the first pathogen playbook.

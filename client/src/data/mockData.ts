@@ -191,7 +191,7 @@ export const INITIAL_DIAGNOSES: DiagnosisRecord[] = [
     pathogenName: 'No Pathogen Detected (Vigorous Canopy)',
     isHealthy: true,
     confidence: 97,
-    severity: 'low',
+    severity: 'none',
     detectedAt: 'Yesterday, 4:30 PM',
     imageUrl: SAMPLE_LEAF_IMAGES.healthyWheat,
     fieldLocation: 'Field C (East)',
