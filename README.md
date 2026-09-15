@@ -15,6 +15,13 @@ classification.
 > MongoDB), and an ML inference service (FastAPI + PyTorch). Handles missing
 > upstream services gracefully with deterministic, data-grounded fallbacks.
 
+## Demo Video
+
+<video src="agrismart_demo.mp4" controls width="100%" style="max-width: 800px;">
+  Your browser does not support the video tag.
+  <a href="agrismart_demo.mp4">Download the demo video</a>
+</video>
+
 ---
 
 ## Table of Contents
@@ -39,7 +46,7 @@ classification.
 - Picks the best available inference engine: **Chloromap ML** (computer vision)
   first, then the **Gemini** multimodal fallback
 - Confidence, severity rating (`low`/`moderate`/`high`/`severe`/healthy `none`),
-  and per-disease precations & treatment guidance
+  and per-disease precautions & treatment guidance
 - Diagnosis history scoped per user & farm, plus a printable/sharable **PDF report**
 
 ### Weather Intelligence
@@ -83,8 +90,8 @@ classification.
                                    │ MongoDB │    │ Chloromap │  │ Gemini AI │
                                    │ (:27017)│    │ FastAPI   │  │ (external)│
                                    └─────────┘    │ (:8000)   │  └───────────┘
-                                                   │ PyTorch   │
-                                                   └───────────┘
+                                                    │ PyTorch   │
+                                                    └───────────┘
 ```
 
 - **`client/`** — React 19 + Vite + Tailwind 4 SPA. Custom hash-path router,
@@ -360,16 +367,6 @@ This project was **bootstrapped from Google AI Studio** with human architectural
   - ML: EfficientNetV2-S factory, deterministic training/evaluation scripts, class-agnostic configs, FastAPI inference wrapper, ONNX export stub.
   - Sustainability: honest FAO-56 composite with graceful client fallback (no fabricated CO₂/chemical numbers).
   - Tests: 69 server tests (auth, farm, diagnosis, sustainability, assistant), 50+ Chloromap unit tests.
-
-> AI Studio generated scaffolding; every file was reviewed, refactored, and extended by hand to meet the SIH rubric.
-
-### Demo video & deployed URL
-
-> **Demo video:** [`agrismart_demo.mp4`](agrismart_demo.mp4) (local file, ~97 MB)
->
-> For SIH submission, upload to YouTube/Drive and replace with public link:
-> - Demo video: `[insert YouTube/Drive link]`
-> - Deployed app: `[insert URL]`
 
 ---
 
