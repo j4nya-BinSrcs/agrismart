@@ -329,6 +329,8 @@ export interface AssistantMessage {
   contextTag?: string;
   actionSuggestions?: string[];
   language?: Language;
+  isFallback?: boolean;
+  fallbackReason?: string;
 }
 
 export interface AssistantContext {

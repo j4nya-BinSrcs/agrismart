@@ -59,3 +59,49 @@ export const authenticate = async (req: Request, _res: Response, next: NextFunct
 };
 
 export default authenticate;
+
+/**
+ * Optional authentication: attaches req.user when a valid Bearer token is
+ * present, and continues anonymously otherwise. Used by the assistant route so
+ * authenticated farmers get full backend context enrichment while demo /
+ * guest users still receive grounded answers from client-provided context.
+ */
+export const authenticateOptional = async (
+  req: Request,
+  _res: Response,
+  next: NextFunction
+) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return next();
+    }
+
+    const token = authHeader.split(' ')[1];
+    if (!token || !token.trim()) {
+      return next();
+    }
+
+    const decoded = jwt.verify(token, config.jwt.secret) as jwt.JwtPayload & {
+      userId?: string;
+    };
+    if (!decoded || !decoded.userId) {
+      return next();
+    }
+
+    const user = await User.findById(decoded.userId);
+    if (!user) {
+      return next();
+    }
+
+    req.user = {
+      id: user._id.toString(),
+      name: user.name,
+      email: user.email,
+      role: user.role,
+    };
+    return next();
+  } catch {
+    return next();
+  }
+};

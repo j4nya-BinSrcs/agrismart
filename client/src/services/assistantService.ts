@@ -1,5 +1,5 @@
 import { AssistantMessage, AssistantContext, Language } from '../types';
-import { apiRequest } from './apiClient';
+import { apiRequestWithAuth } from './apiClient';
 
 interface AssistantBackendResponse {
   reply: string;
@@ -8,6 +8,8 @@ interface AssistantBackendResponse {
   actionSuggestions?: string[];
   model?: string;
   contextGrounded?: boolean;
+  fallback?: boolean;
+  fallbackReason?: string;
   timestamp?: string;
 }
 
@@ -15,15 +17,19 @@ export const assistantService = {
   /**
    * Sends a farmer query to the grounded Gemini backend assistant.
    * Leverages real verified context (diagnosis, weather, irrigation plan).
+   * Auth token is forwarded when available so the backend can enrich the
+   * prompt with the farmer's full farm / field / scan history.
    */
   async sendQuery(
     queryText: string,
     language: Language = 'en',
-    context?: AssistantContext
+    context?: AssistantContext,
+    token: string | null = null
   ): Promise<AssistantMessage> {
     const payload = {
       message: queryText,
       language,
+      languageExplicit: language !== 'en',
       context: context
         ? {
             farmName: context.farmName,
@@ -67,10 +73,10 @@ export const assistantService = {
         : undefined,
     };
 
-    const result = await apiRequest<AssistantBackendResponse>('/assistant', {
+    const result = await apiRequestWithAuth<AssistantBackendResponse>('/assistant', {
       method: 'POST',
       body: JSON.stringify(payload),
-    });
+    }, token);
 
     return {
       id: `bot-${Date.now()}`,
@@ -80,6 +86,8 @@ export const assistantService = {
       contextTag: result.contextTag,
       actionSuggestions: result.actionSuggestions,
       language: result.language || language,
+      isFallback: result.fallback,
+      fallbackReason: result.fallbackReason,
     };
   },
 };

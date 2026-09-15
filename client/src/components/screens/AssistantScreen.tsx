@@ -148,7 +148,7 @@ export const AssistantScreen: React.FC<AssistantScreenProps> = ({
   weather,
   irrigation,
 }) => {
-  const { user } = useAuth();
+  const { token, user } = useAuth();
   const { activeFarm, locationLabel } = useFarm();
   const [selectedLanguage, setSelectedLanguage] = useState<Language>('en');
   const [lastFailedQuery, setLastFailedQuery] = useState<string | null>(null);
@@ -220,8 +220,13 @@ export const AssistantScreen: React.FC<AssistantScreenProps> = ({
   const handleUserSubmit = async (queryText: string) => {
     if (!queryText.trim() || isTyping) return;
 
-    // Detect language of this exact message based on dominant script
-    const messageLang = detectDominantScript(queryText, selectedLanguage);
+    // Respect the UI language selector: when the farmer explicitly picks
+    // Hindi or Gujarati, reply in that language even if they typed in Latin
+    // script. English selection still auto-detects the message's own script.
+    const messageLang =
+      selectedLanguage !== 'en'
+        ? selectedLanguage
+        : detectDominantScript(queryText, selectedLanguage);
 
     const userMsg: AssistantMessage = {
       id: `user-${Date.now()}`,
@@ -244,7 +249,7 @@ export const AssistantScreen: React.FC<AssistantScreenProps> = ({
         weather,
         irrigation,
         soilMoisture: irrigation?.zones?.[0]?.soilMoistureCurrent ?? 31,
-      });
+      }, token);
       setMessages((prev) => [...prev, botResponse]);
     } catch (error) {
       console.error('Failed to get advisor response:', error);
@@ -414,6 +419,17 @@ export const AssistantScreen: React.FC<AssistantScreenProps> = ({
                     <FormattedAssistantMessage text={msg.text} />
                   ) : (
                     <div className="whitespace-pre-line">{msg.text}</div>
+                  )}
+
+                  {isBot && msg.isFallback && (
+                    <div className="mt-2 text-[10px] text-slate-400 dark:text-slate-500 flex items-center gap-1">
+                      <span className="inline-block w-1.5 h-1.5 rounded-full bg-amber-400" />
+                      {selectedLanguage === 'gu'
+                        ? 'નિયમ-આધારિત જવાબ (AI મોડેલ હાલમાં ઉપલબ્ધ નથી)'
+                        : (selectedLanguage === 'hi'
+                            ? 'नियम-आधारित उत्तर (AI मॉडल अभी उपलब्ध नहीं है)'
+                            : 'Rule-based answer (AI model currently unavailable)')}
+                    </div>
                   )}
 
                   {/* Follow-up suggestion buttons */}

@@ -47,6 +47,37 @@ export interface AssistantDiagnosisContext {
   diseaseName?: string;
 }
 
+export interface AssistantFarmContext {
+  id?: string;
+  name?: string;
+  district?: string;
+  state?: string;
+  totalAreaAcres?: number;
+}
+
+export interface AssistantFieldContext {
+  id?: string;
+  farmId?: string;
+  name?: string;
+  crop?: string;
+  variety?: string;
+  growthStage?: string;
+  soilType?: string;
+  soilMoisture?: number | null;
+  areaAcres?: number;
+}
+
+export interface AssistantScanContext {
+  detectedAt?: string;
+  crop?: string;
+  fieldLocation?: string;
+  diseaseName?: string;
+  isHealthy?: boolean;
+  severity?: string;
+  confidence?: number;
+  isMlPrediction?: boolean;
+}
+
 export interface AssistantContext {
   farmName?: string;
   farm?: { name?: string };
@@ -59,6 +90,9 @@ export interface AssistantContext {
   irrigationPlan?: AssistantIrrigationContext;
   diagnosis?: AssistantDiagnosisContext;
   activeDiagnosis?: AssistantDiagnosisContext;
+  farms?: AssistantFarmContext[];
+  fields?: AssistantFieldContext[];
+  diagnoses?: AssistantScanContext[];
 }
 
 /**
@@ -169,6 +203,25 @@ export const detectDominantLanguage = (
 
 // Backward compatibility alias
 export const detectLanguage = detectDominantLanguage;
+
+/**
+ * Resolves the language the assistant should reply in.
+ * The client sets `explicit` when the farmer actively picked the language from
+ * the UI toggle; in that case an hi/gu selection is authoritative even when the
+ * message is typed in Latin script. Otherwise the message's dominant script
+ * drives the reply (so a follow-up asked in English is not forced into a stale
+ * session language).
+ */
+export const resolveResponseLanguage = (
+  message = '',
+  requestedLanguage: SupportedLanguage = 'en',
+  explicit = false
+): SupportedLanguage => {
+  if (explicit && (requestedLanguage === 'hi' || requestedLanguage === 'gu')) {
+    return requestedLanguage;
+  }
+  return detectDominantLanguage(message, requestedLanguage);
+};
 
 /**
  * Builds the strict grounded system instruction for Gemini.
@@ -300,6 +353,46 @@ export const formatContextForPrompt = (context: AssistantContext = {}): string =
     );
   }
 
+  // All farms owned by / shared with the user
+  if (Array.isArray(context.farms) && context.farms.length > 0) {
+    sections.push(`--- USER FARMS (${context.farms.length}) ---`);
+    for (const f of context.farms) {
+      const where = f.district || f.state ? ` (${f.district ? `${f.district}, ` : ''}${f.state || ''})` : '';
+      sections.push(`• ${f.name || 'Unnamed farm'}${where}${typeof f.totalAreaAcres === 'number' ? ` — ${f.totalAreaAcres} acres` : ''}`);
+    }
+    sections.push('Do not claim the farmer has farms or acreage beyond this list.');
+  }
+
+  // Every field/plot across those farms, with current crop & soil state
+  if (Array.isArray(context.fields) && context.fields.length > 0) {
+    sections.push(`--- FIELDS / PLOTS (${context.fields.length}) ---`);
+    for (const fl of context.fields) {
+      const moisture =
+        fl.soilMoisture == null
+          ? 'no soil sensor reading'
+          : `${fl.soilMoisture}% moisture`;
+      sections.push(
+        `• ${fl.name || 'Field'} — crop: ${fl.crop || 'N/A'}${fl.variety ? ` (${fl.variety})` : ''} | ` +
+          `stage: ${fl.growthStage || 'N/A'} | soil: ${fl.soilType || 'N/A'} | ${moisture} | ${fl.areaAcres ?? '?'} acres`
+      );
+    }
+  }
+
+  // Recent scans/diagnoses so crop-health answers use real records
+  if (Array.isArray(context.diagnoses) && context.diagnoses.length > 0) {
+    sections.push(`--- RECENT SCANS / DIAGNOSES (${context.diagnoses.length} LATEST) ---`);
+    for (const d of context.diagnoses.slice(0, 10)) {
+      const verdict = d.isMlPrediction
+        ? d.isHealthy
+          ? 'Healthy'
+          : d.diseaseName || 'Condition detected'
+        : 'Expert advisory assessment (no automated prediction)';
+      const conf = d.isMlPrediction && typeof d.confidence === 'number' ? ` (${d.confidence}% confidence)` : '';
+      sections.push(`• ${d.detectedAt || 'recently'} — ${d.crop || 'crop'} @ ${d.fieldLocation || 'field'} → ${verdict}${conf}`);
+    }
+    sections.push('Use ONLY these verified scan records when answering crop-health questions; do not invent scans that are not listed.');
+  }
+
   return sections.join('\n');
 };
 
@@ -369,17 +462,188 @@ export const generateActionSuggestions = (
   ];
 };
 
+export type AssistantIntent = 'irrigation' | 'weather' | 'diagnosis' | 'general';
+
+const IRRIGATION_KEYWORDS = [
+  'irrigat',
+  'water',
+  'watering',
+  'pump',
+  'drip',
+  'moisture',
+  'सिंचाई',
+  'सिंचन',
+  'पानी',
+  'बाढ़',
+  'સિંચાઈ',
+  'સિંચાઇ',
+  'પિયત',
+  'પાણી',
+];
+
+const WEATHER_KEYWORDS = [
+  'weather',
+  'rain',
+  'rainfall',
+  'forecast',
+  'humidity',
+  'temperature',
+  'wind',
+  'वर्षा',
+  'बारिश',
+  'मौसम',
+  'तापमान',
+  'नमी',
+  'हवा',
+  'વરસાદ',
+  'હવામાન',
+  'તાપમાન',
+  'ભેજ',
+  'પવન',
+];
+
+const DIAGNOSIS_KEYWORDS = [
+  'disease',
+  'diseases',
+  'scan',
+  'diagnos',
+  'leaf',
+  'leaves',
+  'blight',
+  'spot',
+  'healthy',
+  'pest',
+  'spray',
+  'treatment',
+  'रोग',
+  'बीमारी',
+  'लक्षण',
+  'स्वस्थ',
+  'पत्ती',
+  'छिड़काव',
+  'उपचार',
+  'સારવાર',
+  'રોગ',
+  'બીમારી',
+  'લક્ષણ',
+  'તંદુરસ્ત',
+  'પર્ણ',
+  'દવા',
+];
+
 /**
- * Generates a deterministic, 100% grounded fallback response when LLM output violates safety laws.
+ * Classifies a farmer's question into a topic so the rule-based fallback can
+ * answer the right kind of question instead of recycling one fixed template.
+ */
+export const detectAssistantIntent = (message = ''): AssistantIntent => {
+  const text = (message || '').toLowerCase();
+  if (IRRIGATION_KEYWORDS.some((k) => text.includes(k))) return 'irrigation';
+  if (WEATHER_KEYWORDS.some((k) => text.includes(k))) return 'weather';
+  if (DIAGNOSIS_KEYWORDS.some((k) => text.includes(k))) return 'diagnosis';
+  return 'general';
+};
+
+/**
+ * Produces a topic-specific, 100% grounded rule-based reply in the requested
+ * language. Unlike the previous version, it never recycles the irrigation
+ * answer for unrelated questions — the reply always reflects the question.
  */
 export const generateDeterministicGroundedResponse = (
+  context: AssistantContext = {},
+  language: SupportedLanguage = 'en',
+  message?: string
+): string => {
+  const intent = detectAssistantIntent(message || '');
+  switch (intent) {
+    case 'weather':
+      return buildDeterministicWeatherResponse(context, language);
+    case 'diagnosis':
+      return buildDeterministicDiagnosisResponse(context, language);
+    case 'irrigation':
+      return buildDeterministicIrrigationResponse(context, language);
+    default:
+      return buildDeterministicGeneralResponse(context, language, message);
+  }
+};
+
+const buildDeterministicGeneralResponse = (
+  context: AssistantContext = {},
+  language: SupportedLanguage = 'en',
+  message?: string
+): string => {
+  const short = (message || '').trim().replace(/\s+/g, ' ').slice(0, 60);
+  const irr = context.irrigation ?? context.irrigationPlan ?? undefined;
+  const decision = extractIrrigationDecision(context);
+  const diag = context.diagnosis || context.activeDiagnosis;
+  const farmName = context.farmName || context.farm?.name || 'your farm';
+
+  const irrLine = !irr
+    ? '• Irrigation engine: no live irrigation plan is available for this query.'
+    : decision === 'DELAY_IRRIGATION'
+      ? '• Irrigation engine: DO NOT irrigate today — delay is advised.'
+      : decision === 'IRRIGATE'
+        ? '• Irrigation engine: proceed with the scheduled irrigation.'
+        : '• Irrigation engine: no urgent action advised.';
+
+  const diagLine = !diag
+    ? '• No active crop scan context.'
+    : diag.isMlPrediction && diag.diseaseName && diag.diseaseName !== EXPERT_ADVISORY_ASSESSMENT_LABEL
+      ? `• Latest scan: ${diag.diseaseName}.`
+      : '• Latest scan mode: expert advisory assessment (no automated disease prediction).';
+
+  const questionLine = short
+    ? (language === 'gu'
+        ? `"${short}" વિશેનો તમારો પ્રશ્ન —`
+        : language === 'hi'
+          ? `आपके प्रश्न "${short}" के संबंध में —`
+          : `Pertaining to your question "${short}" —`)
+    : language === 'gu'
+      ? 'તમારા ખેતર માટે ઉપલબ્ધ સચોટ ડેટા —'
+      : language === 'hi'
+        ? 'आपके खेत के लिए उपलब्ध सत्यापित डेटा —'
+        : 'Here is the verified data available for your farm —';
+
+  const headerEn = `Grounded summary for ${farmName}\n${questionLine}\n${irrLine}\n${diagLine}\n\nFor a sharper answer, ask specifically about irrigation scheduling, the weather outlook, or crop scouting — replies are grounded in your live farm data.`;
+  const headerHi = `आपके खेत (${farmName}) के लिए सत्यापित सारांश\n${questionLine}\n${irrLine}\n${diagLine}\n\nअधिक सटीक जवाब के लिए सिंचाई समय-निर्धारण, मौसम पूर्वानुमान, या फसल स्काउटिंग के बारे में विशेष रूप से पूछें — उत्तर आपके लाइव खेत डेटा पर आधारित होंगे।`;
+  const headerGu = `તમારા ખેતર (${farmName}) માટે સચોટ સારાંશ\n${questionLine}\n${irrLine}\n${diagLine}\n\nવધુ ચોક્કસ જવાબ માટે પિયત સમયપત્રક, હવામાન આગાહી, અથવા પાક સ્કાઉટિંગ વિશે વિશિષ્ટ પ્રશ્ન પૂછો — જવાબો તમારા લાઇવ ફાર્મ ડેટા પર આધારિત હશે.`;
+
+  if (language === 'gu') return headerGu;
+  if (language === 'hi') return headerHi;
+  return headerEn;
+};
+
+const buildDeterministicDiagnosisResponse = (
   context: AssistantContext = {},
   language: SupportedLanguage = 'en'
 ): string => {
   const diag = context.diagnosis || context.activeDiagnosis;
   const isMlUnavailable = diag && (!diag.isMlPrediction || diag.diseaseName === EXPERT_ADVISORY_ASSESSMENT_LABEL);
+  const isMlResult = diag?.isMlPrediction && diag.diseaseName && diag.diseaseName !== EXPERT_ADVISORY_ASSESSMENT_LABEL;
 
-  if (isMlUnavailable && (!context.irrigation && !context.irrigationPlan)) {
+  if (isMlResult) {
+    const disease = diag?.diseaseName || 'Healthy';
+    const healthy = disease.toLowerCase() === 'healthy';
+    if (language === 'gu') {
+      return `તમારા પાકનો નવીનતમ સ્કેન પરિણામ:
+• મોડેલ પરિણામ: ${disease}
+• સ્થિતિ: ${healthy ? 'તંદુરસ્ત' : 'રોગ શોધાયો'}
+ભલામણ: નિદાન રિપોર્ટમાં દર્શાવેલ ઉપચાર/જાળવણી પગલાં અનુસરો અને ખેતરમાં લક્ષણોની પુષ્ટિ કરો.`;
+    }
+    if (language === 'hi') {
+      return `आपकी फसल का नवीनतम स्कैन परिणाम:
+• मॉडल परिणाम: ${disease}
+• स्थिति: ${healthy ? 'स्वस्थ' : 'रोग पाया गया'}
+सिफारिश: निदान रिपोर्ट में दिए गए उपचार/रखरखाव चरणों का पालन करें और खेत में लक्षणों की पुष्टि करें।`;
+    }
+    return `Latest leaf scan for your farm:
+• Model result: ${disease}
+• Status: ${healthy ? 'Healthy' : 'Condition detected'}
+
+Recommendation
+• Follow the treatment / maintenance protocols shown on the diagnosis report and confirm symptoms in the field.`;
+  }
+
+  if (isMlUnavailable) {
     if (language === 'gu') {
       return `કમ્પ્યુટર આધારિત રોગ નિદાન આ બિલ્ડમાં હાથ ધરવામાં આવતું નથી (Expert Advisory Assessment). કોઈ સ્વચાલિત રોગ અનુમાન કરવામાં આવ્યું નથી. કૃપા કરીને પાકના લક્ષણોનું પ્રત્યક્ષ નિરીક્ષણ કરો અથવા સ્થાનિક કૃષિ અધિકારીનો સંપર્ક કરો.`;
     }
@@ -389,6 +653,85 @@ export const generateDeterministicGroundedResponse = (
     return `Automated image-based disease identification is not performed in this build (Expert Advisory Assessment). No automated disease prediction has been made. Please inspect crop leaves visually or consult a local agricultural extension expert.`;
   }
 
+  if (language === 'gu') {
+    return `હાલમાં કોઈ સક્રિય પાક સ્કેન વિકલ્પ ઉપલબ્ધ નથી. કૃપા કરીને ડાયગ્નોસિસ સ્ક્રીન પર પાંદડાનો ફોટો અપલોડ કરીને સ્કેન કરો.`;
+  }
+  if (language === 'hi') {
+    return `फिलहाल कोई सक्रिय फसल स्कैन उपलब्ध नहीं है। कृपया डायग्नोसिस स्क्रीन पर पत्ते की तस्वीर अपलोड करके स्कैन करें।`;
+  }
+  return `There is no active leaf scan for your farm yet. Open the Crop Scan screen and upload a clear leaf photo to get a grounded health assessment.`;
+};
+
+const buildDeterministicWeatherResponse = (
+  context: AssistantContext = {},
+  language: SupportedLanguage = 'en'
+): string => {
+  const w: AssistantWeatherContext = context.weather ?? {};
+  const rainProb = w.precipitationProbability ?? w.rainProbability ?? 'N/A';
+  const rainMm = w.precipitationMm ?? w.rainfallExpectedMm ?? 'N/A';
+  const temp = w.temperature ?? 'N/A';
+  const humidity = w.humidity ?? 'N/A';
+  const cond = w.condition || w.description || 'N/A';
+  const decision = extractIrrigationDecision(context);
+  const rainAdvice =
+    decision === 'DELAY_IRRIGATION'
+      ? language === 'gu'
+        ? 'નોંધપાત્ર વરસાદની શક્યતા છે — પિયત મોકૂફ રાખો.'
+        : language === 'hi'
+          ? 'भारी वर्षा की संभावना है — सिंचाई टालें।'
+          : 'Significant rain is likely — delay irrigation and let the rainfall replenish soil moisture.'
+      : language === 'gu'
+        ? 'ભારે વરસાદની અપેક્ષા નથી — નિયોજિત પિયત સમયપત્રક અનુસરો.'
+        : language === 'hi'
+          ? 'भारी वर्षा की संभावना नहीं है — नियोजित सिंचाई कार्यक्रम का पालन करें।'
+          : 'No heavy rainfall is expected — follow the planned irrigation schedule.';
+
+  if (language === 'gu') {
+    return `તમારા ખેતર માટે સચોટ હવામાન આગાહી
+• હવામાન: ${cond}
+• તાપમાન: ${temp}°C
+• ભેજ: ${humidity}%
+• વરસાદની શક્યતા: ${rainProb}%
+• અપેક્ષિત વરસાદ: ${rainMm} mm
+
+ભલામણ
+• ${rainAdvice}
+
+આગામી તપાસ
+• આગામી પિયત ચક્ર પહેલા અપડેટેડ આગાહી ફરી જુઓ.`;
+  }
+  if (language === 'hi') {
+    return `आपके खेत के लिए सत्यापित मौसम पूर्वानुमान
+• मौसम: ${cond}
+• तापमान: ${temp}°C
+• आर्द्रता: ${humidity}%
+• वर्षा संभावना: ${rainProb}%
+• अनुमानित वर्षा: ${rainMm} mm
+
+सिफारिश
+• ${rainAdvice}
+
+अगली जांच
+• अगले सिंचाई चक्र से पहले अपडेटेड पूर्वानुमान दोबारा देखें।`;
+  }
+  return `Verified weather outlook for your farm
+• Condition: ${cond}
+• Temperature: ${temp}°C
+• Humidity: ${humidity}%
+• Rain probability: ${rainProb}%
+• Expected rainfall: ${rainMm} mm
+
+Recommendation
+• ${rainAdvice}
+
+Next check
+• Recheck the updated forecast on the AgriSmart weather screen before the next irrigation cycle.`;
+};
+
+const buildDeterministicIrrigationResponse = (
+  context: AssistantContext = {},
+  language: SupportedLanguage = 'en'
+): string => {
   const decision = extractIrrigationDecision(context);
   const w: AssistantWeatherContext = context.weather ?? {};
   const rainProb = w.precipitationProbability ?? w.rainProbability ?? 80;
@@ -585,12 +928,14 @@ export const generateAssistantResponse = async ({
   message,
   language = 'en',
   context = {},
+  explicit = false,
 }: {
   message: string;
   language?: SupportedLanguage;
   context?: AssistantContext;
+  explicit?: boolean;
 }) => {
-  const effectiveLanguage = detectDominantLanguage(message, language);
+  const effectiveLanguage = resolveResponseLanguage(message, language, explicit);
   const apiKey = config.gemini.apiKey;
 
   if (!apiKey || apiKey === 'YOUR_GEMINI_API_KEY') {
@@ -673,13 +1018,19 @@ ${endInstruction}`;
   // Dual-layer Grounding Validation
   const validation = validateGrounding(rawReply, context);
   let finalReply = rawReply;
+  let usedFallback = false;
+  let fallbackReason: string | undefined;
 
   if (!rawReply || !validation.isValid) {
+    usedFallback = true;
     if (rawReply && !validation.isValid) {
+      fallbackReason = validation.reason;
       logger.warn(`[GROUNDING INTERCEPTION] LLM response violated grounding rules: ${validation.reason}`);
     }
-    // Fall back to deterministic, 100% grounded calculation explanation
-    finalReply = generateDeterministicGroundedResponse(context, effectiveLanguage);
+    // Fall back to a topic-aware, 100% grounded rule-based explanation so the
+    // reply actually addresses the farmer's question instead of recycling one
+    // fixed irrigation template.
+    finalReply = generateDeterministicGroundedResponse(context, effectiveLanguage, message);
   }
 
   finalReply = cleanReplyText(finalReply);
@@ -694,6 +1045,8 @@ ${endInstruction}`;
     actionSuggestions,
     model,
     contextGrounded: true,
+    fallback: usedFallback,
+    fallbackReason,
     timestamp: new Date().toISOString(),
   };
 };
@@ -702,6 +1055,8 @@ export default {
   SUPPORTED_LANGUAGES,
   detectDominantLanguage,
   detectLanguage,
+  resolveResponseLanguage,
+  detectAssistantIntent,
   cleanReplyText,
   extractIrrigationDecision,
   buildSystemPrompt,
