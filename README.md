@@ -364,7 +364,10 @@ This project was **bootstrapped from Google AI Studio** with human architectural
 > AI Studio generated scaffolding; every file was reviewed, refactored, and extended by hand to meet the SIH rubric.
 
 ### Demo video & deployed URL
-> **TBD from team** — placeholders for SIH submission:
+
+> **Demo video:** [`agrismart_demo.mp4`](agrismart_demo.mp4) (local file, ~97 MB)
+>
+> For SIH submission, upload to YouTube/Drive and replace with public link:
 > - Demo video: `[insert YouTube/Drive link]`
 > - Deployed app: `[insert URL]`
 
