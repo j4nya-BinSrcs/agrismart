@@ -27,6 +27,30 @@ ensure_node_deps() {
   fi
 }
 
+# Ensure Chloromap ML dependencies are installed (uv sync on first run)
+ensure_ml_deps() {
+  if ! bool_true "${ENABLE_ML:-true}"; then
+    return 0
+  fi
+  if [[ ! -d "${CHLOROMAP_DIR}" ]]; then
+    return 0
+  fi
+
+  local venv_py="${CHLOROMAP_DIR}/.venv/bin/python"
+  if [[ -x "$venv_py" ]]; then
+    log "Chloromap venv present — skipping uv sync (FORCE_INSTALL=true to refresh)"
+    return 0
+  fi
+
+  if command_exists uv; then
+    log "Installing Chloromap ML dependencies (uv sync)..."
+    (cd "${CHLOROMAP_DIR}" && uv sync)
+    ok "uv sync complete"
+  else
+    warn "'uv' not found — skipping Chloromap dep install. Install uv or run 'uv sync' manually in chloromap/"
+  fi
+}
+
 # Ensure project .env exists so the server can boot
 ensure_dotenv() {
   if [[ ! -f "${AGRISMART_ROOT}/.env" && -f "${AGRISMART_ROOT}/.env.example" ]]; then
@@ -120,6 +144,8 @@ start_ml() {
     log "Chloromap ML skipped (--no-ml)"
     return 0
   fi
+
+  ensure_ml_deps
 
   if [[ ! -d "${CHLOROMAP_DIR}" ]]; then
     warn "Chloromap directory not found at ${CHLOROMAP_DIR} — skipping ML"

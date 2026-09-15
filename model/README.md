@@ -8,13 +8,16 @@ satisfied without duplicating artifacts.
 
 | Artifact | Location |
 | :--- | :--- |
-| Trained checkpoint (25-class) | `chloromap/weights/best_model.pth` |
-| Baseline checkpoint (15-class solanaceae backup) | `chloromap/weights/best_model.pth.solanaceae15.pth` (gitignored) |
-| Baseline experiment (frozen v2-S) | `chloromap/weights/best_model.pth.baseline` (gitignored) |
+| Trained checkpoint (15-class solanaceae) | `chloromap/weights/best_model.pth` |
+| Baseline checkpoint (frozen v2-S) | `chloromap/weights/best_model.pth.baseline` (gitignored) |
 | Model source (EfficientNet factory, heads) | `chloromap/src/chloromap/models/` |
 | Training / evaluation code | `chloromap/scripts/{train,evaluate,predict,serve,audit_dataset,prepare_dataset,build_dataset}.py` |
-| Class specification (canonical labels) | `chloromap/configs/class_spec.yaml` |
+| Class specification (canonical labels — 25 classes) | `chloromap/configs/class_spec.yaml` |
 | Report + metrics | [`../report/`](../report/) |
+
+**Current production model:** 15 classes (Pepper, Potato, Tomato) — `tf_efficientnet_b0`, Macro-F1 0.9422, Accuracy 0.9501.
+
+**Canonical target:** 25 classes (adds Apple, Corn, Grape) — defined in `class_spec.yaml`, retraining pending.
 
 Reproduce training from the repo root:
 

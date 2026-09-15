@@ -1,0 +1,61 @@
+# AgriSmart AI — Root-level setup & dependencies
+#
+# This file documents the complete dependency chain for judges to reproduce
+# the full stack. The actual package managers are:
+#   - npm (root, client, server) via package.json workspaces
+#   - uv (Chloromap ML) via chloromap/pyproject.toml + uv.lock
+#
+# Quick start (recommended - use the launcher):
+#   git clone <repo>
+#   cd AgriSmart
+#   ./launch.sh up
+#
+# Manual setup (if launcher fails):
+#   # 1. Node.js >= 18
+#   npm install                    # installs client + server workspaces
+#
+#   # 2. Python 3.13 + uv (for Chloromap ML)
+#   #    Install uv: https://docs.astral.sh/uv/getting-started/installation/
+#   cd chloromap
+#   uv sync                         # creates .venv with pinned deps from uv.lock
+#   # or: pip install -r requirements.txt  (if not using uv)
+#
+#   # 3. MongoDB (local, Docker, or Atlas)
+#   #    Local: mongod --dbpath .run/mongodb-data --port 27017
+#   #    Docker: docker run -d -p 27017:27017 -v .run/mongodb-data:/data/db mongo
+#
+#   # 4. Environment
+#   cp .env.example .env            # edit: MONGODB_URI, JWT_SECRET, GEMINI_API_KEY
+#   cp client/.env.example client/.env  # edit: VITE_API_URL
+#
+#   # 5. Run
+#   npm run dev                     # API (:5000) + client (:3000)
+#   # In another terminal:
+#   cd chloromap && uv run python scripts/serve.py  # ML (:8000)
+#
+# Requirements for Chloromap ML (pinned in chloromap/uv.lock):
+#   torch==2.14.0+cu132
+#   torchvision==0.29.0+cu132
+#   timm==1.0.29
+#   numpy==2.5.2
+#   pillow==12.3.0
+#   pyyaml==6.0.3
+#   tqdm==4.70.1
+#   scikit-learn==1.9.1
+#   matplotlib==3.11.1
+#   fastapi==0.141.1
+#   uvicorn==0.52.4
+#   python-multipart
+#   pytest==9.1.1
+#   pydantic==2.13.5
+#   requests
+#   ruff==0.8.6
+#
+# System requirements:
+#   - Linux / macOS / WSL2
+#   - Node.js >= 18
+#   - Python 3.13 (for Chloromap)
+#   - NVIDIA GPU with CUDA 12.x/13.x (for ML inference; CPU fallback works)
+#   - MongoDB 6+ (local, Docker, or Atlas)
+#   - ~4 GB VRAM for ML (tested on NVIDIA T1200 4GB)
+#   - uv (recommended) or pip

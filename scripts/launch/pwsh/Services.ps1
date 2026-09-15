@@ -27,6 +27,31 @@ function Ensure-NodeDeps {
     }
 }
 
+function Ensure-MlDeps {
+    if (-not (Test-BoolTrue $env:ENABLE_ML)) { return }
+    if (-not (Test-Path -LiteralPath $env:CHLOROMAP_DIR)) { return }
+
+    $venvPy = Join-Path $env:CHLOROMAP_DIR '.venv/Scripts/python.exe'
+    $venvPyUnix = Join-Path $env:CHLOROMAP_DIR '.venv/bin/python'
+    if (Test-Path $venvPy -or Test-Path $venvPyUnix) {
+        Write-Info 'Chloromap venv present — skipping uv sync (-ForceInstall to refresh)'
+        return
+    }
+
+    if (Get-Command uv -ErrorAction SilentlyContinue) {
+        Write-Info 'Installing Chloromap ML dependencies (uv sync)...'
+        Push-Location $env:CHLOROMAP_DIR
+        try {
+            uv sync
+            Write-Ok 'uv sync complete'
+        } finally {
+            Pop-Location
+        }
+    } else {
+        Write-Warn "'uv' not found — skipping Chloromap dep install. Install uv or run 'uv sync' manually in chloromap/"
+    }
+}
+
 function Ensure-DotEnv {
     $envPath = Join-Path $env:AGRISMART_ROOT '.env'
     $example = Join-Path $env:AGRISMART_ROOT '.env.example'
@@ -121,6 +146,8 @@ function Start-AgriMl {
         Write-Info 'Chloromap ML skipped (-NoMl)'
         return
     }
+    Ensure-MlDeps
+
     if (-not (Test-Path -LiteralPath $env:CHLOROMAP_DIR)) {
         Write-Warn "Chloromap directory not found at $($env:CHLOROMAP_DIR) — skipping ML"
         return

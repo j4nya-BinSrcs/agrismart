@@ -26,6 +26,7 @@ classification.
 - [Configuration](#configuration)
 - [Available Commands](#available-commands)
 - [Testing](#testing)
+- [Chloromap ML](#chloromap-ml)
 - [Launcher](#launcher)
 - [Related Documentation](#related-documentation)
 
@@ -141,46 +142,89 @@ AgriSmart/
 
 ---
 
-## Getting Started
+## Getting Started (Judge Quick-Start)
+
+> **Target:** Reproduce a prediction in **under 10 minutes** on a fresh clone.
+> **Recommended:** Use the launcher script — it handles MongoDB, npm, uv, and
+> all services automatically.
 
 ### Prerequisites
 
-- **Node.js ≥ 18** and npm ≥ 9
-- **MongoDB** — local `mongod`, MongoDB Atlas, or Docker (the launcher can
-  provision a local instance automatically)
-- (Optional) **Python 3.13 + GPU** for the Chloromap ML service; the app still
-  runs with Gemini-only diagnosis if ML is unavailable
+- **Linux / macOS / WSL2** (Windows users: run `launch.ps1` in PowerShell)
+- **Node.js ≥ 18** (includes npm)
+- **Python 3.13** + **uv** (for Chloromap ML) — install: `curl -LsSf https://astral.sh/uv/install.sh | sh`
+- **NVIDIA GPU + CUDA 12/13** (for ML; CPU fallback works but slower)
+- **MongoDB** — launcher auto-provisions local `mongod` or Docker if available
 
-### Install
-
-```bash
-npm install
-```
-
-### Configure environment
+### One-command launch (recommended)
 
 ```bash
-# Server config (repo root)
+git clone <this-repo>
+cd AgriSmart
+
+# Optional: add Gemini API key for LLM features
 cp .env.example .env
-#  → set MONGODB_URI, JWT_SECRET, GEMINI_API_KEY
+# edit .env → set GEMINI_API_KEY (optional; app works with fallback rules)
 
-# Client config
-cp client/.env.example client/.env
-#  → set VITE_API_URL (default http://localhost:5000/api/v1)
-```
-
-> **Note:** `client/.env` and `.env` are git-ignored (only the `.env.example`
-> templates are tracked). The API auto-loads `.env` from the repo root.
-
-### Run the full stack
-
-```bash
-npm run dev          # API (:5000) + client (:3000) concurrently
-# or use the launcher for DB + API + client + ML together:
+# Start everything: MongoDB + API + Client + Chloromap ML
 ./launch.sh up
 ```
 
-Then open **http://localhost:3000**.
+The launcher will:
+1. `npm install` (client + server workspaces)
+2. `uv sync` in `chloromap/` (creates `.venv` with pinned deps)
+3. Start MongoDB (local or Docker)
+4. Start API server on `:5000`
+5. Start Vite client on `:3000`
+6. Start Chloromap FastAPI on `:8000` (loads `weights/best_model.pth`)
+
+Wait for "Ready." banner, then open **http://localhost:3000**.
+
+### Verify a prediction
+
+1. Open http://localhost:3000 → Sign up / Login
+2. Go to **Diagnosis** → Upload a leaf image (or use camera)
+3. Click **Analyze** → see class + confidence + treatment guidance
+
+**API-only test** (no UI):
+```bash
+# Use any leaf image (JPEG/PNG/WEBP, max 10 MB)
+curl -X POST http://localhost:8000/predict -F "image=@/path/to/your/leaf.jpg"
+# Returns: {"class_id": 14, "class_name": "Tomato_healthy", "confidence": 0.91}
+```
+
+### Manual setup (if launcher fails)
+
+```bash
+# 1. Node deps
+npm install
+
+# 2. Chloromap ML deps
+cd chloromap && uv sync && cd ..
+
+# 3. MongoDB (pick one)
+#    A) Local: mongod --dbpath .run/mongodb-data --port 27017
+#    B) Docker: docker run -d -p 27017:27017 -v .run/mongodb-data:/data/db mongo
+
+# 4. Env
+cp .env.example .env
+cp client/.env.example client/.env
+# edit .env → MONGODB_URI, JWT_SECRET, GEMINI_API_KEY (optional)
+
+# 5. Run
+npm run dev                    # API + Client (in one terminal)
+# In another terminal:
+cd chloromap && uv run python scripts/serve.py  # ML on :8000
+```
+
+### Stop / Restart
+
+```bash
+./launch.sh down       # stop all
+./launch.sh restart    # down + up
+./launch.sh status     # health snapshot
+./launch.sh logs ml    # tail ML logs
+```
 
 ---
 
@@ -239,6 +283,34 @@ Individual workspaces can also be addressed directly, e.g.
 - **Chloromap:** `cd chloromap && uv run pytest` (or `python -m pytest`) — 50+
   unit tests with synthetic fixtures, no dataset required.
 - **Client:** type-checked via `npm run lint` (`tsc --noEmit`).
+
+---
+
+## Chloromap ML
+
+**Chloromap** is the self-contained PyTorch + FastAPI crop-disease classifier
+subsystem. Given a leaf image it returns the disease (or healthy) class and a
+confidence; any agronomic guidance is handled by the API layer.
+
+- **Backbone:** EfficientNet (`timm`) — `tf_efficientnet_b0`, 224×224, ImageNet normalization
+- **Classes:** 15-class production checkpoint (Pepper/Potato/Tomato); 25-class canonical spec in `configs/class_spec.yaml`
+- **Primary metric:** Macro-F1
+- **Endpoints:** `GET /health`, `GET /metadata`, `POST /predict`, `POST /api/v1/predict`
+
+### Quick benchmarks
+
+| Metric | Value | Context |
+| :--- | :--- | :--- |
+| Val Macro-F1 | **0.9422** | 15-class held-out validation split |
+| Val Accuracy | 0.9501 | same split |
+| Avg inference latency | **21.1 ms** | NVIDIA T1200, FP32, batch 1 |
+| Model load time | 0.90 s | once at startup |
+| GPU memory reserved | 60.8 MB | inference |
+
+Reproduce: `cd chloromap && python scripts/benchmark.py --checkpoint weights/best_model.pth --iterations 50`.
+
+See [docs/CHLOROMAP.md](docs/CHLOROMAP.md) for the full introduction, per-class
+results, supported classes, training workflow, and endpoint reference.
 
 ---
 
@@ -318,3 +390,12 @@ AgriSmart/
 ```
 
 See [`model/README.md`](model/README.md) and [`report/model_report.md`](report/model_report.md) for details.
+
+---
+
+## Related Documentation
+
+- [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — system architecture, data flows, provider-failure handling
+- [`docs/CHLOROMAP.md`](docs/CHLOROMAP.md) — Chloromap ML subsystem: classes, benchmarks, workflow, endpoints
+- [`chloromap/README.md`](chloromap/README.md) — Chloromap setup, training, and evaluation scripts
+- [`report/model_report.md`](report/model_report.md) — one-page model evaluation report
