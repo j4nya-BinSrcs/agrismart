@@ -416,7 +416,7 @@ export const buildContextTag = (
     if (diag?.isMlPrediction && diag.diseaseName && diag.diseaseName !== EXPERT_ADVISORY_ASSESSMENT_LABEL) {
       parts.push(diag.diseaseName);
     } else {
-      parts.push(isGu ? 'રોગ તપાસ' : (isHi ? 'રોગ વિશ્લેષણ' : 'Diagnosis'));
+      parts.push(isGu ? 'રોગ તપાસ' : (isHi ? 'रोग विश्लेषण' : 'Diagnosis'));
     }
   }
 
@@ -462,7 +462,7 @@ export const generateActionSuggestions = (
   ];
 };
 
-export type AssistantIntent = 'irrigation' | 'weather' | 'diagnosis' | 'general';
+export type AssistantIntent = 'irrigation' | 'weather' | 'diagnosis' | 'farm' | 'general';
 
 const IRRIGATION_KEYWORDS = [
   'irrigat',
@@ -531,6 +531,30 @@ const DIAGNOSIS_KEYWORDS = [
   'દવા',
 ];
 
+const FARM_DATA_KEYWORDS = [
+  'field',
+  'fields',
+  'plot',
+  'plots',
+  'farm',
+  'farms',
+  'list',
+  'acre',
+  'acres',
+  'खेत',
+  'खेतों',
+  'प्लॉट',
+  'जमीन',
+  'एकड़',
+  'ખેતર',
+  'ખેતરો',
+  'પ્લોટ',
+  'જમીન',
+  'એકર',
+  'વાડી',
+  'નોંધાયેલા',
+];
+
 /**
  * Classifies a farmer's question into a topic so the rule-based fallback can
  * answer the right kind of question instead of recycling one fixed template.
@@ -540,6 +564,7 @@ export const detectAssistantIntent = (message = ''): AssistantIntent => {
   if (IRRIGATION_KEYWORDS.some((k) => text.includes(k))) return 'irrigation';
   if (WEATHER_KEYWORDS.some((k) => text.includes(k))) return 'weather';
   if (DIAGNOSIS_KEYWORDS.some((k) => text.includes(k))) return 'diagnosis';
+  if (FARM_DATA_KEYWORDS.some((k) => text.includes(k))) return 'farm';
   return 'general';
 };
 
@@ -561,55 +586,205 @@ export const generateDeterministicGroundedResponse = (
       return buildDeterministicDiagnosisResponse(context, language);
     case 'irrigation':
       return buildDeterministicIrrigationResponse(context, language);
+    case 'farm':
+      return buildDeterministicFarmResponse(context, language, message);
     default:
-      return buildDeterministicGeneralResponse(context, language, message);
+      return buildDeterministicGeneralResponse(context, language);
   }
 };
 
-const buildDeterministicGeneralResponse = (
+const farmDetailLine = (f: AssistantFarmContext, language: SupportedLanguage): string => {
+  const where = f.district || f.state ? ` (${[f.district, f.state].filter(Boolean).join(', ')})` : '';
+  const area =
+    typeof f.totalAreaAcres === 'number'
+      ? language === 'hi'
+        ? ` | ${f.totalAreaAcres} एकड़`
+        : language === 'gu'
+          ? ` | ${f.totalAreaAcres} એકર`
+          : ` | ${f.totalAreaAcres} acres`
+      : '';
+  return `• ${f.name || 'Unnamed farm'}${where}${area}`;
+};
+
+const fieldDetailLine = (fl: AssistantFieldContext, language: SupportedLanguage): string => {
+  const name = fl.name || 'Field';
+  const cropPart = fl.crop ? `${fl.crop}${fl.variety ? ` (${fl.variety})` : ''}` : 'N/A';
+  const moisture = fl.soilMoisture == null ? null : `${fl.soilMoisture}%`;
+  const parts: string[] = [];
+  if (language === 'hi') {
+    if (fl.crop) parts.push(`फसल: ${cropPart}`);
+    if (fl.growthStage) parts.push(`अवस्था: ${fl.growthStage}`);
+    if (fl.soilType) parts.push(`मिट्टी: ${fl.soilType}`);
+    if (moisture) parts.push(`${moisture} नमी`);
+    parts.push(`${fl.areaAcres ?? '?'} एकड़`);
+  } else if (language === 'gu') {
+    if (fl.crop) parts.push(`પાક: ${cropPart}`);
+    if (fl.growthStage) parts.push(`અવસ્થા: ${fl.growthStage}`);
+    if (fl.soilType) parts.push(`જમીન: ${fl.soilType}`);
+    if (moisture) parts.push(`${moisture} ભેજ`);
+    parts.push(`${fl.areaAcres ?? '?'} એકર`);
+  } else {
+    if (fl.crop) parts.push(`crop: ${cropPart}`);
+    if (fl.growthStage) parts.push(`stage: ${fl.growthStage}`);
+    if (fl.soilType) parts.push(`soil: ${fl.soilType}`);
+    if (moisture) parts.push(`${moisture} moisture`);
+    parts.push(`${fl.areaAcres ?? '?'} acres`);
+  }
+  return `• ${name} — ${parts.join(' | ')}`;
+};
+
+/**
+ * Answers "which fields/farms do I have?" directly from the registered
+ * farm/field data, optionally scoped to the farm named in the question.
+ */
+export const buildDeterministicFarmResponse = (
   context: AssistantContext = {},
   language: SupportedLanguage = 'en',
   message?: string
 ): string => {
-  const short = (message || '').trim().replace(/\s+/g, ' ').slice(0, 60);
-  const irr = context.irrigation ?? context.irrigationPlan ?? undefined;
+  const farms = Array.isArray(context.farms) ? context.farms : [];
+  const fields = Array.isArray(context.fields) ? context.fields : [];
+
+  if (farms.length === 0 && fields.length === 0) {
+    if (language === 'gu') {
+      return 'તમારા નામે હજી કોઈ ખેતર અથવા પ્લોટ નોંધાયેલા નથી. મેનેજમેન્ટ સ્ક્રીન પરથી ખેતર/પ્લોટ ઉમેરો અને હું ફરી મદદ કરીશ.';
+    }
+    if (language === 'hi') {
+      return 'आपके नाम पर अभी कोई खेत या प्लॉट पंजीकृत नहीं हैं। मैनेजमेंट स्क्रीन से खेत/प्लॉट जोड़ें और मैं फिर से मदद करूँगा।';
+    }
+    return 'No farms or fields are registered for your account yet. Add a farm or field from the Management screen and I can list them for you.';
+  }
+
+  const target = (message || '').toLowerCase();
+  const requestedFarm = farms.find((f) => {
+    const name = (f.name || '').toLowerCase();
+    return name && target.includes(name);
+  });
+
+  const visibleFarms = requestedFarm ? [requestedFarm] : farms;
+  const visibleFields = requestedFarm
+    ? fields.filter((fl) =>
+        fl.farmId
+          ? fl.farmId === requestedFarm.id
+          : (fl.name || '').toLowerCase().includes((requestedFarm.name || '').toLowerCase())
+      )
+    : fields;
+
+  const lines: string[] = [];
+  lines.push(
+    requestedFarm
+      ? language === 'gu'
+        ? `ખેતર "${requestedFarm.name}" ના નોંધાયેલા પ્લોટ (${visibleFields.length}):`
+        : language === 'hi'
+          ? `खेत "${requestedFarm.name}" के पंजीकृत प्लॉट (${visibleFields.length}):`
+          : `Fields at ${requestedFarm.name} (${visibleFields.length}):`
+      : language === 'gu'
+        ? `તમારા ખેતરોના નોંધાયેલા પ્લોટ (${visibleFields.length}):`
+        : language === 'hi'
+          ? `आपके खेतों के पंजीकृत प्लॉट (${visibleFields.length}):`
+          : `Registered fields across your farms (${visibleFields.length}):`
+  );
+
+  if (visibleFields.length === 0) {
+    lines.push(language === 'gu' ? '  હજી કોઈ પ્લોટ ઉમેરાયા નથી.' : language === 'hi' ? '  अभी कोई प्लॉट नहीं जोड़ा गया।' : '  No fields registered yet.');
+  } else {
+    for (const fl of visibleFields) {
+      lines.push(fieldDetailLine(fl, language));
+    }
+  }
+
+  lines.push('');
+  if (visibleFarms.length > 0) {
+    lines.push(language === 'gu' ? 'ખેતર:' : language === 'hi' ? 'खेत:' : 'Farm:');
+    for (const f of visibleFarms) {
+      lines.push(farmDetailLine(f, language));
+    }
+  }
+
+  return lines.join('\n');
+};
+
+const buildDeterministicGeneralResponse = (
+  context: AssistantContext = {},
+  language: SupportedLanguage = 'en'
+): string => {
+  const farms = Array.isArray(context.farms) ? context.farms : [];
+  const fields = Array.isArray(context.fields) ? context.fields : [];
   const decision = extractIrrigationDecision(context);
   const diag = context.diagnosis || context.activeDiagnosis;
-  const farmName = context.farmName || context.farm?.name || 'your farm';
+  const irr = context.irrigation ?? context.irrigationPlan;
 
-  const irrLine = !irr
-    ? '• Irrigation engine: no live irrigation plan is available for this query.'
-    : decision === 'DELAY_IRRIGATION'
-      ? '• Irrigation engine: DO NOT irrigate today — delay is advised.'
-      : decision === 'IRRIGATE'
-        ? '• Irrigation engine: proceed with the scheduled irrigation.'
-        : '• Irrigation engine: no urgent action advised.';
-
-  const diagLine = !diag
-    ? '• No active crop scan context.'
-    : diag.isMlPrediction && diag.diseaseName && diag.diseaseName !== EXPERT_ADVISORY_ASSESSMENT_LABEL
-      ? `• Latest scan: ${diag.diseaseName}.`
-      : '• Latest scan mode: expert advisory assessment (no automated disease prediction).';
-
-  const questionLine = short
-    ? (language === 'gu'
-        ? `"${short}" વિશેનો તમારો પ્રશ્ન —`
-        : language === 'hi'
-          ? `आपके प्रश्न "${short}" के संबंध में —`
-          : `Pertaining to your question "${short}" —`)
-    : language === 'gu'
-      ? 'તમારા ખેતર માટે ઉપલબ્ધ સચોટ ડેટા —'
+  const lines: string[] = [];
+  lines.push(
+    language === 'gu'
+      ? 'તમારા ખેતર માટે સચોટ સારાંશ:'
       : language === 'hi'
-        ? 'आपके खेत के लिए उपलब्ध सत्यापित डेटा —'
-        : 'Here is the verified data available for your farm —';
+        ? 'आपके खेत के लिए सत्यापित सारांश:'
+        : 'Here is the verified picture of your farm:'
+  );
 
-  const headerEn = `Grounded summary for ${farmName}\n${questionLine}\n${irrLine}\n${diagLine}\n\nFor a sharper answer, ask specifically about irrigation scheduling, the weather outlook, or crop scouting — replies are grounded in your live farm data.`;
-  const headerHi = `आपके खेत (${farmName}) के लिए सत्यापित सारांश\n${questionLine}\n${irrLine}\n${diagLine}\n\nअधिक सटीक जवाब के लिए सिंचाई समय-निर्धारण, मौसम पूर्वानुमान, या फसल स्काउटिंग के बारे में विशेष रूप से पूछें — उत्तर आपके लाइव खेत डेटा पर आधारित होंगे।`;
-  const headerGu = `તમારા ખેતર (${farmName}) માટે સચોટ સારાંશ\n${questionLine}\n${irrLine}\n${diagLine}\n\nવધુ ચોક્કસ જવાબ માટે પિયત સમયપત્રક, હવામાન આગાહી, અથવા પાક સ્કાઉટિંગ વિશે વિશિષ્ટ પ્રશ્ન પૂછો — જવાબો તમારા લાઇવ ફાર્મ ડેટા પર આધારિત હશે.`;
+  if (farms.length > 0) {
+    lines.push('');
+    lines.push(language === 'gu' ? 'ખેતરો:' : language === 'hi' ? 'खेत:' : 'Farms:');
+    for (const f of farms) lines.push(farmDetailLine(f, language));
+  }
 
-  if (language === 'gu') return headerGu;
-  if (language === 'hi') return headerHi;
-  return headerEn;
+  if (fields.length > 0) {
+    lines.push('');
+    lines.push(language === 'gu' ? 'પ્લોટ / ખેતરો:' : language === 'hi' ? 'प्लॉट / खेत:' : 'Fields / plots:');
+    for (const fl of fields) lines.push(fieldDetailLine(fl, language));
+  }
+
+  if (irr || decision !== 'UNKNOWN') {
+    lines.push('');
+    lines.push(language === 'gu' ? 'પિયત તારણ:' : language === 'hi' ? 'सिंचाई निर्णय:' : 'Irrigation verdict:');
+    lines.push(
+      decision === 'DELAY_IRRIGATION'
+        ? language === 'gu'
+          ? '• આજે પિયત ન આપો — મોકૂફ રાખો.'
+          : language === 'hi'
+            ? '• आज सिंचाई न करें — टालें।'
+            : '• Do not irrigate today — delay is advised.'
+        : decision === 'IRRIGATE'
+          ? language === 'gu'
+            ? '• પિયત સમયપત્રક મુજબ પાણી આપો.'
+            : language === 'hi'
+              ? '• सिंचाई कार्यक्रम के अनुसार पानी दें।'
+              : '• Proceed with the scheduled irrigation.'
+          : language === 'gu'
+            ? '• કોઈ તાત્કાલિક પિયત નિર્ણય નથી.'
+            : language === 'hi'
+              ? '• कोई तत्काल सिंचाई निर्णय नहीं।'
+              : '• No urgent irrigation decision.'
+    );
+  }
+
+  if (diag) {
+    lines.push('');
+    lines.push(language === 'gu' ? 'નવીનતમ સ્કેન:' : language === 'hi' ? 'नवीनतम स्कैन:' : 'Latest scan:');
+    lines.push(
+      diag.isMlPrediction && diag.diseaseName && diag.diseaseName !== EXPERT_ADVISORY_ASSESSMENT_LABEL
+        ? `• ${diag.diseaseName}`
+        : language === 'gu'
+          ? '• નિષ્ણાત સલાહ મૂલ્યાંકન (સ્વચાલિત રોગ આગાહી નથી).'
+          : language === 'hi'
+            ? '• विशेषज्ञ सलाह मूल्यांकन (कोई स्वचालित रोग पूर्वानुमान नहीं)।'
+            : '• Expert advisory assessment (no automated disease prediction).'
+    );
+  }
+
+  if (farms.length === 0 && fields.length === 0) {
+    lines.push('');
+    lines.push(
+      language === 'gu'
+        ? 'ચોક્કસ જવાબ માટે પિયત, હવામાન અથવા પાકના રોગ વિશે પૂછો — જવાબ તમારા લાઇવ ફાર્મ ડેટા પર આધારિત હશે.'
+        : language === 'hi'
+          ? 'सटीक उत्तर के लिए सिंचाई, मौसम या फसल रोग के बारे में पूछें — उत्तर आपके लाइव खेत डेटा पर आधारित होंगे।'
+          : 'Ask specifically about irrigation, the weather outlook, or crop scouting — replies are grounded in your live farm data.'
+    );
+  }
+
+  return lines.join('\n');
 };
 
 const buildDeterministicDiagnosisResponse = (
@@ -916,6 +1091,19 @@ export const cleanReplyText = (text = ''): string => {
 };
 
 /**
+ * Validates that a final reply actually uses the target script when Hindi or
+ * Gujarati was requested. Falls back to the deterministic builder otherwise so
+ * a misbehaving English-language LLM reply never leaks through.
+ */
+const replyMatchesScript = (reply = '', language: SupportedLanguage): boolean => {
+  if (language === 'hi') return /[\u0900-\u097F]/.test(reply);
+  if (language === 'gu') return /[\u0A80-\u0AFF]/.test(reply);
+  return true;
+};
+
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+/**
  * Generates an advisory response using Google Gemini LLM with strict dual-layer grounding validation
  *
  * @param {Object} params
@@ -982,38 +1170,82 @@ ${endInstruction}`;
   };
 
   const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
-  const controller = new AbortController();
   const timeoutMs = config.gemini.timeoutMs || 15000;
-  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
-  let rawReply = '';
-
-  try {
-    const response = await fetch(endpoint, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(requestBody),
-      signal: controller.signal,
-    });
-
-    clearTimeout(timeoutId);
-
-    if (response.ok) {
-      const data: any = await response.json();
-      const textPart = data.candidates?.[0]?.content?.parts?.[0]?.text;
-      if (textPart && typeof textPart === 'string') {
-        rawReply = textPart.trim();
+  /**
+   * Calls Gemini with a single retry on transient failures (429 quota/rate
+   * limit and 5xx), so a momentary quota hiccup does not silently drop the
+   * farmer into the rule-based engine. Non-OK responses log the upstream error
+   * message (e.g. "Quota exceeded") to make quota exhaustion diagnosable.
+   */
+  const fetchGeminiReply = async (): Promise<string> => {
+    for (let attempt = 1; attempt <= 2; attempt++) {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+      let response: Response;
+      try {
+        response = await fetch(endpoint, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(requestBody),
+          signal: controller.signal,
+        });
+        clearTimeout(timeoutId);
+      } catch (err) {
+        clearTimeout(timeoutId);
+        logger.warn(`Gemini fetch error (attempt ${attempt}): ${getErrorMessage(err)}.`);
+        if (attempt < 2) {
+          await sleep(700);
+          continue;
+        }
+        return '';
       }
-    } else {
+
+      if (response.ok) {
+        try {
+          const data: any = await response.json();
+          const textPart = data.candidates?.[0]?.content?.parts?.[0]?.text;
+          if (textPart && typeof textPart === 'string') {
+            return textPart.trim();
+          }
+        } catch {
+          // empty body / parse failure — treat as empty
+        }
+        return '';
+      }
+
+      let detail = '';
+      try {
+        const errBody = (await response.json()) as any;
+        detail =
+          typeof errBody?.error?.message === 'string'
+            ? errBody.error.message
+            : JSON.stringify(errBody).slice(0, 200);
+      } catch {
+        // non-JSON error body
+      }
+
       const status = response.status;
-      logger.warn(`Gemini API returned non-OK status ${status}. Activating safe grounded engine.`);
+      if (status === 429 || status >= 500) {
+        logger.warn(
+          `Gemini API returned status ${status} (attempt ${attempt})${detail ? ` — ${detail}` : ''}.${attempt < 2 ? ' Retrying…' : ' Activating safe grounded engine.'}`
+        );
+        if (attempt < 2) {
+          await sleep(700);
+          continue;
+        }
+        return '';
+      }
+
+      logger.warn(`Gemini API returned non-OK status ${status}${detail ? ` — ${detail}` : ''}. Activating safe grounded engine.`);
+      return '';
     }
-  } catch (err) {
-    clearTimeout(timeoutId);
-    logger.warn(`Gemini fetch error: ${getErrorMessage(err)}. Activating safe grounded engine.`);
-  }
+    return '';
+  };
+
+  let rawReply = await fetchGeminiReply();
 
   // Dual-layer Grounding Validation
   const validation = validateGrounding(rawReply, context);
@@ -1030,6 +1262,15 @@ ${endInstruction}`;
     // Fall back to a topic-aware, 100% grounded rule-based explanation so the
     // reply actually addresses the farmer's question instead of recycling one
     // fixed irrigation template.
+    finalReply = generateDeterministicGroundedResponse(context, effectiveLanguage, message);
+  }
+
+  // Language fidelity: when Hindi/Gujarati was requested but the LLM replied in
+  // the wrong script, substitute the verified translation from the rule engine.
+  if (!usedFallback && !replyMatchesScript(finalReply, effectiveLanguage)) {
+    usedFallback = true;
+    fallbackReason = `Language enforcement: reply not in ${SUPPORTED_LANGUAGES[effectiveLanguage]}.`;
+    logger.warn(`[LANGUAGE ENFORCEMENT] ${fallbackReason}`);
     finalReply = generateDeterministicGroundedResponse(context, effectiveLanguage, message);
   }
 
@@ -1064,6 +1305,7 @@ export default {
   buildContextTag,
   generateActionSuggestions,
   generateDeterministicGroundedResponse,
+  buildDeterministicFarmResponse,
   validateGrounding,
   generateAssistantResponse,
 };

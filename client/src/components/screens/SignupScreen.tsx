@@ -12,6 +12,7 @@ import {
   ExternalLink,
   MapPin,
   Briefcase,
+  Ruler,
 } from 'lucide-react';
 import { ScreenType, UserRole } from '../../types';
 import { useAuth } from '../../context/AuthContext';
@@ -49,6 +50,7 @@ export const SignupScreen: React.FC<SignupScreenProps> = ({ onNavigate }) => {
     confirmPassword: '',
     role: 'owner' as UserRole,
     farmName: '',
+    totalAreaAcres: '',
     state: '',
     district: '',
   });
@@ -116,6 +118,7 @@ export const SignupScreen: React.FC<SignupScreenProps> = ({ onNavigate }) => {
         state: formData.state,
         district: formData.district,
         location,
+        totalAreaAcres: formData.totalAreaAcres ? Number(formData.totalAreaAcres) : undefined,
       });
       if (result.success) {
         showToast(`Workspace initialized for ${formData.farmName}.`, 'success');
@@ -300,22 +303,45 @@ export const SignupScreen: React.FC<SignupScreenProps> = ({ onNavigate }) => {
               </div>
             </div>
 
-            <div>
-              <label htmlFor="farmName" className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
-                Farm Name
-              </label>
-              <div className="relative">
-                <Sprout className="w-4 h-4 text-slate-400 absolute left-3 top-2.5 pointer-events-none" />
-                <input
-                  id="farmName"
-                  name="farmName"
-                  type="text"
-                  value={formData.farmName}
-                  onChange={handleChange}
-                  placeholder="e.g. Patel Farm"
-                  disabled={isLoading}
-                  className={inputClassName}
-                />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label htmlFor="farmName" className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
+                  Farm Name
+                </label>
+                <div className="relative">
+                  <Sprout className="w-4 h-4 text-slate-400 absolute left-3 top-2.5 pointer-events-none" />
+                  <input
+                    id="farmName"
+                    name="farmName"
+                    type="text"
+                    value={formData.farmName}
+                    onChange={handleChange}
+                    placeholder="e.g. Patel Farm"
+                    disabled={isLoading}
+                    className={inputClassName}
+                  />
+                </div>
+              </div>
+              <div>
+                <label htmlFor="totalAreaAcres" className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
+                  Farm Size (acres, optional)
+                </label>
+                <div className="relative">
+                  <Ruler className="w-4 h-4 text-slate-400 absolute left-3 top-2.5 pointer-events-none" />
+                  <input
+                    id="totalAreaAcres"
+                    name="totalAreaAcres"
+                    type="number"
+                    inputMode="decimal"
+                    min="0"
+                    step="0.1"
+                    value={formData.totalAreaAcres}
+                    onChange={handleChange}
+                    placeholder="e.g. 5.5"
+                    disabled={isLoading}
+                    className={inputClassName}
+                  />
+                </div>
               </div>
             </div>
 

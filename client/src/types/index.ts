@@ -51,6 +51,7 @@ export interface AuthContextType {
     district?: string;
     farmName: string;
     location?: string;
+    totalAreaAcres?: number;
   }) => Promise<{ success: boolean; error?: string }>;
   logout: () => void;
   updateUser?: (updated: Partial<User>) => void;

@@ -295,6 +295,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     district?: string;
     farmName: string;
     location?: string;
+    totalAreaAcres?: number;
   }): Promise<{ success: boolean; error?: string }> => {
     await new Promise((resolve) => setTimeout(resolve, 350));
 
@@ -332,7 +333,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       location: locationLabel,
       latitude: coords.lat,
       longitude: coords.lon,
-      totalAreaAcres: 0,
+      totalAreaAcres: data.totalAreaAcres ?? 0,
     };
 
     let backendToken: string | null = null;
@@ -367,7 +368,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             method: 'POST',
             body: JSON.stringify({
               name: pendingFarm.name,
-              totalAreaAcres: 0,
+              totalAreaAcres: pendingFarm.totalAreaAcres ?? 0,
               state: pendingFarm.state,
               district: pendingFarm.district,
               location: {
