@@ -17,6 +17,9 @@ classification.
 
 ## Demo Video
 
+https://github.com/user-attachments/assets/2be4b475-3c9e-48ee-a5da-a31e083864f4
+
+
 [🎬 Watch Demo Video (MP4, ~97 MB)](agrismart_demo.mp4)
 
 ---
