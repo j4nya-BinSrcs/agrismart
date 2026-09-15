@@ -13,8 +13,8 @@
 #   uv run python scripts/train.py --config configs/final.yaml
 
 data_dir: ../data/raw/plantvillage
-output_dir: ../ml/weights
-reports_dir: ../ml/reports
+output_dir: weights
+reports_dir: reports
 
 model:
   model_name: tf_efficientnet_b0

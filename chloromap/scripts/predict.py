@@ -5,7 +5,7 @@ Usage:
     python scripts/predict.py --image leaf.jpg
     python scripts/predict.py --image leaf.jpg --json
     python scripts/predict.py --image leaf.jpg --top-k 3 --json
-    python scripts/predict.py --image leaf.jpg --checkpoint ml/weights/best_model.pth
+    python scripts/predict.py --image leaf.jpg --checkpoint weights/best_model.pth
 """
 
 from __future__ import annotations
@@ -20,10 +20,13 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 from chloromap.inference.predictor import Predictor  # noqa: E402
 
 
+_DEFAULT_CHECKPOINT = str(Path(__file__).resolve().parents[1] / "weights" / "best_model.pth")
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Classify a single image")
     parser.add_argument("--image", required=True, help="path to an image file")
-    parser.add_argument("--checkpoint", default="../ml/weights/best_model.pth")
+    parser.add_argument("--checkpoint", default=_DEFAULT_CHECKPOINT)
     parser.add_argument("--top-k", type=int, default=1)
     parser.add_argument("--json", action="store_true", help="machine-readable output")
     parser.add_argument("--device", default="auto")

@@ -16,8 +16,8 @@ class TrainConfig:
 
     # --- paths ---
     data_dir: str = "../data/raw/plantvillage"
-    output_dir: str = "../ml/weights"
-    reports_dir: str = "../ml/reports"
+    output_dir: str = "weights"
+    reports_dir: str = "reports"
 
     # --- model ---
     model_name: str = "tf_efficientnetv2_s"

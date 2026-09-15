@@ -302,11 +302,13 @@ export interface SustainabilityImprovement {
 export interface SustainabilityMetric {
   overallScore: number;
   waterEfficiencyScore: number;
-  chemicalReductionScore: number;
-  soilHealthScore: number;
+  chemicalReductionScore: number | null;
+  soilHealthScore: number | null;
   waterSavedMonthLitres: number;
   carbonOffsetKg: number;
   runoffPreventedKg: number;
+  isEstimate: boolean;
+  estimatedAxes: string[];
   improvements: SustainabilityImprovement[];
 }
 

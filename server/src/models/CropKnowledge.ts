@@ -1,6 +1,13 @@
 import { Model, Schema, model } from 'mongoose';
 
-export type SupportedCrop = 'pepper_bell' | 'potato' | 'tomato';
+export type SupportedCrop =
+  | 'pepper_bell'
+  | 'potato'
+  | 'tomato'
+  | 'corn'
+  | 'apple'
+  | 'grape'
+  | 'wheat';
 
 export interface TreatmentProtocol {
   organic: string;

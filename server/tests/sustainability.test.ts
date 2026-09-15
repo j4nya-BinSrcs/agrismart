@@ -243,14 +243,42 @@ await runTest('Test 11: Missing IoT sensor data is explicitly represented as una
   assert(summary.limitations.some((l) => l.toLowerCase().includes('iot')));
 });
 
-await runTest('Test 12: Zero fabricated metrics (no fake CO2 kg, no fake chemical reduction kg)', async () => {
+await runTest('Test 12: Zero fabricated metrics — untracked axes are null, estimates carry published formulas', async () => {
   const summary = await sustainabilityService.getSustainabilitySummary(userA.id, { farmId: farmA.id });
 
-  // Verify that fake metrics are NOT present in output
-  assert.strictEqual((summary as any).metrics.carbonOffsetKg, undefined);
+  // Composite score must derive ONLY from the data-backed water-efficiency axis,
+  // never inflated by fabricated chemical/soil numbers.
+  const eff = summary.metrics.weightedIrrigationEfficiencyPercent.value!;
+  assert.strictEqual(summary.metrics.sustainabilityScore!.value, eff);
+
+  // Chemical & soil axes must be explicitly "not_tracked" (null), never fabricated.
+  assert.strictEqual(summary.metrics.chemicalReductionScore!.value, null);
+  assert.strictEqual(summary.metrics.chemicalReductionScore!.source, 'not_tracked');
+  assert.strictEqual(summary.metrics.soilHealthScore!.value, null);
+  assert.strictEqual(summary.metrics.soilHealthScore!.source, 'not_tracked');
+
+  // Carbon/runoff estimates must carry explicit published conversion formulas
+  // and the value must equal the published formula applied to avoided litres.
+  const avoided = summary.metrics.estimatedAvoidedIrrigationLitres.value;
+  const expectedCarbon = Math.round(avoided * 0.0005);
+  const expectedRunoff = Math.round(avoided * 0.001);
+  assert.strictEqual(summary.metrics.carbonOffsetKg!.value, expectedCarbon);
+  assert(summary.metrics.carbonOffsetKg!.formula!.includes('0.0005'));
+  assert.strictEqual(summary.metrics.runoffPreventedKg!.value, expectedRunoff);
+  assert(summary.metrics.runoffPreventedKg!.formula!.includes('0.001'));
+
+  // No fake per-kilogram active-ingredient metric anywhere.
   assert.strictEqual((summary as any).metrics.chemicalReductionKg, undefined);
-  assert.strictEqual((summary as any).metrics.overallScore, undefined);
   assert(summary.limitations.some((l) => l.toLowerCase().includes('chemical')));
+});
+
+await runTest('Test 12b: No-fields scope returns honest nulls with status not fabricated values', async () => {
+  const summary = await sustainabilityService.getSustainabilitySummary(userB.id);
+
+  assert.strictEqual(summary.metrics.sustainabilityScore!.value, null);
+  assert.strictEqual(summary.metrics.sustainabilityScore!.status, 'no_fields_configured');
+  assert.strictEqual(summary.metrics.carbonOffsetKg!.value, 0);
+  assert.strictEqual(summary.metrics.runoffPreventedKg!.value, 0);
 });
 
 // ==========================================

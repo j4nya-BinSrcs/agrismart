@@ -68,16 +68,24 @@ export interface SaveDiagnosisInput extends Partial<IDiagnosis> {
  */
 export const normalizeCropKey = (crop: string): SupportedCrop | null => {
   const key = crop.trim().toLowerCase().replace(/[\s-]+/g, '_');
-  if (key === 'tomato') return 'tomato';
-  if (key === 'potato') return 'potato';
+  if (key === 'tomato' || key.startsWith('tomato_')) return 'tomato';
+  if (key === 'potato' || key.startsWith('potato_')) return 'potato';
   if (
     key === 'pepper_bell' ||
     key === 'pepper' ||
     key === 'bell_pepper' ||
-    key === 'pepperbell'
+    key === 'pepperbell' ||
+    key.startsWith('pepper_') ||
+    key.startsWith('bell_')
   ) {
     return 'pepper_bell';
   }
+  if (key === 'corn' || key === 'maize' || key.startsWith('corn_') || key.startsWith('maize_')) {
+    return 'corn';
+  }
+  if (key === 'apple' || key.startsWith('apple_')) return 'apple';
+  if (key === 'grape' || key.startsWith('grape_')) return 'grape';
+  if (key === 'wheat' || key.startsWith('wheat_')) return 'wheat';
   return null;
 };
 
@@ -94,7 +102,7 @@ export interface MlPrediction {
   confidence: number;
 }
 
-const SUPPORTED_CROP_PREFIXES = ['Tomato', 'Potato', 'Pepper__bell'];
+const SUPPORTED_CROP_PREFIXES = ['Tomato', 'Potato', 'Pepper__bell', 'Corn', 'Apple', 'Grape'];
 
 const humanizeClassLabel = (s: string): string =>
   s.replace(/_+/g, ' ').replace(/\s+/g, ' ').trim();

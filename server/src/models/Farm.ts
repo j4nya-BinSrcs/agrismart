@@ -38,6 +38,7 @@ export interface IFarmView {
   district?: string;
   totalAreaAcres: number;
   description: string;
+  owner: string;
   members: FarmMemberView[];
   createdAt: Date;
   updatedAt: Date;
@@ -130,6 +131,11 @@ const FarmSchema = new Schema<IFarm>(
     toJSON: {
       transform(_doc, ret: Record<string, any>) {
         ret.id = ret._id ? ret._id.toString() : ret.id;
+        // Convenience field: the owner is the member with role 'owner'
+        if (ret.members && Array.isArray(ret.members)) {
+          const ownerMember = ret.members.find(m => m.role === 'owner');
+          if (ownerMember) ret.owner = ownerMember.user.toString();
+        }
         delete ret._id;
         delete ret.__v;
         return ret;
@@ -138,6 +144,10 @@ const FarmSchema = new Schema<IFarm>(
     toObject: {
       transform(_doc, ret: Record<string, any>) {
         ret.id = ret._id ? ret._id.toString() : ret.id;
+        if (ret.members && Array.isArray(ret.members)) {
+          const ownerMember = ret.members.find(m => m.role === 'owner');
+          if (ownerMember) ret.owner = ownerMember.user.toString();
+        }
         delete ret._id;
         delete ret.__v;
         return ret;

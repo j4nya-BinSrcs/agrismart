@@ -478,6 +478,8 @@ export const SUSTAINABILITY_DATA: SustainabilityMetric = {
   waterSavedMonthLitres: 14200,
   carbonOffsetKg: 48.2,
   runoffPreventedKg: 4.8,
+  isEstimate: true,
+  estimatedAxes: ['all-axes'],
   improvements: [
     {
       id: 'imp-1',

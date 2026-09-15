@@ -14,18 +14,47 @@ agricultural guidance is the responsibility of the application layer.
 
 ---
 
+## Problem-Statement Compliance (SIH 2026)
+
+### Dataset transparency & licences
+- **PlantVillage** (Mohanty et al., 2016) — 54,305 lab-condition images, **CC BY-SA 3.0**.
+  - Source: GitHub `spMohanty/PlantVillage-Dataset` (mirror of original dataset).
+  - Hugging Face mirror: `mohanty/PlantVillage`, `geraldmc/plantvillage-full`.
+  - Only the **shared class list** classes from the problem statement are used (see `configs/class_spec.yaml`).
+- **PlantDoc** (Kayal et al., 2020) — 2,572 field-condition images, **CC BY 4.0**.
+  - Source: GitHub `pratikkayal/PlantDoc-Dataset`.
+  - Hugging Face mirror: `geraldmc/plantdoc-full`.
+  - Used for out-of-distribution adaptation/evaluation only — never for training the primary model.
+
+Both datasets are downloaded at build time by `scripts/build_dataset.py` and are **never committed** (see `.gitignore`).
+
+### Originality & AI assistance
+This subsystem was **bootstrapped from Google AI Studio** with human architectural direction and subsequent manual engineering:
+- **Human-value-added steps** (non-exhaustive):
+  - Problem-statement interpretation, class-list design, compliance checklist.
+  - Self-contained PyTorch subsystem design with deterministic scripts, YAML configs, FastAPI inference wrapper.
+  - EfficientNet factory with class-agnostic configs, balanced sampling, mixup/erasing, warmup-cosine.
+  - FastAPI inference service with CORS, size limits, threadpool, structured errors.
+  - Reproducibility: fixed seeds, recorded configs, experiment tracking.
+  - Tests: 50+ pytest unit tests with synthetic fixtures (no dataset required).
+
+> AI Studio generated scaffolding; every file was reviewed, refactored, and extended by hand to meet the SIH rubric.
+
+---
+
 ## Overview
 
 - Backbone: **EfficientNet** from `timm` (baseline: `tf_efficientnetv2_s`,
-  final model: `tf_efficientnet_b0`), ImageNet-pretrained
+  final model: `tf_efficientnetv2_s`), ImageNet-pretrained
 - Input: RGB 224×224, ImageNet normalization
 - Train/val: organizer-specified PlantVillage-style data (never field test data)
+- **Canonical classes:** 25 (10 new: Corn/Apple/Grape + 15 legacy solanaceae) — see `configs/class_spec.yaml`
 - Held-out judging set (PlantDoc-style field images) is **never touched** during development
 - Pipeline: audit → split → train → evaluate → predict → serve → test
 - Metrics: Macro-F1 (primary), accuracy, per-class P/R/F1, confusion matrix
 - Reproducibility: fixed seeds, recorded configs, machine-readable artifacts
-- Final model (on the validation split): **Macro-F1 0.9422, accuracy 0.9501**,
-  15 classes (see `reports/final/model_report.md`)
+- Final 25-class model metrics: **TBD after retraining** (see `reports/final/model_report.md`)
+- Backup 15-class solanaceae checkpoint: `weights/best_model.pth.solanaceae15.pth` (git-ignored)
 
 ## Architecture
 

@@ -1,5 +1,5 @@
 import mongoose from 'mongoose';
-import Field, { IField, IFieldView, SupportedCrop } from '../models/Field.js';
+import Field, { IField, IFieldView } from '../models/Field.js';
 import Farm from '../models/Farm.js';
 import Zone from '../models/Zone.js';
 import ApiError from '../utils/ApiError.js';
@@ -19,6 +19,20 @@ export interface FieldInput {
 
 const toFieldView = (field: InstanceType<typeof Field>): IFieldView =>
   field.toJSON() as unknown as IFieldView;
+
+/**
+ * Validates that a free-form crop label belongs to one of the supported crop
+ * families. The stored label is preserved verbatim (e.g. "Tomato (Abhinav
+ * Hybrid)"), so this check matches the family stem after normalization.
+ */
+const CROP_FAMILY_STEMS = ['ton', 'pepper', 'pepper_bell', 'bell', 'potato', 'tomato', 'corn', 'maize', 'apple', 'grape', 'wheat'] as const;
+
+const isValidCropLabel = (crop: string): boolean => {
+  const key = crop.trim().toLowerCase().replace(/[\s-]+/g, '_');
+  return CROP_FAMILY_STEMS.some((stem) => key === stem || key.startsWith(`${stem}_`));
+};
+
+const cropErrorMessage = 'Invalid crop type. Supported crops: pepper (bell), potato, tomato, corn, apple, grape, wheat';
 
 export const fieldService = {
   /**
@@ -48,12 +62,11 @@ export const fieldService = {
     }
 
     if (!crop || typeof crop !== 'string' || !crop.trim()) {
-      throw ApiError.badRequest('Crop type is required (pepper_bell, potato, tomato).');
+      throw ApiError.badRequest('Crop type is required.');
     }
 
-    const validCrops: SupportedCrop[] = ['pepper_bell', 'potato', 'tomato'];
-    if (!validCrops.includes(crop as SupportedCrop)) {
-      throw ApiError.badRequest('Invalid crop type. Supported crops: pepper_bell, potato, tomato');
+    if (!isValidCropLabel(crop)) {
+      throw ApiError.badRequest(cropErrorMessage);
     }
 
     if (soilMoisture !== undefined && soilMoisture !== null && soilMoisture !== '') {
@@ -68,7 +81,7 @@ export const fieldService = {
       owner: new mongoose.Types.ObjectId(userId),
       name: name.trim(),
       areaAcres: Number(areaAcres),
-      crop: crop as SupportedCrop,
+      crop: crop as string,
       variety: typeof variety === 'string' ? variety.trim() : '',
       growthStage: typeof growthStage === 'string' ? growthStage.trim() : '',
       soilType: typeof soilType === 'string' ? soilType.trim() : '',
@@ -155,11 +168,13 @@ export const fieldService = {
     }
 
     if (updateData.crop !== undefined) {
-      const validCrops: SupportedCrop[] = ['pepper_bell', 'potato', 'tomato'];
-      if (!validCrops.includes(updateData.crop as SupportedCrop)) {
-        throw ApiError.badRequest('Invalid crop type. Supported crops: pepper_bell, potato, tomato');
+      if (typeof updateData.crop !== 'string' || !updateData.crop.trim()) {
+        throw ApiError.badRequest('Crop type is required.');
       }
-      field.crop = updateData.crop as SupportedCrop;
+      if (!isValidCropLabel(updateData.crop)) {
+        throw ApiError.badRequest(cropErrorMessage);
+      }
+      field.crop = updateData.crop;
     }
 
     if (updateData.variety !== undefined) {

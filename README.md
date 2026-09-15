@@ -264,7 +264,57 @@ environment variables > `scripts/launch/local.env` > `scripts/launch/defaults.en
 
 ---
 
-## Related Documentation
+## Problem-Statement Compliance (SIH 2026)
 
-- [Architecture Overview](docs/ARCHITECTURE.md) — system design, data flows, external providers, failure handling
-- [Chloromap ML Subsystem](chloromap/README.md) — training, evaluation, and the inference API
+### Dataset transparency & licences
+- **PlantVillage** (Mohanty et al., 2016) — 54,305 lab-condition images, **CC BY-SA 3.0**.
+  - Source: GitHub `spMohanty/PlantVillage-Dataset` (mirror of original dataset).
+  - Hugging Face mirror: `mohanty/PlantVillage`, `geraldmc/plantvillage-full`.
+  - Only the **shared class list** classes from the problem statement are used (see `chloromap/configs/class_spec.yaml`).
+- **PlantDoc** (Kayal et al., 2020) — 2,572 field-condition images, **CC BY 4.0**.
+  - Source: GitHub `pratikkayal/PlantDoc-Dataset`.
+  - Hugging Face mirror: `geraldmc/plantdoc-full`.
+  - Used for out-of-distribution adaptation/evaluation only — never for training the primary model.
+
+Both datasets are downloaded at build time by `chloromap/scripts/build_dataset.py` and are **never committed** (see `.gitignore`).
+
+### Originality & AI assistance
+This project was **bootstrapped from Google AI Studio** with human architectural direction and subsequent manual engineering:
+- **Human-value-added steps** (non-exhaustive):
+  - Problem-statement interpretation, class-list design, compliance checklist (Section 7).
+  - Repository structure (MERN monorepo + self-contained ML subsystem) per submission mandates.
+  - Server: layered services (auth, diagnosis, weather, irrigation, sustainability, assistant, PDF report), JWT auth, anti-IDOR, provider-resilient fallbacks, trilingual support.
+  - Client: custom hash-router, React 19 + Vite + Tailwind 4 SPA with service layer, demo-data fallbacks, trilingual i18n.
+  - ML: EfficientNetV2-S factory, deterministic training/evaluation scripts, class-agnostic configs, FastAPI inference wrapper, ONNX export stub.
+  - Sustainability: honest FAO-56 composite with graceful client fallback (no fabricated CO₂/chemical numbers).
+  - Tests: 69 server tests (auth, farm, diagnosis, sustainability, assistant), 50+ Chloromap unit tests.
+
+> AI Studio generated scaffolding; every file was reviewed, refactored, and extended by hand to meet the SIH rubric.
+
+### Demo video & deployed URL
+> **TBD from team** — placeholders for SIH submission:
+> - Demo video: `[insert YouTube/Drive link]`
+> - Deployed app: `[insert URL]`
+
+---
+
+## Submission Artifacts (Section 7.1 layout)
+
+| Directory | Purpose |
+| :--- | :--- |
+| [`/model/`](model/) | Trained checkpoint + training tooling (in `chloromap/`) |
+| [`/report/`](report/) | One-page model report (`model_report.md`) |
+
+### Repository Layout (updated)
+
+```text
+AgriSmart/
+├── model/                       # ← SIH mandated: trained model pointer
+│   └── README.md
+├── report/                      # ← SIH mandated: one-page model report
+│   └── model_report.md
+├── client/                      # React 19 + Vite + Tailwind SPA
+...
+```
+
+See [`model/README.md`](model/README.md) and [`report/model_report.md`](report/model_report.md) for details.

@@ -88,10 +88,17 @@ export const SustainabilityScreen: React.FC<SustainabilityScreenProps> = ({
                 <span className="text-xs font-semibold text-slate-900 dark:text-slate-100">
                   Overall Sustainability Index
                 </span>
-                <span className="inline-flex items-center gap-1 text-[11px] text-emerald-800 dark:text-emerald-300 font-medium bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-800 px-1.5 py-0.5 rounded">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-700 dark:bg-emerald-400" />
-                  Eco-Compliant Grade A
-                </span>
+                {metrics.isEstimate ? (
+                  <span className="inline-flex items-center gap-1 text-[11px] text-amber-800 dark:text-amber-300 font-medium bg-amber-50 dark:bg-amber-950/50 border border-amber-200 dark:border-amber-800 px-1.5 py-0.5 rounded">
+                    <span className="w-1.5 h-1.5 rounded-full bg-amber-700 dark:bg-amber-400" />
+                    Estimated
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1 text-[11px] text-emerald-800 dark:text-emerald-300 font-medium bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-800 px-1.5 py-0.5 rounded">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-700 dark:bg-emerald-400" />
+                    Data-backed
+                  </span>
+                )}
               </div>
               <p className="text-xs font-medium text-slate-800 dark:text-slate-200">
                 Estimates from weather-linked irrigation decisions when available — not a certified regional ranking.
@@ -103,9 +110,9 @@ export const SustainabilityScreen: React.FC<SustainabilityScreenProps> = ({
           </div>
 
           <div className="w-full md:w-auto flex flex-col md:items-end shrink-0 pt-2 md:pt-0 border-t md:border-t-0 border-slate-100 dark:border-slate-800">
-            <span className="text-[11px] text-slate-400 dark:text-slate-500">Benchmark comparison</span>
+            <span className="text-[11px] text-slate-400 dark:text-slate-500">{metrics.isEstimate ? 'Offline reference values' : 'Live composite'}</span>
             <span className="text-xs font-medium text-emerald-800 dark:text-emerald-400 mt-0.5">
-              +28% above regional flood-irrigation baseline
+              {metrics.isEstimate ? 'Unverified — refresh when backend is online' : 'Computed from persisted FAO-56 water data'}
             </span>
           </div>
         </div>
@@ -146,10 +153,12 @@ export const SustainabilityScreen: React.FC<SustainabilityScreenProps> = ({
               <ShieldCheck className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500" />
             </div>
             <div className="text-2xl font-semibold text-slate-900 dark:text-slate-100 font-sans mb-1">
-              {metrics.chemicalReductionScore}%
+              {metrics.chemicalReductionScore !== null ? `${metrics.chemicalReductionScore}%` : '—'}
             </div>
             <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
-              Targeted leaf spot treatment over affected rows rather than blanket calendar chemical spray.
+              {metrics.chemicalReductionScore !== null
+                ? 'Targeted leaf spot treatment over affected rows rather than blanket calendar chemical spray.'
+                : 'Not tracked — no chemical application ledger is persisted; this axis is omitted rather than estimated.'}
             </p>
           </div>
 
@@ -169,10 +178,12 @@ export const SustainabilityScreen: React.FC<SustainabilityScreenProps> = ({
               <Leaf className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500" />
             </div>
             <div className="text-2xl font-semibold text-slate-900 dark:text-slate-100 font-sans mb-1">
-              {metrics.soilHealthScore}%
+              {metrics.soilHealthScore !== null ? `${metrics.soilHealthScore}%` : '—'}
             </div>
             <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
-              Organic carbon retention, minimal machinery compaction on wet soil, and microbial preservation.
+              {metrics.soilHealthScore !== null
+                ? 'Organic carbon retention, minimal machinery compaction on wet soil, and microbial preservation.'
+                : 'Not tracked — no physical IoT soil-sensor ledger is persisted; this axis is omitted rather than estimated.'}
             </p>
           </div>
 
@@ -195,7 +206,7 @@ export const SustainabilityScreen: React.FC<SustainabilityScreenProps> = ({
                 Water saved through delayed irrigation
               </h3>
               <span className="text-[10px] font-semibold bg-emerald-100 dark:bg-emerald-900/70 text-emerald-900 dark:text-emerald-200 px-2 py-0.2 rounded">
-                14,200 L Total
+                {metrics.waterSavedMonthLitres.toLocaleString()} L Total
               </span>
             </div>
             <p className="text-xs text-slate-600 dark:text-slate-300 mt-0.5">
@@ -227,10 +238,10 @@ export const SustainabilityScreen: React.FC<SustainabilityScreenProps> = ({
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-5 space-y-3">
         <div className="pb-2 border-b border-slate-100 dark:border-slate-800">
           <h3 className="text-xs font-semibold text-slate-900 dark:text-slate-100">
-            Measurable Resource Savings (Current Month)
+            Model-Estimated Resource Savings (Current Cycle)
           </h3>
           <p className="text-[11px] text-slate-500 dark:text-slate-400">
-            Verified reductions recorded through AgriSmart AI operational advisories
+            Model-estimated figures from AgriSmart FAO-56 irrigation advisories — not meter logs
           </p>
         </div>
 
@@ -257,7 +268,7 @@ export const SustainabilityScreen: React.FC<SustainabilityScreenProps> = ({
               {metrics.carbonOffsetKg} kg CO₂e
             </div>
             <p className="text-[11px] text-slate-600 dark:text-slate-400 leading-relaxed">
-              Energy reduction from eliminating 34 unnecessary pump runtime hours.
+              Model estimate at 0.0005 kg CO₂e per litre avoided (pumped-lift energy baseline).
             </p>
           </div>
 
@@ -267,7 +278,7 @@ export const SustainabilityScreen: React.FC<SustainabilityScreenProps> = ({
               {metrics.runoffPreventedKg} kg
             </div>
             <p className="text-[11px] text-slate-600 dark:text-slate-400 leading-relaxed">
-              Selective spot application prevented synthetic wash-off into regional drainage canals.
+              Model estimate at 0.001 kg sediment/agrochemical load per litre avoided.
             </p>
           </div>
         </div>
@@ -348,46 +359,49 @@ export const SustainabilityScreen: React.FC<SustainabilityScreenProps> = ({
             <div className="space-y-3 text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
               <div className="p-3 rounded-md bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700">
                 <div className="flex items-center justify-between mb-1">
-                  <span className="font-semibold text-slate-900 dark:text-slate-100">1. Water Efficiency Factor</span>
-                  <span className="font-bold text-emerald-800 dark:text-emerald-400">92 / 100 (Weight: 40%)</span>
+                  <span className="font-semibold text-slate-900 dark:text-slate-100">1. Water Efficiency (only data-backed axis)</span>
+                  <span className="font-bold text-emerald-800 dark:text-emerald-400">{metrics.waterEfficiencyScore} / 100</span>
                 </div>
                 <p className="text-[11px] text-slate-600 dark:text-slate-400">
-                  Calculated by comparing actual water applied versus optimal crop evapotranspiration (ETc). The 14,200 L saved via rain holds prevented excess aquifer pumping.
+                  Area-weighted application efficiency computed from the configured irrigation methods against FAO Standards:
+                  <code className="text-[11px] font-mono">sum(zoneArea × methodEfficiency) / totalArea</code>.
                 </p>
                 <div className="text-[11px] text-slate-500 dark:text-slate-400 font-mono mt-1 bg-white dark:bg-slate-900 p-1 rounded border border-slate-200 dark:border-slate-700">
-                  Contribution: 92 × 0.40 = +36.8 points
+                  sustainabilityScore = weightedIrrigationEfficiencyPercent
                 </div>
               </div>
 
               <div className="p-3 rounded-md bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700">
                 <div className="flex items-center justify-between mb-1">
-                  <span className="font-semibold text-slate-900 dark:text-slate-100">2. Chemical Reduction & Runoff</span>
-                  <span className="font-bold text-emerald-800 dark:text-emerald-400">78 / 100 (Weight: 30%)</span>
+                  <span className="font-semibold text-slate-900 dark:text-slate-100">2. Chemical &amp; Runoff Reduction</span>
+                  <span className="font-bold text-slate-500 dark:text-slate-400">
+                    {metrics.chemicalReductionScore !== null ? `${metrics.chemicalReductionScore} / 100` : 'Not tracked'}
+                  </span>
                 </div>
                 <p className="text-[11px] text-slate-600 dark:text-slate-400">
-                  Calculated from targeted spot pruning instead of blanket prophylactic spraying. 4.8 kg active chemical load spared from drainage channels.
+                  {metrics.chemicalReductionScore !== null
+                    ? 'Derived from the pollution load avoided via smart irrigation; converted at 0.001 kg per litre.'
+                    : 'No chemical-application ledger is persisted, so this axis is omitted rather than fabricated. Runoff prevention is a model estimate only.'}
                 </p>
-                <div className="text-[11px] text-slate-500 dark:text-slate-400 font-mono mt-1 bg-white dark:bg-slate-900 p-1 rounded border border-slate-200 dark:border-slate-700">
-                  Contribution: 78 × 0.30 = +23.4 points
-                </div>
               </div>
 
               <div className="p-3 rounded-md bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700">
                 <div className="flex items-center justify-between mb-1">
-                  <span className="font-semibold text-slate-900 dark:text-slate-100">3. Soil Health & Compaction Index</span>
-                  <span className="font-bold text-emerald-800 dark:text-emerald-400">81 / 100 (Weight: 30%)</span>
+                  <span className="font-semibold text-slate-900 dark:text-slate-100">3. Soil Health &amp; Sensor Telemetry</span>
+                  <span className="font-bold text-slate-500 dark:text-slate-400">
+                    {metrics.soilHealthScore !== null ? `${metrics.soilHealthScore} / 100` : 'Not tracked'}
+                  </span>
                 </div>
                 <p className="text-[11px] text-slate-600 dark:text-slate-400">
-                  Calculated from soil carbon content (0.72%) and halting tractor passes when clay loam moisture reaches plastic threshold.
+                  {metrics.soilHealthScore !== null
+                    ? 'Composite of carbon retention and compaction-avoidance telemetry.'
+                    : 'No physical IoT soil-sensor ledger is persisted, so this axis is omitted rather than fabricated.'}
                 </p>
-                <div className="text-[11px] text-slate-500 dark:text-slate-400 font-mono mt-1 bg-white dark:bg-slate-900 p-1 rounded border border-slate-200 dark:border-slate-700">
-                  Contribution: 81 × 0.30 = +24.3 points
-                </div>
               </div>
 
               <div className="p-2.5 rounded bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 flex items-center justify-between text-xs font-semibold text-emerald-900 dark:text-emerald-300">
-                <span>Total Aggregated Index:</span>
-                <span>36.8 + 23.4 + 24.3 = 84.5 ≈ 84 / 100</span>
+                <span>Overall Sustainability Index:</span>
+                <span>{metrics.isEstimate ? `${metrics.overallScore} / 100 (estimated)` : `${metrics.overallScore} / 100`}</span>
               </div>
             </div>
 
@@ -417,7 +431,7 @@ export const SustainabilityScreen: React.FC<SustainabilityScreenProps> = ({
             <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
               <div>
                 <h3 className="font-semibold text-sm text-slate-900 dark:text-slate-100">
-                  How Delayed Irrigation Delivers 14,200 L Water Savings
+                  How Delayed Irrigation Delivers {metrics.waterSavedMonthLitres.toLocaleString()} L Water Savings
                 </h3>
                 <p className="text-xs text-slate-500 dark:text-slate-400">Cross-system synergy: Weather + Soil Telemetry + Pumping Control</p>
               </div>
@@ -444,7 +458,7 @@ export const SustainabilityScreen: React.FC<SustainabilityScreenProps> = ({
               <div className="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-lg border border-slate-200 dark:border-slate-700 space-y-2">
                 <div className="flex items-center gap-2 text-slate-900 dark:text-slate-100 font-semibold">
                   <Droplets className="w-4 h-4 text-emerald-800 dark:text-emerald-400" />
-                  <span>2. Soil Sensor Verification (Field A: 31% Moisture)</span>
+                  <span>2. Soil Moisture Check</span>
                 </div>
                 <p className="text-[11px] text-slate-600 dark:text-slate-400 pl-6">
                   Root-zone capacitance probes confirm that soil moisture is sufficient to sustain crop transpiration until natural precipitation arrives.
@@ -457,7 +471,7 @@ export const SustainabilityScreen: React.FC<SustainabilityScreenProps> = ({
                   <span>3. Pump Cycle Suspension & Cumulative Impact</span>
                 </div>
                 <p className="text-[11px] text-slate-600 dark:text-slate-400 pl-6">
-                  A 5HP agricultural pump draws ~45,000 liters/hr across multiple plots. Canceling 6 unnecessary rain-coincident irrigation sessions preserved <strong>14,200 Liters</strong> and eliminated 34 pump runtime hours (52 kg CO₂e offset).
+                  A delayed pump cycle preserves the FAO-56 estimated demand of roughly {metrics.waterSavedMonthLitres.toLocaleString()} Litres (≈ {metrics.carbonOffsetKg} kg CO₂e offset).
                 </p>
               </div>
             </div>

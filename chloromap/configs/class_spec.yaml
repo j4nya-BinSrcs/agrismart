@@ -1,0 +1,45 @@
+# Canonical class specification (SIH Problem Statement — "Shared class list")
+#
+# Every row maps a canonical output label (uniform `Crop___Disease` strings,
+# PlantVillage-style) to the source directory name in the PlantVillage
+# (raw/color) dataset. The dataset builder (scripts/build_dataset.py) uses this
+# table verbatim. If the official kickoff list differs, edit ONLY this table —
+# no code changes are needed anywhere else.
+#
+# Sources:
+#   PlantVillage — Mohanty, Hughes & Salathé (2016), Frontiers in Plant Science.
+#     CC BY-SA 4.0. Mirrors: spMohanty/PlantVillage-Dataset (GitHub),
+#     mohanty/PlantVillage + geraldmc/plantvillage-full (Hugging Face).
+#   PlantDoc     — Singh et al. (2020), CoDS-COMAD. CC BY 4.0.
+#     Mirrors: pratikkayal/PlantDoc-Dataset (GitHub),
+#     geraldmc/plantdoc-full (Hugging Face).
+#
+# All 25 classes below exist in BOTH datasets (or are retained from the
+# previous 15-class solanaceae model for continuity and better field coverage).
+
+classes:
+  Apple___Apple_scab: Apple___Apple_scab
+  Apple___Black_rot: Apple___Black_rot
+  Apple___healthy: Apple___healthy
+  Corn___Common_rust: "Corn (maize)___Common_rust_"
+  Corn___Gray_leaf_spot: "Corn (maize)___Cercospora_leaf_spot Gray_leaf_spot"
+  Corn___healthy: "Corn (maize)___healthy"
+  Grape___Black_rot: Grape___Black_rot
+  Grape___Esca_(Black_Measles): Grape___Esca_(Black_Measles)
+  Grape___Leaf_blight_(Isariopsis_Leaf_Spot): Grape___Leaf_blight_(Isariopsis_Leaf_Spot)
+  Grape___healthy: Grape___healthy
+  Pepper__bell___Bacterial_spot: Pepper__bell___Bacterial_spot
+  Pepper__bell___healthy: Pepper__bell___healthy
+  Potato___Early_blight: Potato___Early_blight
+  Potato___Late_blight: Potato___Late_blight
+  Potato___healthy: Potato___healthy
+  Tomato___Bacterial_spot: Tomato_Bacterial_spot
+  Tomato___Early_blight: Tomato_Early_blight
+  Tomato___Late_blight: Tomato_Late_blight
+  Tomato___Leaf_Mold: Tomato_Leaf_Mold
+  Tomato___Septoria_leaf_spot: Tomato_Septoria_leaf_spot
+  Tomato___Spider_mites_Two-spotted_spider_mite: Tomato_Spider_mites_Two_spotted_spider_mite
+  Tomato___Target_Spot: Tomato__Target_Spot
+  Tomato___Tomato_Yellow_Leaf_Curl_Virus: Tomato__Tomato_YellowLeaf__Curl_Virus
+  Tomato___Tomato_mosaic_virus: Tomato__Tomato_mosaic_virus
+  Tomato___healthy: Tomato_healthy

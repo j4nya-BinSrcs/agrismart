@@ -139,6 +139,30 @@ export const sustainabilityService = {
             method: 'area_weighted_application_efficiency',
             status: 'no_fields_configured',
           },
+          sustainabilityScore: {
+            value: null,
+            unit: 'score_0_100',
+            source: 'composite',
+            method: 'water_efficiency_only_data_backed_axis',
+            formula: 'sustainabilityScore = weightedIrrigationEfficiencyPercent (chemistry/soil not tracked)',
+            status: 'no_fields_configured',
+          },
+          carbonOffsetKg: {
+            value: 0,
+            unit: 'kg_co2e',
+            source: 'model_estimate',
+            method: 'pumped_lift_baseline',
+            formula: 'carbonOffsetKg = estimatedAvoidedIrrigationLitres * 0.0005',
+            status: 'no_fields_configured',
+          },
+          runoffPreventedKg: {
+            value: 0,
+            unit: 'kg',
+            source: 'model_estimate',
+            method: 'sediment_agrochemical_runoff',
+            formula: 'runoffPreventedKg = estimatedAvoidedIrrigationLitres * 0.001',
+            status: 'no_fields_configured',
+          },
         },
         insights: [
           'No farm fields are currently configured. Add farms and fields to enable sustainability accounting.',
@@ -237,6 +261,28 @@ export const sustainabilityService = {
     const estimatedAvoidedIrrigationLitres =
       irrigationEvaluation?.totalEstimatedAvoidedIrrigationLitres ?? 0;
 
+    // ------------------------------------------------------------------
+    // Published sustainability accounting (Section 7.2 "sustainability/bonus D").
+    // Exactly one axis is backed by real persisted data: the FAO-56 water
+    // efficiency score. Every other figure is either (a) a documented model
+    // estimate with an explicit conversion constant, or (b) explicitly
+    // NOT tracked (never fabricated).
+    // ------------------------------------------------------------------
+    // 1. Water efficiency (%): from FAO irrigation-method standards.
+    const sustainabilityScore =
+      weightedIrrigationEfficiencyPercent !== null
+        ? Math.min(100, Math.max(0, Math.round(weightedIrrigationEfficiencyPercent)))
+        : null;
+    // 2. Carbon estimate: avoided pumping energy ≈ 0.0005 kg CO2e per litre.
+    //    Constant documented in report/model_report.md (pumped-lift baseline).
+    const carbonOffsetKg = estimatedAvoidedIrrigationLitres > 0
+      ? Math.round(estimatedAvoidedIrrigationLitres * 0.0005)
+      : 0;
+    // 3. Runoff estimate: ≈ 0.001 kg sediment/agrochemical runoff per litre avoided.
+    const runoffPreventedKg = estimatedAvoidedIrrigationLitres > 0
+      ? Math.round(estimatedAvoidedIrrigationLitres * 0.001)
+      : 0;
+
     // 6. Formulate Insights
     const insights = [];
     if (estimatedAvoidedIrrigationLitres > 0) {
@@ -293,6 +339,44 @@ export const sustainabilityService = {
           source: 'fao_irrigation_method_standards',
           method: 'area_weighted_application_efficiency',
           formula: 'sum(zoneArea * methodEfficiency) / totalArea * 100',
+        },
+        sustainabilityScore: {
+          value: sustainabilityScore,
+          unit: 'score_0_100',
+          source: 'composite',
+          method: 'water_efficiency_only_data_backed_axis',
+          formula: 'sustainabilityScore = weightedIrrigationEfficiencyPercent '
+            + '(chemistry/soil not tracked; no fabricated figures)',
+        },
+        carbonOffsetKg: {
+          value: carbonOffsetKg,
+          unit: 'kg_co2e',
+          source: 'model_estimate',
+          method: 'pumped_lift_baseline',
+          formula: 'carbonOffsetKg = estimatedAvoidedIrrigationLitres * 0.0005',
+        },
+        runoffPreventedKg: {
+          value: runoffPreventedKg,
+          unit: 'kg',
+          source: 'model_estimate',
+          method: 'sediment_agrochemical_runoff',
+          formula: 'runoffPreventedKg = estimatedAvoidedIrrigationLitres * 0.001',
+        },
+        chemicalReductionScore: {
+          value: null,
+          unit: 'score_0_100',
+          source: 'not_tracked',
+          method: 'no_chemical_application_ledger',
+          formula: null,
+          note: 'No chemical/fertilizer application ledger is persisted; omitted rather than fabricated.',
+        },
+        soilHealthScore: {
+          value: null,
+          unit: 'score_0_100',
+          source: 'not_tracked',
+          method: 'no_sensor_soil_ledger',
+          formula: null,
+          note: 'No physical IoT soil-sensor ledger is persisted; omitted rather than fabricated.',
         },
         fieldsCovered: {
           value: fields.length,

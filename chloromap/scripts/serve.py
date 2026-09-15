@@ -3,7 +3,7 @@
 
 Usage:
     python scripts/serve.py --port 8000
-    python scripts/serve.py --checkpoint ml/weights/best_model.pth --port 8080
+    python scripts/serve.py --checkpoint weights/best_model.pth --port 8080
 """
 
 from __future__ import annotations
@@ -16,10 +16,12 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
 import uvicorn  # noqa: E402
 
+_DEFAULT_CHECKPOINT = str(Path(__file__).resolve().parents[1] / "weights" / "best_model.pth")
+
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Serve the disease classifier via FastAPI")
-    parser.add_argument("--checkpoint", default="../ml/weights/best_model.pth")
+    parser.add_argument("--checkpoint", default=_DEFAULT_CHECKPOINT)
     parser.add_argument("--port", type=int, default=8000)
     parser.add_argument("--host", default="0.0.0.0")
     args = parser.parse_args()

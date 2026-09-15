@@ -16,6 +16,25 @@ from .confusion_matrix import plot_confusion_matrix
 from .metrics import compute_metrics
 
 
+def _image_count(d: Path) -> int:
+    exts = {".jpg", ".jpeg", ".png", ".bmp", ".tiff", ".webp"}
+    return sum(1 for f in d.rglob("*") if f.is_file() and f.suffix.lower() in exts)
+
+
+def _dataset_summary(val_dir: Path, seed: int) -> dict:
+    def _count(name: str) -> int:
+        cand = val_dir.parent / name
+        return _image_count(cand) if cand.exists() else 0
+
+    return {
+        "source": "PlantVillage (lab-condition) — shared class list",
+        "split": f"deterministic stratified (seed {seed}) via scripts/prepare_dataset.py",
+        "train": _count("train"),
+        "val": _count("val"),
+        "seed": seed,
+    }
+
+
 def evaluate_checkpoint(
     checkpoint: str | Path,
     val_dir: Optional[str | Path] = None,
@@ -117,12 +136,30 @@ def build_evaluation_artifacts(
     device: str = "auto",
     seed: int = 42,
     title: str = "Confusion Matrix",
+    summary: Optional[dict] = None,
 ) -> dict:
-    """Evaluate and write metrics.json, model_report.md, confusion_matrix.png."""
+    """Evaluate and write metrics.json, model_report.md, confusion_matrix.png.
+
+    ``summary`` may carry the extra sections of the one-page model report
+    (Section 7.3 of the SIH contract):
+
+        {
+          "task": "...",
+          "approach": "...",
+          "dataset": {"source": "...", "split": "...", "train": n, "val": n},
+          "baseline": {"name": "...", "macro_f1": x, "accuracy": y},
+          "limitations": ["..."],
+        }
+    """
     reports_dir = Path(reports_dir)
     reports_dir.mkdir(parents=True, exist_ok=True)
 
     result = evaluate_checkpoint(checkpoint, val_dir=val_dir, device=device, seed=seed)
+
+    # Fill dataset/split summary if the caller did not provide one.
+    summary = dict(summary or {})
+    if not summary.get("dataset"):
+        summary["dataset"] = _dataset_summary(Path(val_dir), seed)
 
     # --- metrics.json ---
     metrics_out = reports_dir / "metrics.json"
@@ -144,7 +181,7 @@ def build_evaluation_artifacts(
         fig_rel = fig_path.relative_to(reports_dir)
     except ValueError:
         fig_rel = Path("..") / fig_path.relative_to(reports_dir.parent)
-    md = _render_markdown(result, ckpt_path=checkpoint, fig_rel=fig_rel)
+    md = _render_markdown(result, ckpt_path=checkpoint, fig_rel=fig_rel, summary=summary)
     report_path = reports_dir / "model_report.md"
     report_path.write_text(md)
 
@@ -154,13 +191,50 @@ def build_evaluation_artifacts(
     return result
 
 
-def _render_markdown(result: dict, ckpt_path, fig_rel: Path) -> str:
+def _render_markdown(result: dict, ckpt_path, fig_rel: Path, summary: Optional[dict] = None) -> str:
+    import os
+
     lines = []
     lines.append("# Model Evaluation Report\n")
-    lines.append(f"- Checkpoint: `{ckpt_path}`")
-    lines.append(f"- Macro-F1 (**primary**): `{result['macro_f1']:.4f}`")
-    lines.append(f"- Accuracy (secondary): `{result['accuracy']:.4f}`")
-    lines.append(f"- Number of classes: `{result['num_classes']}`")
+
+    meta = result.get("ckpt_meta", {})
+    model_name = meta.get("model_name", result.get("checkpoint"))
+    num_classes = result.get("num_classes", 0)
+    task = (summary or {}).get("task",
+                               f"Image classification into {num_classes} crop-disease/healthy classes")
+    lines.append(f"**Task:** {task}\n")
+    lines.append(f"- **Model:** `{model_name}` (backbone from `timm`, ImageNet-pretrained, transfer-learned)")
+    lines.append(f"- **Input:** RGB {meta.get('image_size', 224)}×{meta.get('image_size', 224)}, ImageNet normalization")
+
+    dset = (summary or {}).get("dataset") or {}
+    if dset:
+        lines.append(f"- **Dataset/split:** {dset.get('source', 'PlantVillage')} — seed {dset.get('seed', 42)}, "
+                     f"deterministic stratified split (train {dset.get('train', '?')} / val {dset.get('val', '?')}); "
+                     "held-out PlantDoc-style field set is never used for training.")
+    else:
+        lines.append("- **Dataset/split:** see `chloromap/reports/final/dataset_audit.json` "
+                     "(deterministic stratified split, seed 42).")
+
+    approach = (summary or {}).get("approach")
+    if approach:
+        lines.append(f"- **Approach:** {approach}")
+    lines.append("")
+
+    lines.append("## Metric & result\n")
+    lines.append(f"- **Macro-F1 (primary):** `{result['macro_f1']:.4f}`")
+    lines.append(f"- **Accuracy (secondary):** `{result['accuracy']:.4f}`")
+
+    baseline = (summary or {}).get("baseline")
+    if baseline:
+        lines.append("")
+        lines.append("## Baseline comparison\n")
+        lines.append("| Model | Macro-F1 | Accuracy |")
+        lines.append("|---|---|---|")
+        lines.append(f"| Frozen-backbone baseline ({baseline.get('name', 'baseline')}) "
+                     f"| {baseline.get('macro_f1', 0.0):.4f} | {baseline.get('accuracy', 0.0):.4f} |")
+        lines.append(f"| Final model (this report) | {result['macro_f1']:.4f} | {result['accuracy']:.4f} |")
+    else:
+        lines.append("\n> Baseline comparison pending — see `chloromap/reports/experiments/baseline_001.json`.")
     lines.append("")
 
     lines.append("## Per-class metrics\n")
@@ -173,6 +247,13 @@ def _render_markdown(result: dict, ckpt_path, fig_rel: Path) -> str:
 
     lines.append("## Confusion matrix\n")
     lines.append(f"![Confusion matrix]({fig_rel})\n")
+
+    limitations = (summary or {}).get("limitations")
+    if limitations:
+        lines.append("## Limitations\n")
+        for item in limitations:
+            lines.append(f"- {item}")
+        lines.append("")
 
     lines.append("## Checkpoint metadata\n")
     lines.append("```json")

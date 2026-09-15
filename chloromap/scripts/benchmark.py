@@ -2,7 +2,7 @@
 """Benchmark model load, preprocessing, and inference latency.
 
 Usage:
-    python scripts/benchmark.py --checkpoint ml/weights/best_model.pth
+    python scripts/benchmark.py --checkpoint weights/best_model.pth
     python scripts/benchmark.py --checkpoint ... --image sample.jpg --iterations 25
     python scripts/benchmark.py --checkpoint ... --iterations 50 --json
 """
@@ -26,7 +26,10 @@ from chloromap.inference.preprocessing import build_tensor, load_image_pil  # no
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Benchmark inference latency")
-    parser.add_argument("--checkpoint", default="../ml/weights/best_model.pth")
+    parser.add_argument(
+        "--checkpoint",
+        default=str(Path(__file__).resolve().parents[1] / "weights" / "best_model.pth"),
+    )
     parser.add_argument("--image", default=None, help="optional real image")
     parser.add_argument("--iterations", type=int, default=20)
     parser.add_argument("--warmup", type=int, default=3)

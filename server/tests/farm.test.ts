@@ -523,6 +523,7 @@ await runTest('Test 26: Deleting a Field cascades deletion to all of its child Z
   const tempField = await fieldService.createField(userA.id, farmA.id, {
     name: 'Temporary Field for Cascade Test',
     areaAcres: 8.0,
+    crop: 'Tomato',
   });
 
   await zoneService.createZone(userA.id, farmA.id, tempField.id, {
@@ -560,6 +561,7 @@ await runTest('Test 27: Deleting a Farm cascades deletion to all child Fields an
   const tempField = await fieldService.createField(userA.id, tempFarm.id, {
     name: 'Temp Field in Temp Farm',
     areaAcres: 20.0,
+    crop: 'Tomato',
   });
 
   await zoneService.createZone(userA.id, tempFarm.id, tempField.id, {

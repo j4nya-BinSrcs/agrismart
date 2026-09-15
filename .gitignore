@@ -17,6 +17,14 @@ scripts/launch/local.env
 # Launcher runtime (PIDs, logs, local MongoDB data)
 .run/
 
+# Datasets (large; never committed)
+data/
+
+# ML checkpoints (large; committed model lives in chloromap/weights)
+chloromap/weights/*.pth.baseline
+chloromap/weights/*.solanaceae15.pth
+chloromap/weights/best_model.adapter.pth
+
 # OS and IDE files
 .DS_Store
 Thumbs.db

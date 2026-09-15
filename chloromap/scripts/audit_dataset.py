@@ -3,7 +3,7 @@
 
 Usage:
     python scripts/audit_dataset.py [--data-dir ../data/raw/plantvillage]
-                                    [--out ml/reports/final/dataset_audit.json]
+                                    [--out reports/final/dataset_audit.json]
                                     [--split-dir ../data/processed]
 """
 
@@ -24,7 +24,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Audit a crop-disease image dataset")
     parser.add_argument("--data-dir", default="../data/raw/plantvillage",
                         help="root dir with class-name sub-folders")
-    parser.add_argument("--out", default="../ml/reports/final/dataset_audit.json",
+    parser.add_argument("--out", default="reports/final/dataset_audit.json",
                         help="machine-readable audit output path")
     parser.add_argument("--min-dimension", type=int, default=32,
                         help="minimum image width/height to be considered healthy")

@@ -1,7 +1,7 @@
 # Baseline experiment — frozen backbone, minimal augmentation
 data_dir: ../data/raw/plantvillage
-output_dir: ../ml/weights
-reports_dir: ../ml/reports
+output_dir: weights
+reports_dir: reports
 
 model:
   model_name: tf_efficientnetv2_s

@@ -60,10 +60,17 @@ def audit_dataset(root: str | Path, min_dimension: int = 32) -> AuditReport:
 
     This function never modifies or deletes anything.
     """
-    root = Path(root)
+    root = Path(root).resolve()
     extensions = {".jpg", ".jpeg", ".png", ".bmp", ".tiff", ".webp"}
 
-    report = AuditReport(root=str(root))
+    # Record a readable, machine-agnostic path (relative to CWD when possible)
+    # so machine-specific absolute paths never leak into committed artifacts.
+    try:
+        root_str = str(root.relative_to(Path.cwd()))
+    except ValueError:
+        root_str = str(root)
+
+    report = AuditReport(root=root_str)
 
     class_dirs = sorted([d for d in root.iterdir() if d.is_dir()])
     report.class_dirs_found = [d.name for d in class_dirs]

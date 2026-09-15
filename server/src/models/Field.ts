@@ -1,13 +1,32 @@
 import { Model, Schema, Types, model } from 'mongoose';
 
-export type SupportedCrop = 'pepper_bell' | 'potato' | 'tomato';
+export type SupportedCrop =
+  | 'pepper_bell'
+  | 'potato'
+  | 'tomato'
+  | 'corn'
+  | 'apple'
+  | 'grape'
+  | 'wheat';
 
-export const SUPPORTED_CROPS: SupportedCrop[] = ['pepper_bell', 'potato', 'tomato'];
+export const SUPPORTED_CROPS: SupportedCrop[] = [
+  'pepper_bell',
+  'potato',
+  'tomato',
+  'corn',
+  'apple',
+  'grape',
+  'wheat',
+];
 
 export const CROP_DISPLAY_NAMES: Record<SupportedCrop, string> = {
   pepper_bell: 'Pepper Bell',
   potato: 'Potato',
   tomato: 'Tomato',
+  corn: 'Corn',
+  apple: 'Apple',
+  grape: 'Grape',
+  wheat: 'Wheat',
 };
 
 export interface IField {
@@ -15,7 +34,7 @@ export interface IField {
   owner: Types.ObjectId;
   name: string;
   areaAcres: number;
-  crop: SupportedCrop;
+  crop: string;
   variety: string;
   growthStage: string;
   soilType: string;
@@ -31,7 +50,7 @@ export interface IFieldView {
   owner: string;
   name: string;
   areaAcres: number;
-  crop: SupportedCrop;
+  crop: string;
   variety: string;
   growthStage: string;
   soilType: string;
@@ -67,10 +86,6 @@ const FieldSchema = new Schema<IField>(
     },
     crop: {
       type: String,
-      enum: {
-        values: SUPPORTED_CROPS,
-        message: 'Crop must be one of: pepper_bell, potato, tomato',
-      },
       required: [true, 'Crop type is required'],
     },
     variety: {
