@@ -9,6 +9,9 @@ const DARK = '#1e293b'; // slate-800
 const LIGHT = '#f1f5f9'; // slate-100
 const ROSE = '#b91c1c'; // rose-700
 
+const MARGIN = 42;
+const CONTENT_WIDTH = 595.28 - MARGIN * 2; // A4 width minus margins
+
 interface ReportRecord {
   id?: string;
   crop?: string;
@@ -45,22 +48,22 @@ const sectionTitle = (doc: PDFKit.PDFDocument, title: string) => {
   doc
     .fillColor(EMPHASIS)
     .font('Helvetica-Bold')
-    .fontSize(12)
+    .fontSize(10)
     .text(title, { continued: false });
   doc
-    .moveDown(0.4)
-    .moveTo(doc.x, doc.y - 6)
-    .lineTo(doc.page.width - 60, doc.y - 6)
-    .lineWidth(1)
+    .moveDown(0.2)
+    .moveTo(doc.x, doc.y - 5)
+    .lineTo(doc.page.width - MARGIN, doc.y - 5)
+    .lineWidth(0.8)
     .strokeColor(LIGHT)
     .stroke()
-    .moveDown(0.4);
+    .moveDown(0.25);
 };
 
 const labelValue = (doc: PDFKit.PDFDocument, label: string, value: string) => {
   if (!value) return;
-  doc.fillColor(MUTED).font('Helvetica-Bold').fontSize(9).text(label);
-  doc.fillColor(DARK).font('Helvetica').text(String(value)).moveDown(0.3);
+  doc.fillColor(MUTED).font('Helvetica-Bold').fontSize(7.5).text(label);
+  doc.fillColor(DARK).font('Helvetica').fontSize(8).text(String(value)).moveDown(0.2);
 };
 
 /**
@@ -83,13 +86,14 @@ const decodeReportImage = (
 };
 
 /**
- * Generates a professional single-page (multi-page if needed) diagnostic
- * report PDF for a diagnosis record and returns the bytes as a Buffer.
+ * Generates a compact, professional diagnostic report PDF for a diagnosis
+ * record and returns the bytes as a Buffer. Tight margins and dense typography
+ * keep typical reports on a single A4 page.
  */
 export const buildDiagnosisReportPdf = async (record: ReportRecord): Promise<Buffer> => {
   const doc = new PDFDocument({
     size: 'A4',
-    margin: 60,
+    margin: MARGIN,
     bufferPages: true,
     info: {
       Title: `AgriSmart Diagnosis Report — ${record.diseaseName || 'Crop'}`,
@@ -110,18 +114,18 @@ export const buildDiagnosisReportPdf = async (record: ReportRecord): Promise<Buf
   // Header band
   // ------------------------------------------------------------------
   doc
-    .rect(0, 0, doc.page.width, 34)
+    .rect(0, 0, doc.page.width, 26)
     .fill(EMPHASIS);
   doc
     .fillColor('#ffffff')
     .font('Helvetica-Bold')
-    .fontSize(16)
-    .text('AgriSmart AI', 60, 10)
+    .fontSize(13)
+    .text('AgriSmart AI', MARGIN, 6)
     .font('Helvetica')
-    .fontSize(9)
-    .text('Crop Health Diagnostic Report', 60, 32, { characterSpacing: 0.5 });
+    .fontSize(8)
+    .text('Crop Health Diagnostic Report', MARGIN, 26, { characterSpacing: 0.4 });
 
-  doc.moveDown(1.6);
+  doc.moveDown(1.1);
 
   // ------------------------------------------------------------------
   // Diagnosis summary card
@@ -134,30 +138,30 @@ export const buildDiagnosisReportPdf = async (record: ReportRecord): Promise<Buf
   doc
     .fillColor(DARK)
     .font('Helvetica-Bold')
-    .fontSize(18)
-    .text(diagnosisTitle, { lineGap: 2 });
+    .fontSize(15)
+    .text(diagnosisTitle, { lineGap: 1 });
   doc
     .fillColor(isAdvisory ? ROSE : EMPHASIS)
     .font('Helvetica-Bold')
-    .fontSize(9)
+    .fontSize(8)
     .text(
       isAdvisory
         ? 'EXPERT ADVISORY ASSESSMENT — RULE-BASED GUIDANCE (NOT AN AUTOMATED DISEASE IDENTIFICATION)'
         : 'CLASSIFIED BY THE CHLOROMAP COMPUTER-VISION MODEL',
-      { characterSpacing: 0.4 }
+      { characterSpacing: 0.3 }
     )
-    .moveDown(0.5);
+    .moveDown(0.3);
 
   if (record.pathogenName) {
     doc
       .fillColor(MUTED)
       .font('Helvetica')
-      .fontSize(9)
+      .fontSize(8)
       .text(`Pathogen: ${record.pathogenName}`)
-      .moveDown(0.3);
+      .moveDown(0.2);
   }
 
-  doc.moveDown(0.3);
+  doc.moveDown(0.2);
 
   // Meta grid (label/value) rows
   const metaRows: [string, string][] = [
@@ -169,64 +173,63 @@ export const buildDiagnosisReportPdf = async (record: ReportRecord): Promise<Buf
   ];
 
   const metaTop = doc.y;
-  let labelX = 60;
+  let labelX = MARGIN;
   metaRows.forEach(([label, value]) => {
-    doc.fillColor(MUTED).font('Helvetica-Bold').fontSize(8.5).text(label, labelX, metaTop, { lineBreak: false });
-    doc.fillColor(DARK).font('Helvetica').fontSize(9).text(value, labelX, metaTop + 12, { width: 150 });
-    labelX += 132;
+    doc.fillColor(MUTED).font('Helvetica-Bold').fontSize(7).text(label, labelX, metaTop, { lineBreak: false });
+    doc.fillColor(DARK).font('Helvetica').fontSize(8).text(value, labelX, metaTop + 9.5, { width: 100 });
+    labelX += 103;
   });
-  doc.y = metaTop + 34;
-  doc.moveDown(0.2);
+  doc.y = metaTop + 22;
+  doc.moveDown(0.1);
 
   // Confidence + Status strip
   doc
-    .roundedRect(60, doc.y, 170, 20, 4)
+    .roundedRect(MARGIN, doc.y, 150, 16, 3)
     .fill(LIGHT);
   doc
     .fillColor(DARK)
     .font('Helvetica-Bold')
-    .fontSize(8.5)
+    .fontSize(8)
     .text(
       isAdvisory
         ? 'Status: Advisory Guidance'
         : `Confidence: ${Math.round((record.confidence ?? 0) * 100) / 100}%`,
-      60,
-      doc.y + 6,
-      { width: 170, align: 'center' }
+      MARGIN,
+      doc.y + 4.5,
+      { width: 150, align: 'center' }
     );
   doc
-    .roundedRect(240, doc.y - 20, 170, 20, 4)
+    .roundedRect(MARGIN + 160, doc.y - 16, 150, 16, 3)
     .fill(isAdvisory ? '#fef3c7' : record.isHealthy ? '#d1fae5' : '#fee2e2');
   doc
     .fillColor(isAdvisory ? '#92400e' : record.isHealthy ? '#065f46' : '#991b1b')
     .font('Helvetica-Bold')
-    .fontSize(8.5)
+    .fontSize(8)
     .text(
       isAdvisory ? 'Source: Expert Rules' : record.isHealthy ? 'Status: Healthy' : 'Status: Disease Detected',
-      240,
-      doc.y + 6,
-      { width: 170, align: 'center' }
+      MARGIN + 160,
+      doc.y + 4.5,
+      { width: 150, align: 'center' }
     );
-  doc.y += 10;
-  doc.moveDown(1);
+  doc.y += 8;
+  doc.moveDown(0.5);
 
   // ------------------------------------------------------------------
-  // Leaf image (if embeddable)
+  // Leaf image (small, on the right of the observation summary)
   // ------------------------------------------------------------------
   const decoded = decodeReportImage(record.imageUrl || '');
   if (decoded) {
     try {
-      doc.image(decoded.buffer, { fit: [120, 120] });
-      // Advance past the image vertically before continuing text.
-      doc.x = 60;
-      doc.y += 120;
+      doc.image(decoded.buffer, { fit: [74, 74] });
+      doc.x = MARGIN;
+      doc.y += 76;
     } catch (err) {
       doc
         .fillColor(MUTED)
         .font('Helvetica-Oblique')
-        .fontSize(9)
+        .fontSize(8)
         .text(`[Leaf thumbnail unavailable: ${getErrorMessage(err)}]`);
-      doc.moveDown(0.4);
+      doc.moveDown(0.2);
     }
   }
 
@@ -238,10 +241,10 @@ export const buildDiagnosisReportPdf = async (record: ReportRecord): Promise<Buf
     doc
       .fillColor(DARK)
       .font('Helvetica')
-      .fontSize(9.5)
-      .text(record.shortExplanation, { lineGap: 2 });
+      .fontSize(8.5)
+      .text(record.shortExplanation, { lineGap: 1.5 });
   }
-  doc.moveDown(0.8);
+  doc.moveDown(0.5);
 
   // ------------------------------------------------------------------
   // Symptoms matched / ruled out
@@ -254,32 +257,32 @@ export const buildDiagnosisReportPdf = async (record: ReportRecord): Promise<Buf
       doc
         .fillColor(EMPHASIS)
         .font('Helvetica-Bold')
-        .fontSize(9.5)
+        .fontSize(8.5)
         .text(`Matched Symptoms (${record.symptomsMatched.length})`, { continued: false });
-      record.symptomsMatched.slice(0, 10).forEach((item) => {
+      record.symptomsMatched.slice(0, 8).forEach((item) => {
         doc
           .fillColor(DARK)
           .font('Helvetica')
-          .fontSize(9)
-          .text(`• ${item}`, { bulletIndent: 8, width: doc.page.width - 140, lineGap: 1.5 });
+          .fontSize(8)
+          .text(`• ${item}`, { bulletIndent: 8, width: CONTENT_WIDTH - 30, lineGap: 1 });
       });
-      doc.moveDown(0.4);
+      doc.moveDown(0.3);
     }
     if (record.symptomsRuledOut && record.symptomsRuledOut.length) {
       doc
         .fillColor(MUTED)
         .font('Helvetica-Bold')
-        .fontSize(9.5)
+        .fontSize(8.5)
         .text(`Ruled-out Conditions (${record.symptomsRuledOut.length})`, { continued: false });
-      record.symptomsRuledOut.slice(0, 10).forEach((item) => {
+      record.symptomsRuledOut.slice(0, 8).forEach((item) => {
         doc
           .fillColor(DARK)
           .font('Helvetica')
-          .fontSize(9)
-          .text(`• ${item}`, { bulletIndent: 8, width: doc.page.width - 140, lineGap: 1.5 });
+          .fontSize(8)
+          .text(`• ${item}`, { bulletIndent: 8, width: CONTENT_WIDTH - 30, lineGap: 1 });
       });
     }
-    doc.moveDown(0.8);
+    doc.moveDown(0.5);
   }
 
   // ------------------------------------------------------------------
@@ -291,30 +294,30 @@ export const buildDiagnosisReportPdf = async (record: ReportRecord): Promise<Buf
     doc
       .fillColor(EMPHASIS)
       .font('Helvetica-Bold')
-      .fontSize(9.5)
+      .fontSize(8.5)
       .text('Organic / Biological', { continued: false });
     doc
       .fillColor(DARK)
       .font('Helvetica')
-      .fontSize(9)
-      .text(tp.organic || '—', { lineGap: 1.5 })
-      .moveDown(0.3);
+      .fontSize(8)
+      .text(tp.organic || '—', { lineGap: 1.2 })
+      .moveDown(0.2);
     doc
       .fillColor(DARK)
       .font('Helvetica-Bold')
-      .fontSize(9.5)
+      .fontSize(8.5)
       .text('Conventional', { continued: false });
     doc
       .fillColor(DARK)
       .font('Helvetica')
-      .fontSize(9)
-      .text(tp.conventional || '—', { lineGap: 1.5 });
+      .fontSize(8)
+      .text(tp.conventional || '—', { lineGap: 1.2 });
     if (tp.dosage || tp.applicationTiming) {
-      doc.moveDown(0.2);
+      doc.moveDown(0.1);
       labelValue(doc, 'Dosage', tp.dosage || '');
       labelValue(doc, 'Application Window', tp.applicationTiming || '');
     }
-    doc.moveDown(0.6);
+    doc.moveDown(0.4);
   }
 
   // ------------------------------------------------------------------
@@ -326,21 +329,21 @@ export const buildDiagnosisReportPdf = async (record: ReportRecord): Promise<Buf
       doc
         .fillColor(EMPHASIS)
         .font('Helvetica-Bold')
-        .fontSize(9.5)
+        .fontSize(8.5)
         .text(`Step ${action.step || 0}: ${action.title || ''}`, { continued: true });
       doc
         .fillColor(MUTED)
         .font('Helvetica-Oblique')
-        .fontSize(8)
+        .fontSize(7.5)
         .text(`  ${action.timing || ''}`);
       doc
         .fillColor(DARK)
         .font('Helvetica')
-        .fontSize(9)
-        .text(action.description || '', { width: doc.page.width - 140, lineGap: 1.5 })
-        .moveDown(0.25);
+        .fontSize(8)
+        .text(action.description || '', { width: CONTENT_WIDTH - 30, lineGap: 1.2 })
+        .moveDown(0.15);
     });
-    doc.moveDown(0.6);
+    doc.moveDown(0.4);
   }
 
   // ------------------------------------------------------------------
@@ -348,14 +351,14 @@ export const buildDiagnosisReportPdf = async (record: ReportRecord): Promise<Buf
   // ------------------------------------------------------------------
   if (record.precautions && record.precautions.length) {
     sectionTitle(doc, 'Field Precautions');
-    record.precautions.slice(0, 10).forEach((item) => {
+    record.precautions.slice(0, 8).forEach((item) => {
       doc
         .fillColor(DARK)
         .font('Helvetica')
-        .fontSize(9)
-        .text(`• ${item}`, { bulletIndent: 8, width: doc.page.width - 140, lineGap: 2 });
+        .fontSize(8)
+        .text(`• ${item}`, { bulletIndent: 8, width: CONTENT_WIDTH - 30, lineGap: 1.2 });
     });
-    doc.moveDown(0.8);
+    doc.moveDown(0.5);
   }
 
   // ------------------------------------------------------------------
@@ -367,7 +370,7 @@ export const buildDiagnosisReportPdf = async (record: ReportRecord): Promise<Buf
     if (ri.weatherRisk) labelValue(doc, 'Weather Correlation', ri.weatherRisk);
     if (ri.irrigationAdvice) labelValue(doc, 'Irrigation Guidance', ri.irrigationAdvice);
     if (ri.sustainabilityImpact) labelValue(doc, 'Sustainability Impact', ri.sustainabilityImpact);
-    doc.moveDown(0.6);
+    doc.moveDown(0.4);
   }
 
   // ------------------------------------------------------------------
@@ -375,29 +378,28 @@ export const buildDiagnosisReportPdf = async (record: ReportRecord): Promise<Buf
   // ------------------------------------------------------------------
   doc
     .fillColor(LIGHT)
-    .moveTo(60, doc.y)
-    .lineTo(doc.page.width - 60, doc.y)
-    .lineWidth(1)
+    .moveTo(MARGIN, doc.y)
+    .lineTo(doc.page.width - MARGIN, doc.y)
+    .lineWidth(0.8)
     .stroke()
-    .moveDown(0.6);
+    .moveDown(0.4);
   doc
     .fillColor(MUTED)
     .font('Helvetica-Oblique')
-    .fontSize(7.5)
+    .fontSize(7)
     .text(
       'Disclaimer: This report combines computer-vision classification (where available) with validated agronomic guidance ' +
       'from the AgriSmart crop-knowledge base. Classifier confidence is a ranking signal, not verified certainty. ' +
       'For laboratory confirmation or severe outbreaks, consult your district Krishi Vigyan Kendra (KVK) or local extension officer.',
-      { width: doc.page.width - 140, lineGap: 2 }
-    );
+      { width: CONTENT_WIDTH, lineGap: 1.5 }
+    )
+    .moveDown(0.5);
   doc
     .fillColor(MUTED)
     .font('Helvetica')
-    .fontSize(7.5)
+    .fontSize(7)
     .text(
-      `Report ID: ${record.id || '—'}  •  Generated by AgriSmart AI  •  ${new Date().toLocaleString()}`,
-      60,
-      doc.page.height - 50
+      `Report ID: ${record.id || '—'}  •  Generated by AgriSmart AI  •  ${new Date().toLocaleString()}`
     );
 
   doc.end();
