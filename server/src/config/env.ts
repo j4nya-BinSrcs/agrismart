@@ -37,6 +37,10 @@ export const config = Object.freeze({
     defaultLatitude: parseFloat(process.env.DEFAULT_LATITUDE || '22.5645'),
     defaultLongitude: parseFloat(process.env.DEFAULT_LONGITUDE || '72.9289'),
   },
+  chloromap: {
+    url: process.env.CHLOROMAP_URL || 'http://127.0.0.1:8000',
+    timeoutMs: parseInt(process.env.CHLOROMAP_TIMEOUT_MS || '20000', 10),
+  },
   gemini: {
     apiKey: process.env.GEMINI_API_KEY || '',
     model: process.env.GEMINI_MODEL || 'gemini-flash-latest',

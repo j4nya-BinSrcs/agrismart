@@ -1,7 +1,7 @@
 import mongoose, { Model, Schema, Types, model } from 'mongoose';
 import type { HydratedDocument } from 'mongoose';
 
-export type DiagnosisSource = 'expert_rules' | 'ml_unavailable';
+export type DiagnosisSource = 'expert_rules' | 'ml_unavailable' | 'ml';
 export type DiagnosisSeverity = 'low' | 'moderate' | 'high' | 'severe';
 
 export interface RecommendedActionStep {
@@ -195,7 +195,7 @@ const DiagnosisSchema = new Schema<IDiagnosis>(
     // isMlPrediction=false. Legacy "ml_unavailable" records remain readable.
     source: {
       type: String,
-      enum: ['expert_rules', 'ml_unavailable'],
+      enum: ['expert_rules', 'ml_unavailable', 'ml'],
       default: 'expert_rules',
     },
     isMlPrediction: {

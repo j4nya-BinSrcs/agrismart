@@ -29,6 +29,8 @@ import {
 import { DiagnosisRecord, ScreenType } from '../../types';
 import { StatusBadge } from '../common/StatusBadge';
 import { useToast } from '../../context/ToastContext';
+import { useAuth } from '../../context/AuthContext';
+import diagnosisService from '../../services/diagnosisService';
 import { BackButton } from '../common/BackButton';
 
 interface DiagnosisResultScreenProps {
@@ -43,9 +45,11 @@ export const DiagnosisResultScreen: React.FC<DiagnosisResultScreenProps> = ({
   onAskAssistantWithContext,
 }) => {
   const { showToast } = useToast();
+  const { token } = useAuth();
   const [completedSteps, setCompletedSteps] = useState<number[]>([]);
   const [selectedProtocolTab, setSelectedProtocolTab] = useState<'organic' | 'conventional'>('organic');
   const [reportSaved, setReportSaved] = useState<boolean>(false);
+  const [isExporting, setIsExporting] = useState<boolean>(false);
   const [feedbackGiven, setFeedbackGiven] = useState<'accurate' | 'inaccurate' | null>(null);
   const [isZoomOpen, setIsZoomOpen] = useState<boolean>(false);
   const [showBoundingBoxes, setShowBoundingBoxes] = useState<boolean>(true);
@@ -66,10 +70,19 @@ export const DiagnosisResultScreen: React.FC<DiagnosisResultScreenProps> = ({
     onNavigate('assistant');
   };
 
-  const handlePrintOrSave = () => {
-    setReportSaved(true);
-    showToast('Diagnostic advisory report saved and exported as PDF.', 'success');
-    setTimeout(() => setReportSaved(false), 3000);
+  const handlePrintOrSave = async () => {
+    if (isExporting) return;
+    setIsExporting(true);
+    try {
+      await diagnosisService.exportReportPdf(diagnosis, token);
+      setReportSaved(true);
+      showToast('Diagnostic report downloaded as PDF.', 'success');
+      setTimeout(() => setReportSaved(false), 3000);
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'Failed to export the report.', 'error');
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   return (
@@ -144,7 +157,7 @@ export const DiagnosisResultScreen: React.FC<DiagnosisResultScreenProps> = ({
             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-750 transition-colors cursor-pointer shadow-xs"
           >
             <Printer className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
-            <span>{reportSaved ? 'Saved ✓' : 'Export Report'}</span>
+            <span>{isExporting ? 'Preparing PDF…' : reportSaved ? 'Saved ✓' : 'Export Report'}</span>
           </button>
 
           <button
@@ -166,10 +179,10 @@ export const DiagnosisResultScreen: React.FC<DiagnosisResultScreenProps> = ({
             <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" />
             <div className="space-y-0.5">
               <div className="font-semibold text-amber-950 dark:text-amber-100">
-                Expert Advisory Mode (Automated Image Classification Not Performed)
+                Expert Advisory Mode (ML Model Offline — Automated Classification Not Performed)
               </div>
               <p className="text-[11px] text-amber-800 dark:text-amber-300 leading-relaxed">
-                Automated image-based disease identification is not performed in this build. The recommendations below are rule-based agronomic guidance derived from the crop, growth stage and soil details you provided — treat them as a scouting checklist, not an automated disease prediction.
+                The Chloromap computer-vision classifier is currently offline, so this assessment used rule-based agronomic guidance derived from the crop, growth stage and soil details you provided — treat it as a scouting checklist, not an automated disease prediction.
               </p>
             </div>
           </div>
@@ -657,25 +670,46 @@ export const DiagnosisResultScreen: React.FC<DiagnosisResultScreenProps> = ({
 
             <div className="space-y-3 text-xs text-slate-700 dark:text-slate-300">
               <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 space-y-1">
-                <span className="font-semibold text-slate-900 dark:text-slate-100 block">1. Morphological Pattern Recognition</span>
+                <span className="font-semibold text-slate-900 dark:text-slate-100 block">1. Model Classification Output</span>
                 <p className="text-slate-600 dark:text-slate-400 leading-relaxed">
-                  Concentric target-board rings (3–12 mm diameter) with distinct dark brown margins and a chlorotic halo on mature leaves match the definitive phenotype of <em>Alternaria solani</em>.
+                  The Chloromap computer-vision model assigned the top probability to{' '}
+                  <strong>{diagnosis.diseaseName}</strong>
+                  {diagnosis.pathogenName ? <> (causative agent: <em>{diagnosis.pathogenName}</em>)</> : null}{' '}
+                  with <strong>{diagnosis.confidence}%</strong> confidence. Confidence is a ranking signal, not verified certainty.
                 </p>
               </div>
 
               <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 space-y-1">
-                <span className="font-semibold text-slate-900 dark:text-slate-100 block">2. Canopy Distribution & Soil Splash</span>
-                <p className="text-slate-600 dark:text-slate-400 leading-relaxed">
-                  Lesions are restricted to the lower 20% canopy tier, indicating early transmission via rain and soil splash rather than airborne late-season blight.
-                </p>
+                <span className="font-semibold text-slate-900 dark:text-slate-100 block">2. Matched Symptom Markers</span>
+                {diagnosis.symptomsMatched && diagnosis.symptomsMatched.length > 0 ? (
+                  <ul className="text-slate-600 dark:text-slate-400 leading-relaxed space-y-1">
+                    {diagnosis.symptomsMatched.slice(0, 4).map((symptom, idx) => (
+                      <li key={idx}>• {symptom}</li>
+                    ))}
+                    {diagnosis.symptomsMatched.length > 4 && (
+                      <li className="text-slate-500">…and {diagnosis.symptomsMatched.length - 4} more markers.</li>
+                    )}
+                  </ul>
+                ) : (
+                  <p className="text-slate-600 dark:text-slate-400 leading-relaxed">
+                    Field morphology and scouting markers were registered for {diagnosis.crop} at {diagnosis.growthStage} stage in {diagnosis.fieldLocation}.
+                  </p>
+                )}
               </div>
 
               <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 space-y-1">
                 <span className="font-semibold text-slate-900 dark:text-slate-100 block">3. Differential Diagnosis & Exclusions</span>
-                <p className="text-slate-600 dark:text-slate-400 leading-relaxed">
-                  • <strong>Septoria Leaf Spot:</strong> Excluded because spots exceed 3 mm and lack light gray necrotic centers.<br />
-                  • <strong>Bacterial Canker:</strong> Excluded due to absence of vascular browning and fruit lesions.
-                </p>
+                {diagnosis.symptomsRuledOut && diagnosis.symptomsRuledOut.length > 0 ? (
+                  <ul className="text-slate-600 dark:text-slate-400 leading-relaxed space-y-1">
+                    {diagnosis.symptomsRuledOut.slice(0, 4).map((ruledOut, idx) => (
+                      <li key={idx}>• {ruledOut}</li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-slate-600 dark:text-slate-400 leading-relaxed">
+                    Confirm the condition in the field and arrange lab confirmation via the nearest Krishi Vigyan Kendra (KVK) for severe cases.
+                  </p>
+                )}
               </div>
             </div>
 

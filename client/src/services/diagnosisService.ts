@@ -83,6 +83,71 @@ export const diagnosisService = {
   },
 
   /**
+   * Exports the diagnosis report as a downloadable PDF.
+   * POSTs the full record to the backend /api/v1/diagnosis/report and
+   * triggers a browser download when the PDF bytes come back.
+   */
+  async exportReportPdf(record: DiagnosisRecord, token: string | null = null): Promise<void> {
+    if (!token) {
+      throw new Error('Sign in required to export the diagnostic report.');
+    }
+
+    const url = `${API_BASE_URL}/diagnosis/report`;
+
+    let response: Response;
+    try {
+      response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/pdf',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(record),
+      });
+    } catch (netErr) {
+      const errorMsg = netErr instanceof Error ? netErr.message : String(netErr);
+      throw new Error(
+        `Cannot connect to AgriSmart backend (${API_BASE_URL}). Verify the backend is running. (${errorMsg})`
+      );
+    }
+
+    if (!response.ok) {
+      let message = `Server error (${response.status}) while generating the report.`;
+      try {
+        const json = await response.json();
+        message = json?.message || json?.error || message;
+      } catch {
+        // non-JSON error body — keep the generic message
+      }
+      if (response.status === 401) {
+        throw new Error('Session expired. Please sign in again.');
+      }
+      throw new Error(message);
+    }
+
+    const blob = await response.blob();
+    if (!blob || blob.size === 0) {
+      throw new Error('The backend returned an empty PDF. Please try again.');
+    }
+
+    const contentType = response.headers.get('Content-Type') || '';
+    if (!contentType.includes('pdf')) {
+      throw new Error('The backend did not return a PDF file.');
+    }
+
+    const objectUrl = URL.createObjectURL(blob);
+    const filename = `agrismart-${(record.crop || 'crop').replace(/[^a-z0-9\-_]/gi, '_').toLowerCase()}-diagnostic-report.pdf`;
+    const link = document.createElement('a');
+    link.href = objectUrl;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
+  },
+
+  /**
    * Analyzes crop leaf image via real backend POST /api/v1/diagnosis/analyze
    */
   async analyzeCrop(

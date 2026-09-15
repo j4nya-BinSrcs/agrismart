@@ -187,7 +187,7 @@ export const DiagnoseScreen: React.FC<DiagnoseScreenProps> = ({
     }
 
     setIsAnalyzing(true);
-    setAnalysisStep('Preparing expert advisory from crop knowledge...');
+    setAnalysisStep('Running leaf image classification through the Chloromap model...');
 
     try {
       if (isDemo || !token) {
@@ -462,7 +462,7 @@ export const DiagnoseScreen: React.FC<DiagnoseScreenProps> = ({
                 <div className="p-3 rounded-md bg-slate-50 dark:bg-slate-800/60 border border-slate-200 text-center space-y-1.5">
                   <div className="flex items-center justify-center gap-1.5 text-xs font-medium">
                     <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                    Generating advisory
+                    Generating diagnosis
                   </div>
                   <p className="text-xs text-slate-600">{analysisStep}</p>
                 </div>
@@ -478,7 +478,7 @@ export const DiagnoseScreen: React.FC<DiagnoseScreenProps> = ({
                 </button>
               )}
               <p className="text-[11px] text-slate-400 text-center mt-2">
-                Uses crop knowledge for Pepper Bell, Potato, and Tomato. This is an expert advisory, not automated ML classification of the image.
+                Powered by the Chloromap computer-vision disease model for Pepper Bell, Potato, and Tomato. Falls back to expert advisory guidance if the ML service is offline.
               </p>
             </div>
           </div>

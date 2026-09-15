@@ -156,7 +156,7 @@ export interface DiagnosisRecord {
   precautions: string[];
   recommendedActions: RecommendedActionStep[];
   relatedInsights: RelatedInsights;
-  source?: 'expert_rules' | 'ml_unavailable' | string;
+  source?: 'expert_rules' | 'ml_unavailable' | 'ml' | string;
   isMlPrediction?: boolean;
   rawModelOutput?: unknown;
 }

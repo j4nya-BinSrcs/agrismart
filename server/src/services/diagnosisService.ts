@@ -2,6 +2,7 @@ import Diagnosis from '../models/Diagnosis.js';
 import CropKnowledge from '../models/CropKnowledge.js';
 import type { DiseaseInfo, SupportedCrop } from '../models/CropKnowledge.js';
 import type { IDiagnosis, RecommendedActionStep, RelatedInsights, TreatmentProtocols } from '../models/Diagnosis.js';
+import config from '../config/env.js';
 import ApiError from '../utils/ApiError.js';
 import logger from '../utils/logger.js';
 import mongoose from 'mongoose';
@@ -28,7 +29,7 @@ export interface DiagnosisRequestInput {
   fieldId?: string;
 }
 
-export interface ExpertAdvisoryRecord {
+export interface DiagnosisRecordResult {
   id: string;
   user?: string;
   farm?: string;
@@ -51,9 +52,9 @@ export interface ExpertAdvisoryRecord {
   precautions: string[];
   recommendedActions: RecommendedActionStep[];
   relatedInsights: RelatedInsights;
-  source: 'expert_rules';
-  isMlPrediction: false;
-  rawModelOutput: null;
+  source: 'expert_rules' | 'ml';
+  isMlPrediction: boolean;
+  rawModelOutput: Record<string, unknown> | null;
 }
 
 export interface SaveDiagnosisInput extends Partial<IDiagnosis> {
@@ -78,6 +79,161 @@ export const normalizeCropKey = (crop: string): SupportedCrop | null => {
     return 'pepper_bell';
   }
   return null;
+};
+
+// ---------------------------------------------------------------------------
+// Chloromap computer-vision disease classifier wiring.
+// The model (EfficientNetV2-S, 15 PlantVillage-style classes) runs in the
+// sibling ML service and returns { class_id, class_name, confidence } where
+// class_name is formatted like "Tomato___Early_blight" or "Tomato_healthy".
+// ---------------------------------------------------------------------------
+
+export interface MlPrediction {
+  classId: number;
+  className: string;
+  confidence: number;
+}
+
+const SUPPORTED_CROP_PREFIXES = ['Tomato', 'Potato', 'Pepper__bell'];
+
+const humanizeClassLabel = (s: string): string =>
+  s.replace(/_+/g, ' ').replace(/\s+/g, ' ').trim();
+
+/**
+ * Splits a Chloromap class name (e.g. "Potato___Early_blight",
+ * "Pepper__bell___healthy", "Tomato_Septoria_leaf_spot") into its crop and
+ * disease parts and flags whether the class represents a healthy plant.
+ */
+export const parseMlClassName = (
+  className: string
+): { cropLabel: string; diseaseLabel: string; isHealthy: boolean } => {
+  const clean = (className || '').trim();
+  let cropPart = '';
+  let diseasePart = '';
+
+  if (clean.includes('___')) {
+    const splitAt = clean.indexOf('___');
+    cropPart = clean.slice(0, splitAt);
+    diseasePart = clean.slice(splitAt + 3);
+  } else {
+    const prefix = [...SUPPORTED_CROP_PREFIXES]
+      .sort((a, b) => b.length - a.length)
+      .find((p) => clean.startsWith(p));
+    if (prefix) {
+      cropPart = prefix;
+      diseasePart = clean.slice(prefix.length).replace(/^_+/, '');
+    } else {
+      diseasePart = clean;
+    }
+  }
+
+  const diseaseLabel =
+    humanizeClassLabel(diseasePart) ||
+    humanizeClassLabel(cropPart) ||
+    'Healthy';
+  return {
+    cropLabel: humanizeClassLabel(cropPart),
+    diseaseLabel,
+    isHealthy: /healthy/i.test(diseasePart),
+  };
+};
+
+/**
+ * Decodes a base64 data-URI image into a Buffer so it can be forwarded to the
+ * Chloromap classifier. Returns null for unsupported/hosted-image payloads.
+ */
+const decodeImageBuffer = (
+  imageUrl: string
+): { buffer: Buffer; mimeType: string } | null => {
+  if (!imageUrl || typeof imageUrl !== 'string') return null;
+  const matches = imageUrl.match(/^data:(image\/(?:jpeg|png|webp|jpg));base64,(.+)$/);
+  if (!matches) return null;
+  try {
+    const rawMime = matches[1].toLowerCase();
+    const mimeType = rawMime === 'image/jpg' ? 'image/jpeg' : rawMime;
+    return { buffer: Buffer.from(matches[2], 'base64'), mimeType };
+  } catch {
+    return null;
+  }
+};
+
+/**
+ * Calls the Chloromap ML inference service with the leaf photo and returns the
+ * predicted class. Returns null (never throws) whenever the ML service is
+ * unreachable, misconfigured, or rejects the payload so the caller can fall
+ * back to the expert advisory engine.
+ */
+export const classifyWithChloromap = async (imageUrl?: string): Promise<MlPrediction | null> => {
+  const decoded = decodeImageBuffer(imageUrl || '');
+  if (!decoded) {
+    return null;
+  }
+
+  const endpoint = `${config.chloromap.url}/api/v1/predict`;
+  try {
+    const form = new FormData();
+    form.append('image', new Blob([decoded.buffer], { type: decoded.mimeType }), 'leaf.jpg');
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), config.chloromap.timeoutMs);
+    let response: Response;
+    try {
+      response = await fetch(endpoint, { method: 'POST', body: form, signal: controller.signal });
+    } finally {
+      clearTimeout(timeoutId);
+    }
+
+    if (!response.ok) {
+      logger.warn(`[chloromap] ML service returned status ${response.status} from ${endpoint}.`);
+      return null;
+    }
+
+    const data = (await response.json()) as {
+      class_id?: number;
+      class_name?: string;
+      confidence?: number;
+    };
+    if (typeof data.class_name !== 'string' || typeof data.confidence !== 'number') {
+      logger.warn('[chloromap] ML response missing class_name or confidence.');
+      return null;
+    }
+
+    return {
+      classId: typeof data.class_id === 'number' ? data.class_id : -1,
+      className: data.class_name,
+      confidence: data.confidence,
+    };
+  } catch (err) {
+    logger.warn(`[chloromap] ML classification unavailable (${config.chloromap.url}): ${getErrorMessage(err)}`);
+    return null;
+  }
+};
+
+const normalizeDiseaseName = (s: string): string =>
+  s.toLowerCase().replace(/[^a-z0-9]/g, '').trim();
+
+const findKnowledgeEntry = (
+  diseases: DiseaseInfo[],
+  mlDiseaseLabel: string,
+  isHealthy: boolean
+): DiseaseInfo | null => {
+  if (isHealthy) {
+    return diseases.find((d) => d.isHealthy) ?? null;
+  }
+  const target = normalizeDiseaseName(mlDiseaseLabel);
+  return diseases.find((d) => !d.isHealthy && normalizeDiseaseName(d.diseaseName) === target) ?? null;
+};
+
+const SEVERITY_ORDER: Array<'low' | 'moderate' | 'high' | 'severe'> = ['low', 'moderate', 'high', 'severe'];
+
+const worstSeverity = (entry: DiseaseInfo): 'low' | 'moderate' | 'high' | 'severe' => {
+  let worst: 'low' | 'moderate' | 'high' | 'severe' = 'low';
+  for (const symptom of entry.symptoms ?? []) {
+    if (SEVERITY_ORDER.indexOf(symptom.severity) > SEVERITY_ORDER.indexOf(worst)) {
+      worst = symptom.severity;
+    }
+  }
+  return worst;
 };
 
 const uniqueStrings = (items: string[]) => [...new Set(items.map((s) => s.trim()).filter(Boolean))];
@@ -233,9 +389,11 @@ async function getCropKnowledge(cropKey: SupportedCrop) {
 }
 
 /**
- * Creates a diagnosis record based on crop knowledge and expert rules
+ * Creates a diagnosis record. Attempts Chloromap image classification first;
+ * the returned record uses automated ML provenance (isMlPrediction=true) when
+ * the model answers, otherwise it falls back to the expert advisory engine.
  */
-const createDiagnosisRecord = async (input: DiagnosisRequestInput): Promise<ExpertAdvisoryRecord> => {
+const createDiagnosisRecord = async (input: DiagnosisRequestInput): Promise<DiagnosisRecordResult> => {
   const crop = input.crop || 'Crop';
   const variety = input.variety || 'Standard Variety';
   const growthStage = input.growthStage || 'Active Growth';
@@ -328,6 +486,89 @@ const createDiagnosisRecord = async (input: DiagnosisRequestInput): Promise<Expe
     relatedInsights = fromDb.relatedInsights;
   }
 
+  // ------------------------------------------------------------------
+  // Chloromap computer-vision classification — takes priority whenever the
+  // model answers. Guidance is then grounded in the predicted disease.
+  // ------------------------------------------------------------------
+  const mlPrediction = await classifyWithChloromap(input.imageUrl);
+  let source: DiagnosisRecordResult['source'] = 'expert_rules';
+  let isMlPrediction = false;
+  let rawModelOutput: Record<string, unknown> | null = null;
+
+  if (mlPrediction) {
+    isMlPrediction = true;
+    source = 'ml';
+    rawModelOutput = {
+      ...mlPrediction,
+      service: `${config.chloromap.url}/api/v1/predict`,
+      classifiedAt: now.toISOString(),
+    };
+
+    const parsed = parseMlClassName(mlPrediction.className);
+    const confidencePct = Math.min(100, Math.max(0, Math.round(mlPrediction.confidence * 1000) / 10));
+
+    let mlEntry = cropKnowledge
+      ? findKnowledgeEntry(cropKnowledge.diseases as DiseaseInfo[], parsed.diseaseLabel, parsed.isHealthy)
+      : null;
+
+    // Prefer knowledge of the crop the model actually classified when the
+    // user-selected crop has no matching disease entry.
+    if (!mlEntry) {
+      const predictedCropKey = normalizeCropKey(parsed.cropLabel);
+      if (predictedCropKey && predictedCropKey !== cropKey) {
+        const predictedKnowledge = predictedCropKey ? await getCropKnowledge(predictedCropKey) : null;
+        mlEntry = predictedKnowledge
+          ? findKnowledgeEntry(predictedKnowledge.diseases as DiseaseInfo[], parsed.diseaseLabel, parsed.isHealthy)
+          : null;
+      }
+    }
+
+    diseaseName = parsed.isHealthy ? 'Healthy' : parsed.diseaseLabel || EXPERT_ADVISORY_ASSESSMENT_LABEL;
+    isHealthy = parsed.isHealthy;
+    confidence = confidencePct;
+    severity = mlEntry ? worstSeverity(mlEntry) : 'moderate';
+
+    if (mlEntry) {
+      pathogenName = mlEntry.pathogenName;
+      symptomsMatched = [
+        `Chloromap model matched the leaf phenotype to "${parsed.isHealthy ? 'Healthy' : parsed.diseaseLabel}" (confidence ${confidencePct}%).`,
+        `Foliage imagery for ${crop} (${variety}) captured at ${fieldLocation} (${growthStage} stage).`,
+        soilAdvice,
+        ...(mlEntry.symptoms.map((s) => `${mlEntry.diseaseName}: ${s.name} — ${s.description}`) ?? []),
+      ];
+      symptomsRuledOut = [
+        ...(cropKnowledge?.diseases ?? []).filter((d) => !d.isHealthy && normalizeDiseaseName(d.diseaseName) !== normalizeDiseaseName(parsed.diseaseLabel))
+          .map((d) => `${d.diseaseName} was not the top-matching class (probability below ${parsed.isHealthy ? '' : 'the predicted '}${confidencePct}%).`),
+        'Confirm visually in the field and, for severe or spreading outbreaks, arrange lab confirmation via the nearest KVK.',
+      ];
+      treatmentProtocols = mlEntry.treatmentProtocols;
+      precautions = mlEntry.precautions;
+      recommendedActions = mlEntry.recommendedActions;
+      relatedInsights = mlEntry.relatedInsights;
+      shortExplanation =
+        `The Chloromap computer-vision model classified the ${crop} (${growthStage}) leaf captured at ${fieldLocation} as ` +
+        `${parsed.isHealthy ? 'healthy' : `"${parsed.diseaseLabel}"`} with ${confidencePct}% confidence. ` +
+        `Agronomic guidance below reflects the ${parsed.isHealthy ? 'maintenance' : 'treatment'} protocols for ${mlEntry.diseaseName} from the AgriSmart crop-knowledge base. ` +
+        `Classifier confidence is a ranking signal — verify symptoms in the field and consult a local extension officer for confirmation.`;
+    } else {
+      pathogenName = '';
+      symptomsMatched = [
+        `Chloromap model classified the leaf as "${parsed.diseaseLabel}" with ${confidencePct}% confidence.`,
+        `Foliage imagery for ${crop} (${variety}) captured at ${fieldLocation} (${growthStage} stage).`,
+        soilAdvice,
+        ...rules.focusAreas,
+      ];
+      symptomsRuledOut = [
+        'This class has no dedicated agronomic playbook in the AgriSmart knowledge base yet.',
+        'Follow the scouting checklist below and confirm the condition in the field or with your local Krishi Vigyan Kendra (KVK).',
+      ];
+      shortExplanation =
+        `The Chloromap computer-vision model identified ${parsed.diseaseLabel} on the ${crop} leaf with ${confidencePct}% confidence. ` +
+        `Because specific treatment protocols for this class are not yet seeded in the knowledge base, the guidance below is general preventive scouting advice — ` +
+        `treat it as a response checklist and seek lab confirmation before applying any chemical control.`;
+    }
+  }
+
   return {
     id: `diag-${now.getTime()}-${Math.random().toString(36).substring(2, 7)}`,
     ...(input.userId ? { user: input.userId } : {}),
@@ -351,9 +592,9 @@ const createDiagnosisRecord = async (input: DiagnosisRequestInput): Promise<Expe
     precautions,
     recommendedActions,
     relatedInsights,
-    source: 'expert_rules',
-    isMlPrediction: false,
-    rawModelOutput: null,
+    source,
+    isMlPrediction,
+    rawModelOutput,
   };
 };
 
@@ -438,7 +679,7 @@ export const diagnosisService = {
   /**
    * Produces an explainable agronomic advisory assessment for a submitted crop image.
    */
-  async analyzeCrop(requestData: DiagnosisRequestInput): Promise<ExpertAdvisoryRecord> {
+  async analyzeCrop(requestData: DiagnosisRequestInput): Promise<DiagnosisRecordResult> {
     const { crop, growthStage, fieldLocation, imageUrl, variety, soilMoistureContext, userId, farmId, fieldId } =
       requestData;
 
