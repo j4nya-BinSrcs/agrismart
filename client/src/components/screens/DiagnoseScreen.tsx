@@ -190,12 +190,10 @@ export const DiagnoseScreen: React.FC<DiagnoseScreenProps> = ({
     setAnalysisStep('Running leaf image classification through the Chloromap model...');
 
     try {
-      if (isDemo || !token) {
+      if (isDemo) {
         setIsAnalyzing(false);
         showToast(
-          isDemo
-            ? 'Demo mode cannot save diagnoses. Sign up for a real account to run assessments.'
-            : 'Sign in required to run crop diagnosis.',
+          'Demo mode cannot save diagnoses. Sign up for a real account to run assessments.',
           'error'
         );
         return;

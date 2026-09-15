@@ -180,10 +180,6 @@ export const diagnosisService = {
     onProgress?.('Dispatching payload to backend diagnostic pipeline...');
     await new Promise((resolve) => setTimeout(resolve, 250));
 
-    if (!token) {
-      throw new Error('Sign in required to run crop diagnosis.');
-    }
-
     try {
       const record = await apiRequestWithAuth<DiagnosisRecord>(
         '/diagnosis/analyze',

@@ -177,17 +177,101 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     );
 
     if (matched) {
-      if (matched.password === trimmedPass) {
-        setIsAuthenticated(true);
-        setUser(matched.user);
-        setAuthToken(null);
-        setIsDemo(false);
-        if (matched.pendingFarm) {
-          setStoredItem(PENDING_FARM_KEY, matched.pendingFarm);
-        }
-        return { success: true };
+      if (matched.password !== trimmedPass) {
+        return { success: false, error: 'Invalid username or password.' };
       }
-      return { success: false, error: 'Invalid username or password.' };
+
+      // Local-registered accounts must still get a real backend token so scans,
+      // farm data, and the assistant work after returning to the app. Try a
+      // backend login first so users who also registered on the backend connect
+      // to their real data; auto-register when the account only exists locally.
+      // When the backend is unreachable we fall back to a token-less local session.
+      let resolvedToken: string | null = null;
+      let resolvedUser: User = matched.user;
+      const provisionBackendUser = async (): Promise<void> => {
+        try {
+          const response = await apiRequestWithAuth<BackendAuthResponse>(
+            matched.user.email
+              ? '/auth/login'
+              : '/auth/register',
+            {
+              method: 'POST',
+              body: JSON.stringify(
+                matched.user.email
+                  ? { email: matched.user.email.toLowerCase(), password: trimmedPass }
+                  : {
+                      name: matched.user.name,
+                      email: matched.user.email.toLowerCase(),
+                      password: trimmedPass,
+                      role: matched.user.role,
+                    }
+              ),
+            },
+            null
+          );
+          const backendUser: User = {
+            id: response.user.id,
+            name: response.user.name,
+            email: response.user.email,
+            role: (response.user.role as UserRole) || matched.user.role,
+          };
+          resolvedToken = response.token;
+          resolvedUser = backendUser;
+
+          // Keep the authoritative backend id on the stored account so future
+          // sessions (including offline fallback) stay consistent.
+          setStoredItem<StoredAccount[]>(REGISTERED_ACCOUNTS_KEY, [
+            ...registered.filter((a) => a.user.email !== matched.user.email),
+            { ...matched, user: backendUser },
+          ]);
+        } catch (err) {
+          if (matched.user.email && err instanceof ApiError && err.statusCode === 401) {
+            // Known locally but not on the backend — provision the account so
+            // scans and farm creation are backed by MongoDB.
+            try {
+              const reg = await apiRequestWithAuth<BackendAuthResponse>(
+                '/auth/register',
+                {
+                  method: 'POST',
+                  body: JSON.stringify({
+                    name: matched.user.name,
+                    email: matched.user.email.toLowerCase(),
+                    password: trimmedPass,
+                    role: matched.user.role,
+                  }),
+                },
+                null
+              );
+              const backendUser: User = {
+                id: reg.user.id,
+                name: reg.user.name,
+                email: reg.user.email,
+                role: (reg.user.role as UserRole) || matched.user.role,
+              };
+              resolvedToken = reg.token;
+              resolvedUser = backendUser;
+              setStoredItem<StoredAccount[]>(REGISTERED_ACCOUNTS_KEY, [
+                ...registered.filter((a) => a.user.email !== matched.user.email),
+                { ...matched, user: backendUser },
+              ]);
+            } catch {
+              // Backend rejects provisioning — keep local token-less session.
+            }
+          }
+          // Network/other errors mean the backend is unreachable — local session stays.
+        }
+      };
+
+      await provisionBackendUser();
+
+      setIsAuthenticated(true);
+      setUser(resolvedUser);
+      setAuthToken(resolvedToken);
+      setIsDemo(false);
+      if (matched.pendingFarm) {
+        setStoredItem(PENDING_FARM_KEY, matched.pendingFarm);
+      }
+      return { success: true };
     }
 
     return { success: false, error: 'Invalid username or password.' };
