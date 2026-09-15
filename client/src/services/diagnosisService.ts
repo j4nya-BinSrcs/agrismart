@@ -5,34 +5,53 @@ import { apiRequestWithAuth, ApiError, API_BASE_URL } from './apiClient';
 const diagnosesKeyFor = (userId?: string | null) =>
   userId ? `diagnoses_history_${userId}` : 'diagnoses_history';
 
+/**
+ * Keeps diagnostics scoped to the active farm. Records created before farm
+ * linking existed (or demo seeds) have no `farm` field and stay visible on
+ * every farm; records attributed to a farm only appear on that farm.
+ */
+const filterByFarm = (records: DiagnosisRecord[], farmId?: string | null): DiagnosisRecord[] =>
+  farmId ? records.filter((d) => !d.farm || d.farm === farmId) : records;
+
 export const diagnosisService = {
   /**
    * Fetches diagnosis history from backend MongoDB /api/v1/diagnosis/history
    */
-  async getDiagnosisHistory(token: string | null = null, userId?: string | null, limit = 30): Promise<DiagnosisRecord[]> {
+  async getDiagnosisHistory(
+    token: string | null = null,
+    userId?: string | null,
+    limit = 30,
+    farmId?: string | null
+  ): Promise<DiagnosisRecord[]> {
     const storageKey = diagnosesKeyFor(userId);
     if (token) {
       try {
+        const farmQuery = farmId ? `&farmId=${encodeURIComponent(farmId)}` : '';
         const records = await apiRequestWithAuth<DiagnosisRecord[]>(
-          `/diagnosis/history?limit=${limit}`,
+          `/diagnosis/history?limit=${limit}${farmQuery}`,
           {},
           token
         );
         if (Array.isArray(records)) {
           setStoredItem(storageKey, records);
-          return records;
+          return filterByFarm(records, farmId);
         }
       } catch (err) {
         console.warn('[diagnosisService] Backend history unavailable, using local cache:', err);
       }
     }
-    return getStoredItem<DiagnosisRecord[]>(storageKey, []);
+    return filterByFarm(getStoredItem<DiagnosisRecord[]>(storageKey, []), farmId);
   },
 
   /**
    * Fetches a single diagnosis by ID from backend /api/v1/diagnosis/:id
    */
-  async getDiagnosisById(id: string, token: string | null = null, userId?: string | null): Promise<DiagnosisRecord | null> {
+  async getDiagnosisById(
+    id: string,
+    token: string | null = null,
+    userId?: string | null,
+    farmId?: string | null
+  ): Promise<DiagnosisRecord | null> {
     if (token) {
       try {
         const record = await apiRequestWithAuth<DiagnosisRecord>(
@@ -47,7 +66,7 @@ export const diagnosisService = {
         console.warn(`[diagnosisService] Failed to fetch diagnosis ${id} from backend:`, err);
       }
     }
-    const list = await this.getDiagnosisHistory(token, userId);
+    const list = await this.getDiagnosisHistory(token, userId, 30, farmId);
     return list.find((d) => d.id === id) || null;
   },
 

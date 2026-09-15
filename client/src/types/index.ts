@@ -138,6 +138,8 @@ export interface RelatedInsights {
 
 export interface DiagnosisRecord {
   id: string;
+  farm?: string;
+  field?: string;
   crop: SupportedCrop;
   variety?: string;
   growthStage: string;

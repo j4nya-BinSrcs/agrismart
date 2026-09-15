@@ -57,7 +57,9 @@ export const getHistory: AsyncHandler = async (req, res, next) => {
   try {
     const rawLimit = req.query.limit;
     const limit = parseInt(typeof rawLimit === 'string' ? rawLimit : '20', 10);
-    const history = await diagnosisService.getHistory(limit, req.user!.id);
+    const rawFarmId = req.query.farmId;
+    const farmId = typeof rawFarmId === 'string' && rawFarmId ? rawFarmId : undefined;
+    const history = await diagnosisService.getHistory(limit, req.user!.id, farmId);
     return ApiResponse.success(res, 200, 'Diagnosis history retrieved', history);
   } catch (error) {
     next(error);

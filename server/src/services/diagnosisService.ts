@@ -731,9 +731,10 @@ export const diagnosisService = {
   },
 
   /**
-   * Retrieves diagnosis history for a user (falls back to unscoped only when no userId)
+   * Retrieves diagnosis history for a user, optionally scoped to a farm so a
+   * farmer switching farms never sees another farm's scan history.
    */
-  async getHistory(limit = 20, userId?: string) {
+  async getHistory(limit = 20, userId?: string, farmId?: string) {
     if (mongoose.connection.readyState === 1) {
       try {
         const filter: Record<string, unknown> = {};
@@ -744,6 +745,10 @@ export const diagnosisService = {
           filter.user = userId;
         } else {
           return [];
+        }
+
+        if (farmId && mongoose.Types.ObjectId.isValid(farmId)) {
+          filter.farm = new mongoose.Types.ObjectId(farmId);
         }
 
         const records = await Diagnosis.find(filter)
@@ -806,6 +811,12 @@ export const diagnosisService = {
       const payload: Record<string, unknown> = { ...recordData };
       if (userId && mongoose.Types.ObjectId.isValid(userId)) {
         payload.user = new mongoose.Types.ObjectId(userId);
+      }
+      if (recordData.farm && mongoose.Types.ObjectId.isValid(String(recordData.farm))) {
+        payload.farm = new mongoose.Types.ObjectId(String(recordData.farm));
+      }
+      if (recordData.field && mongoose.Types.ObjectId.isValid(String(recordData.field))) {
+        payload.field = new mongoose.Types.ObjectId(String(recordData.field));
       }
 
       const filter: Record<string, unknown> = { id: recordData.id };

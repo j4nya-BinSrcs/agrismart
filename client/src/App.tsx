@@ -369,8 +369,8 @@ export default function App() {
           sust,
         ] = await Promise.all([
           isDemo
-            ? diagnosisService.getDiagnosisHistory(null, user?.id)
-            : diagnosisService.getDiagnosisHistory(token, user?.id),
+            ? diagnosisService.getDiagnosisHistory(null, user?.id, 30, activeFarm?.id)
+            : diagnosisService.getDiagnosisHistory(token, user?.id, 30, activeFarm?.id),
           farmService.getTodayActions(isDemo),
           farmService.getNotifications(isDemo),
           weatherService.getFullForecast(coords),
