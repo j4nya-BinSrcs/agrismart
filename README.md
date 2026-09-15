@@ -17,10 +17,7 @@ classification.
 
 ## Demo Video
 
-<video src="agrismart_demo.mp4" controls width="100%" style="max-width: 800px;">
-  Your browser does not support the video tag.
-  <a href="agrismart_demo.mp4">Download the demo video</a>
-</video>
+[🎬 Watch Demo Video (MP4, ~97 MB)](agrismart_demo.mp4)
 
 ---
 
