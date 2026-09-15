@@ -253,10 +253,11 @@ export const DiagnosisResultScreen: React.FC<DiagnosisResultScreenProps> = ({
               <span className="text-slate-600 dark:text-slate-400 flex items-center gap-1">
                 <span>Severity:</span>
                 <span className={`capitalize font-medium ${
+                  diagnosis.severity === 'none' ? 'text-slate-500 dark:text-slate-400' :
                   diagnosis.severity === 'low' ? 'text-emerald-800 dark:text-emerald-400' :
                   diagnosis.severity === 'moderate' ? 'text-amber-800 dark:text-amber-400' : 'text-rose-800 dark:text-rose-400'
                 }`}>
-                  {diagnosis.severity}
+                  {diagnosis.severity === 'none' ? 'None' : diagnosis.severity}
                 </span>
               </span>
             </div>

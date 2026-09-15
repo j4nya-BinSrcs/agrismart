@@ -41,7 +41,7 @@ export interface DiagnosisRecordResult {
   pathogenName: string;
   isHealthy: boolean;
   confidence: number;
-  severity: 'low' | 'moderate' | 'high' | 'severe';
+  severity: 'none' | 'low' | 'moderate' | 'high' | 'severe';
   detectedAt: string;
   imageUrl: string;
   fieldLocation: string;
@@ -414,7 +414,7 @@ const createDiagnosisRecord = async (input: DiagnosisRequestInput): Promise<Diag
   let pathogenName = '';
   let isHealthy = false;
   let confidence = 0;
-  let severity: 'low' | 'moderate' | 'high' | 'severe' = 'low';
+  let severity: 'none' | 'low' | 'moderate' | 'high' | 'severe' = 'low';
   let shortExplanation = `AgriSmart is running in expert advisory mode. Automated image-based disease classification is not performed in this build; the guidance below is generated from validated agronomic rules applied to the details you entered (${crop}, ${growthStage}, ${fieldLocation}). Follow it as a scouting checklist — it is not an automated disease prediction.`;
   let symptomsMatched: string[] = [
     `Field cluster assessed: ${fieldLocation} — ${crop} at ${growthStage} stage`,
@@ -526,7 +526,7 @@ const createDiagnosisRecord = async (input: DiagnosisRequestInput): Promise<Diag
     diseaseName = parsed.isHealthy ? 'Healthy' : parsed.diseaseLabel || EXPERT_ADVISORY_ASSESSMENT_LABEL;
     isHealthy = parsed.isHealthy;
     confidence = confidencePct;
-    severity = mlEntry ? worstSeverity(mlEntry) : 'moderate';
+    severity = parsed.isHealthy ? 'none' : mlEntry ? worstSeverity(mlEntry) : 'moderate';
 
     if (mlEntry) {
       pathogenName = mlEntry.pathogenName;

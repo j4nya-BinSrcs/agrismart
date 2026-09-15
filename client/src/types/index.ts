@@ -67,7 +67,7 @@ export interface AuthContextType {
 
 export type Language = 'en' | 'hi' | 'gu';
 
-export type SeverityLevel = 'low' | 'moderate' | 'high' | 'severe';
+export type SeverityLevel = 'none' | 'low' | 'moderate' | 'high' | 'severe';
 export type ActionPriority = 'urgent' | 'recommended' | 'informational';
 export type ActionCategory = 'irrigation' | 'crop_protection' | 'weather' | 'field_work';
 

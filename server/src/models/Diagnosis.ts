@@ -2,7 +2,7 @@ import mongoose, { Model, Schema, Types, model } from 'mongoose';
 import type { HydratedDocument } from 'mongoose';
 
 export type DiagnosisSource = 'expert_rules' | 'ml_unavailable' | 'ml';
-export type DiagnosisSeverity = 'low' | 'moderate' | 'high' | 'severe';
+export type DiagnosisSeverity = 'none' | 'low' | 'moderate' | 'high' | 'severe';
 
 export interface RecommendedActionStep {
   step: number;
@@ -146,7 +146,7 @@ const DiagnosisSchema = new Schema<IDiagnosis>(
     },
     severity: {
       type: String,
-      enum: ['low', 'moderate', 'high', 'severe'],
+      enum: ['none', 'low', 'moderate', 'high', 'severe'],
       default: 'low',
     },
     detectedAt: {
