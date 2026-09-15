@@ -1,141 +1,270 @@
-# 🌱 AgriSmart AI
+# AgriSmart AI
 
-### Intelligent Agriculture for a Sustainable Future
+**Intelligent agriculture for a sustainable future.**
 
-AgriSmart AI is an AI-powered agricultural decision-support platform designed to help farmers make smarter, faster, and more sustainable decisions.
+AgriSmart AI is an AI-powered agricultural decision-support platform that helps
+farmers diagnose crop diseases, understand the weather, schedule irrigation,
+track sustainability, and get grounded agronomic advice — all in one connected
+experience with trilingual support (English, Hindi, Gujarati).
 
-The platform brings crop disease diagnosis, weather intelligence, smart irrigation, sustainability insights, and an agricultural assistant into one connected experience.
+The platform is a full MERN monorepo (React + Express + MongoDB) with a
+dedicated computer-vision ML subsystem (Chloromap) for crop disease
+classification.
 
-> 🚧 **Current Status:** MERN full-stack build — Express + MongoDB API (auth, diagnosis, weather, irrigation, assistant, sustainability), a Gemini-grounded farmer assistant, and a React/Vite client with realistic demo-data fallbacks when the backend or external APIs are offline.
-
----
-
-## ✨ Features
-
-### 📊 Smart Dashboard
-- Farm health overview
-- Crop health summary
-- Soil moisture monitoring
-- Weather conditions
-- Disease/risk indicators
-- Today's recommended actions
-- Recent crop diagnoses
-- Sustainability overview
-
-### 🌿 Crop Disease Diagnosis
-- Upload crop/leaf images
-- Drag & drop image upload
-- Camera/gallery interface
-- Image preview
-- Crop and growth-stage selection
-- AI analysis interface
-- Disease/healthy status
-- Confidence percentage
-- Severity information
-- Recommended precautions and actions
-
-### 🌦️ Weather Intelligence
-- Current temperature
-- Humidity
-- Rain probability
-- Forecast
-- Agricultural weather risks
-- Actionable recommendations
-
-Instead of simply showing weather data, the interface focuses on:
-
-> **"What does this weather mean for my farm?"**
-
-### 💧 Smart Irrigation
-- Soil moisture
-- Crop information
-- Growth stage
-- Rain probability
-- Irrigation status
-- AI recommendations
-- Water usage/saving insights
-
-### 🌍 Sustainability
-- Sustainability score
-- Water efficiency
-- Resource usage
-- Crop health
-- Estimated water saved
-- Carbon impact
-- Improvement suggestions
-
-### 🤖 Farmer Assistant
-- Agricultural-focused conversational interface
-- Crop-related questions
-- Farming recommendations
-- Contextual agricultural guidance
+> **Status:** Production-ready build. Client (React 19 + Vite), API (Express 4 +
+> MongoDB), and an ML inference service (FastAPI + PyTorch). Handles missing
+> upstream services gracefully with deterministic, data-grounded fallbacks.
 
 ---
 
-## 🚀 Getting Started
+## Table of Contents
 
-```bash
-# 1. Install all workspace dependencies (client + server)
-npm install
+- [Features](#features)
+- [Architecture Overview](#architecture-overview)
+- [Repository Layout](#repository-layout)
+- [Getting Started](#getting-started)
+- [Configuration](#configuration)
+- [Available Commands](#available-commands)
+- [Testing](#testing)
+- [Launcher](#launcher)
+- [Related Documentation](#related-documentation)
 
-# 2. Configure environment
-cp .env.example .env                  # server vars (GEMINI_API_KEY, MONGODB_URI, JWT_SECRET...)
-cp client/.env.example client/.env    # frontend vars (VITE_API_URL)
+---
 
-# 3. Run the full stack (client on :3000, API on :5000)
-npm run dev
+## Features
+
+### Crop Disease Diagnosis
+- Leaf photography via camera/gallery or drag-and-drop upload
+- Picks the best available inference engine: **Chloromap ML** (computer vision)
+  first, then the **Gemini** multimodal fallback
+- Confidence, severity rating (`low`/`moderate`/`high`/`severe`/healthy `none`),
+  and per-disease precations & treatment guidance
+- Diagnosis history scoped per user & farm, plus a printable/sharable **PDF report**
+
+### Weather Intelligence
+- Hyper-local current conditions, hourly & daily forecast from Open-Meteo
+- "What does this weather mean for my farm?" crop-specific risk advisories
+
+### Smart Irrigation
+- Soil-moisture–aware scheduling fused with rain probability
+- Zone-by-zone recommendations (irrigate / delay / watch) plus water-savings insight
+
+### Sustainability
+- Sustainability score, water efficiency, resource usage, carbon impact, and
+  actionable improvement suggestions
+
+### Farmer Assistant
+- Grounded conversational advisor backed by **Gemini**, strict grounding
+  validation, and a deterministic rule engine when the model is unavailable
+- Answers farm-specific questions from your registered fields/farms
+- Trilingual: **English, Hindi, Gujarati** with language enforcement
+
+### Farm Management
+- Farms, fields/plots, and zones with location, crop, stage, soil type & moisture
+
+### Provider Resiliency
+- Every screen degrades gracefully: demo-data fallbacks, deterministic rule
+  engines, and structured errors instead of blank pages
+
+---
+
+## Architecture Overview
+
+```text
+        ┌─────────────────┐        ┌──────────────────────────────────────┐
+        │  React/Vite SPA  │ ──────▶│  Express API  (:5000)  /api/v1        │
+        │  (client :3000)  │  HTTP  │  auth · diagnosis · weather ·          │
+        └─────────────────┘        │  irrigation · sustainability ·         │
+                                    │  assistant · farms/fields/zones        │
+                                    └───┬───────────────┬───────────┬────────┘
+                                        │               │           │
+                                   ┌────▼────┐    ┌─────▼─────┐  ┌──▼────────┐
+                                   │ MongoDB │    │ Chloromap │  │ Gemini AI │
+                                   │ (:27017)│    │ FastAPI   │  │ (external)│
+                                   └─────────┘    │ (:8000)   │  └───────────┘
+                                                   │ PyTorch   │
+                                                   └───────────┘
 ```
 
-Useful per-app commands:
+- **`client/`** — React 19 + Vite + Tailwind 4 SPA. Custom hash-path router,
+  service layer, Auth/Farm/Theme/Toast contexts, demo-data fallbacks.
+- **`server/`** — Express 4 + Mongoose 9 API. JWT auth, layered services,
+  Open-Meteo integrations, Gemini grounding, PDF report generation.
+- **`chloromap/`** — self-contained PyTorch (EfficientNet) ML subsystem with a
+  FastAPI inference service used by the diagnosis pipeline.
+- **`launch.sh` / `launch.ps1`** — dev/production supervisor: provisions
+  MongoDB (local or Docker), boots the API, client, and ML service, and tails logs.
 
-| Command | Description |
-| :--- | :--- |
-| `npm run dev` | Run client + server together (concurrently) |
-| `npm run dev:client` | Vite dev server on `http://localhost:3000` |
-| `npm run dev:server` | Express API (tsx watch) on `http://localhost:5000` |
-| `npm run build` | Production build for client + server type-check |
-| `npm run lint` | `tsc --noEmit` for both workspaces |
-| `npm test` | Server test harness (`server/tests/*.test.js`) |
+See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the full detail (data
+flows, interceptors, provider-failure handling).
 
-## 🏗️ Project Structure
+---
+
+## Repository Layout
 
 ```text
 AgriSmart/
-├── .env / .env.example        # server configuration
-├── client/                    # React + Vite + Tailwind frontend (npm workspace)
-│   ├── .env.example           # VITE_API_URL
-│   ├── vercel.json            # SPA rewrites for static hosting
-│   └── src/                   # screens, components, services, contexts, types
-└── server/                    # Express + Mongoose backend (npm workspace)
-    ├── server.js              # entry point
-    ├── src/
-    │   ├── config/            # env + DB connection
-    │   ├── controllers/       # request handlers
-    │   ├── models/            # User, Farm, Field, Zone, Diagnosis
-    │   ├── routes/            # /api/v1 routers
-    │   ├── services/          # auth, diagnosis, gemini, weather, irrigation, ...
-    │   ├── middleware/        # JWT auth, error/not-found handlers, validators
-    │   └── utils/             # ApiError, ApiResponse, logger
-    └── tests/                 # hand-rolled Node test harness
+├── client/                       # React 19 + Vite + Tailwind SPA (npm workspace)
+│   ├── .env.example              #   VITE_API_URL
+│   ├── vercel.json               #   SPA rewrites for static hosting
+│   └── src/
+│       ├── components/           # screens, layout, common UI, auth
+│       ├── context/              # Auth, Farm, Theme, Toast providers
+│       ├── services/             # HTTP service layer with demo fallbacks
+│       ├── data/                 # India location data + demo/mock data
+│       ├── utils/                # formatters, storage
+│       └── types/
+├── server/                       # Express 4 + Mongoose 9 API (npm workspace)
+│   └── src/
+│       ├── server.ts             # entry point (www/index)
+│       ├── app.ts                # Express app: middleware, routes, errors
+│       ├── config/               # env parsing + Mongo connection
+│       ├── controllers/          # request handlers
+│       ├── models/               # User, Farm, Field, Zone, Diagnosis, CropKnowledge
+│       ├── routes/               # /api/v1 routers (incl. nested fields/zones)
+│       ├── middleware/           # JWT auth, error/404 handlers, validators
+│       ├── services/             # auth, diagnosis, weather, irrigation,
+│       │                         # sustainability, assistant(Gemini), PDF report
+│       └── utils/                # ApiError, ApiResponse, logger
+├── chloromap/                    # PyTorch ML subsystem (FastAPI inference service)
+│   ├── configs/                  # baseline.yaml, final.yaml
+│   ├── scripts/                  # audit / prepare / train / evaluate / predict / serve
+│   ├── src/chloromap/            # data, models, training, evaluation, inference
+│   ├── tests/                    # pytest suites
+│   ├── weights/                  # trained checkpoints
+│   └── requirements.txt
+├── scripts/launch/               # launcher env & bash/pwsh libraries
+├── launch.sh / launch.ps1        # dev/production supervisor
+├── .env.example                  # server configuration template
+└── package.json                  # npm workspaces (client, server) + dev scripts
 ```
 
 ---
 
-## 🎯 Core User Flow
+## Getting Started
 
-```text
-Dashboard
-    ↓
-Diagnose Crop
-    ↓
-Upload / Capture Leaf Image
-    ↓
-AI Analysis
-    ↓
-Diagnosis Result
-    ↓
-Recommended Actions
-    ↓
-Weather / Irrigation / Sustainability Insights
-    ↓
-Farmer Assistant
+### Prerequisites
+
+- **Node.js ≥ 18** and npm ≥ 9
+- **MongoDB** — local `mongod`, MongoDB Atlas, or Docker (the launcher can
+  provision a local instance automatically)
+- (Optional) **Python 3.13 + GPU** for the Chloromap ML service; the app still
+  runs with Gemini-only diagnosis if ML is unavailable
+
+### Install
+
+```bash
+npm install
+```
+
+### Configure environment
+
+```bash
+# Server config (repo root)
+cp .env.example .env
+#  → set MONGODB_URI, JWT_SECRET, GEMINI_API_KEY
+
+# Client config
+cp client/.env.example client/.env
+#  → set VITE_API_URL (default http://localhost:5000/api/v1)
+```
+
+> **Note:** `client/.env` and `.env` are git-ignored (only the `.env.example`
+> templates are tracked). The API auto-loads `.env` from the repo root.
+
+### Run the full stack
+
+```bash
+npm run dev          # API (:5000) + client (:3000) concurrently
+# or use the launcher for DB + API + client + ML together:
+./launch.sh up
+```
+
+Then open **http://localhost:3000**.
+
+---
+
+## Configuration
+
+Environment variables are read from `.env` at the repo root (server) and
+`client/.env` (client).
+
+| Variable | Default | Description |
+| :--- | :--- | :--- |
+| `PORT` | `5000` | API server port |
+| `NODE_ENV` | `development` | Runtime environment |
+| `CORS_ORIGIN` | `http://localhost:3000` | Comma-separated allowed origins |
+| `MONGODB_URI` | `mongodb://127.0.0.1:27017/agrismart` | MongoDB connection string |
+| `JWT_SECRET` | dev fallback | Secret used to sign JWTs |
+| `JWT_EXPIRES_IN` | `7d` | Access-token lifetime |
+| `GEMINI_API_KEY` | — | Google Gemini API key (**required** for live LLM) |
+| `GEMINI_MODEL` | `gemini-flash-latest` | Gemini model identifier |
+| `CHLOROMAP_URL` | `http://127.0.0.1:8000` | Chloromap ML inference base URL |
+| `APP_URL` | `http://localhost:5000` | Public app URL |
+
+Client:
+
+| Variable | Default | Description |
+| :--- | :--- | :--- |
+| `VITE_API_URL` | — | Base URL for the API (e.g. `/api/v1`) |
+
+---
+
+## Available Commands
+
+Run from the repo root (`npm` workspaces):
+
+| Command | Description |
+| :--- | :--- |
+| `npm install` | Install client + server dependencies |
+| `npm run dev` | Run API + client simultaneously (concurrently) |
+| `npm run dev:client` | Vite dev server on `http://localhost:3000` |
+| `npm run dev:server` | Express API via `tsx watch` on `http://localhost:5000` |
+| `npm run build` | Type-check + build both workspaces |
+| `npm run lint` | TypeScript type-check for client & server |
+| `npm test` | Server test harness (`server/tests/*.test.ts`) |
+| `npm run preview` | Preview the built client |
+| `./launch.sh up` | Supervisor: DB + API + client + ML (see below) |
+
+Individual workspaces can also be addressed directly, e.g.
+`npm run build --workspace server` or `npm run build --workspace client`.
+
+---
+
+## Testing
+
+- **Server:** hand-rolled Node test harness. `npm test` runs
+  `server/tests/*.test.ts` (assistant, auth, farm, sustainability) via `tsx`
+  from the repo root.
+- **Chloromap:** `cd chloromap && uv run pytest` (or `python -m pytest`) — 50+
+  unit tests with synthetic fixtures, no dataset required.
+- **Client:** type-checked via `npm run lint` (`tsc --noEmit`).
+
+---
+
+## Launcher
+
+`./launch.sh` (and `launch.ps1` for PowerShell) supervises the whole stack —
+MongoDB, API, client, and Chloromap — writing PIDs/logs under `.run/`.
+
+```bash
+./launch.sh                  # start everything (foreground supervisor)
+./launch.sh up --no-ml       # skip the ML service
+./launch.sh up --no-db       # assume MongoDB is already running
+./launch.sh up --detach      # start and return (supervisor detached)
+./launch.sh status           # per-service health snapshot
+./launch.sh logs server      # tail logs (server|client|ml|mongodb|all)
+./launch.sh down             # stop all managed services
+./launch.sh restart          # down + up
+```
+
+Defaults (override-safe): ports `3000`/`5000`/`8000`/`27017`, runtime
+artifacts under `.run/`, Chloromap at `./chloromap`. Config precedence:
+environment variables > `scripts/launch/local.env` > `scripts/launch/defaults.env`.
+
+---
+
+## Related Documentation
+
+- [Architecture Overview](docs/ARCHITECTURE.md) — system design, data flows, external providers, failure handling
+- [Chloromap ML Subsystem](chloromap/README.md) — training, evaluation, and the inference API

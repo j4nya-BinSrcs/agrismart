@@ -9,9 +9,8 @@
 # Recipe: full fine-tune with warmup+cosine, mixup, random erasing,
 # class-balanced sampling (helps the 21x-more-rare Potato___healthy).
 #
-# Run from the repo root:
-#   cd ~/Documents/AgriSmart
-#   python ml/scripts/train.py --config ml/configs/final.yaml
+# Run from the chloromap/ directory:
+#   uv run python scripts/train.py --config configs/final.yaml
 
 data_dir: ../data/raw/plantvillage
 output_dir: ../ml/weights
